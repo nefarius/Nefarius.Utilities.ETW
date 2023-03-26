@@ -1,11 +1,10 @@
-﻿namespace ETW2JSON
-{
-    using System;
-    using System.Runtime.CompilerServices;
-    using System.Text.Json;
-    using ETWDeserializer;
+﻿using System.Runtime.CompilerServices;
+using System.Text.Json;
+using ETWDeserializer;
 
-    public struct EtwJsonWriter : IEtwWriter
+namespace Nefarius.Utilities.ETW
+{
+	public struct EtwJsonWriter : IEtwWriter
     {
         private readonly Utf8JsonWriter writer;
 

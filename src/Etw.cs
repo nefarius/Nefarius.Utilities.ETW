@@ -1,11 +1,10 @@
-﻿namespace ETW2JSON
-{
-    using System;
-    using System.Runtime.InteropServices;
-    using System.Security;
-    using ETWDeserializer;
+﻿using System.Runtime.InteropServices;
+using System.Security;
+using ETWDeserializer;
 
-    using ULONG = System.UInt32;
+namespace Nefarius.Utilities.ETW
+{
+	using ULONG = System.UInt32;
     using LONG = System.Int32;
     using ULONGLONG = System.UInt64;
     using LONGLONG = System.Int64;
@@ -145,10 +144,10 @@
         [DllImport("advapi32.dll", EntryPoint = "OpenTraceW", CharSet = CharSet.Unicode, SetLastError = true), SuppressUnmanagedCodeSecurity]
         internal static extern UInt64 OpenTrace([In] [Out] ref EVENT_TRACE_LOGFILEW Logfile);
 
-        [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true), SuppressUnmanagedCodeSecurityAttribute]
+        [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true), SuppressUnmanagedCodeSecurity]
         internal extern static int ProcessTrace([In] ULONGLONG[] HandleArray, [In] ULONG HandleCount, [In] IntPtr StartTime, [In] IntPtr EndTime);
 
-        [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true), SuppressUnmanagedCodeSecurityAttribute]
+        [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true), SuppressUnmanagedCodeSecurity]
         internal extern static int CloseTrace([In] ULONGLONG TraceHandle);
 
         internal const ULONG EVENT_TRACE_REAL_TIME_MODE = 0x00000100; // Real time mode on
