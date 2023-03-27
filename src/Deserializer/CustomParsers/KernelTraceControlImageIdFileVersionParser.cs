@@ -2,7 +2,7 @@
 {
     using System;
 
-    internal sealed class KernelTraceControlImageIdFileVersionParser
+    internal sealed class KernelTraceControlImageIdFileVersionParser : ICustomParser
     {
         private static readonly EventMetadata EventMetadata;
 

@@ -177,6 +177,9 @@
             return operand;
         }
 
+        /// <summary>
+        ///     Here happens the decision making on which parser to use for a given provider.
+        /// </summary>
         [MethodImpl(MethodImplOptions.NoInlining)]
         private unsafe bool CustomParserLookup(EVENT_RECORD* eventRecord, ref TraceEventKey key)
         {

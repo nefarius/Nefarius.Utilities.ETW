@@ -2,7 +2,7 @@
 {
     using System;
 
-    internal sealed class KernelTraceControlImageIdParser
+    internal sealed class KernelTraceControlImageIdParser : ICustomParser
     {
         private static readonly EventMetadata EventMetadata;
 

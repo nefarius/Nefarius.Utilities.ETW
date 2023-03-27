@@ -2,7 +2,7 @@
 {
     using System;
 
-    internal sealed class KernelTraceControlDbgIdParser
+    internal sealed class KernelTraceControlDbgIdParser : ICustomParser
     {
         private static readonly EventMetadata EventMetadata;
 

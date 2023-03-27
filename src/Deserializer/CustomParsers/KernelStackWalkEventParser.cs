@@ -2,7 +2,7 @@
 {
     using System;
 
-    internal sealed class KernelStackWalkEventParser
+    internal sealed class KernelStackWalkEventParser : ICustomParser
     {
         private static readonly EventMetadata EventMetadata;
 
