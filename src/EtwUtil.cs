@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
@@ -25,9 +24,6 @@ public static class EtwUtil
     {
         List<string> list = inputFiles.ToList();
         Deserializer<EtwJsonWriter> deserializer = new Deserializer<EtwJsonWriter>(new EtwJsonWriter(jsonWriter));
-
-        Stopwatch watch = new();
-        watch.Start();
 
         int count = list.Count;
         EVENT_TRACE_LOGFILEW[] fileSessions = new EVENT_TRACE_LOGFILEW[count];
