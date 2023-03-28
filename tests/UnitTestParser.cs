@@ -27,6 +27,12 @@ public class Tests
             Assert.Fail();
         }
 
+        ms.Seek(0, SeekOrigin.Begin);
+
+        var sr = new StreamReader(ms);
+
+        var json = sr.ReadToEnd();
+
         Assert.Pass();
     }
 }
