@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 
 using ETWDeserializer;
+using ETWDeserializer.CustomParsers;
 
 namespace Nefarius.Utilities.ETW;
 
@@ -23,7 +24,11 @@ public static class EtwUtil
         Action<string> reportError)
     {
         List<string> list = inputFiles.ToList();
-        Deserializer<EtwJsonWriter> deserializer = new Deserializer<EtwJsonWriter>(new EtwJsonWriter(jsonWriter));
+        Deserializer<EtwJsonWriter> deserializer = new Deserializer<EtwJsonWriter>(new EtwJsonWriter(jsonWriter),
+            provider =>
+            {
+                return provider != CustomParserGuids.ViGEmRuntimeGuid ? null : File.OpenRead(@"D:\Development\git.nefarius.at\ViGEm Framework\library\ViGEmRuntimeETW.man");
+            });
 
         int count = list.Count;
         EVENT_TRACE_LOGFILEW[] fileSessions = new EVENT_TRACE_LOGFILEW[count];

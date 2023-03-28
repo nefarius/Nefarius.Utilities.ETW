@@ -6,6 +6,7 @@
     using System.Runtime.CompilerServices;
     using System.Runtime.InteropServices;
     using System.Text.RegularExpressions;
+
     using CustomParsers;
 
     public sealed class Deserializer<T>
@@ -31,9 +32,16 @@
 
         private EventMetadata[] eventMetadataTable;
 
+        private readonly Func<Guid, Stream?>? _customProviderManifest;
+
         public Deserializer(T writer)
         {
             this.writer = writer;
+        }
+
+        public Deserializer(T writer, Func<Guid, Stream?>? customProviderManifest) : this(writer)
+        {
+            _customProviderManifest = customProviderManifest;
         }
 
         public void ResetWriter(T writer)
@@ -70,11 +78,10 @@
             }
         }
 
-        private static unsafe IEventTraceOperand BuildOperandFromXml(EVENT_RECORD* eventRecord, Dictionary<Guid, EventSourceManifest> cache, EventRecordReader eventRecordReader, int metadataTableIndex)
+        private static unsafe IEventTraceOperand? BuildOperandFromXml(EVENT_RECORD* eventRecord, Dictionary<Guid, EventSourceManifest> cache, EventRecordReader eventRecordReader, int metadataTableIndex)
         {
-            EventSourceManifest manifest;
             Guid providerGuid = eventRecord->ProviderId;
-            if (!cache.TryGetValue(providerGuid, out manifest))
+            if (!cache.TryGetValue(providerGuid, out EventSourceManifest? manifest))
             {
                 manifest = CreateEventSourceManifest(providerGuid, cache, eventRecord, eventRecordReader);
             }
@@ -114,7 +121,7 @@
             return new UnknownOperandBuilder(eventRecord->ProviderId, metadataTableIndex);
         }
 
-        private static unsafe EventSourceManifest CreateEventSourceManifest(Guid providerGuid, Dictionary<Guid, EventSourceManifest> cache, EVENT_RECORD* eventRecord, EventRecordReader eventRecordReader)
+        private static unsafe EventSourceManifest? CreateEventSourceManifest(Guid providerGuid, Dictionary<Guid, EventSourceManifest> cache, EVENT_RECORD* eventRecord, EventRecordReader eventRecordReader)
         {
             // EventSource Schema events have the following signature:
             // { byte Format, byte MajorVersion, byte MinorVersion, byte Magic, ushort TotalChunks, ushort ChunkNumber } == 8 bytes, followed by the XML schema
@@ -135,7 +142,7 @@
                 return null;
             }
 
-            EventSourceManifest manifest;
+            EventSourceManifest? manifest;
             if (!cache.TryGetValue(providerGuid, out manifest))
             {
                 manifest = new EventSourceManifest(eventRecord->ProviderId, format, majorVersion, minorVersion, magic, totalChunks);
@@ -157,13 +164,30 @@
 
         private unsafe IEventTraceOperand BuildOperand(EVENT_RECORD* eventRecord, EventRecordReader eventRecordReader, int metadataTableIndex, ref bool isSpecialKernelTraceMetaDataEvent)
         {
+            IEventTraceOperand? operand;
+            var customProvider = _customProviderManifest?.Invoke(eventRecord->ProviderId);
+
+            if (customProvider is not null)
+            {
+                if (!eventSourceManifestCache.TryGetValue(eventRecord->ProviderId, out EventSourceManifest? manifest))
+                {
+                    manifest = new EventSourceManifest(eventRecord->ProviderId, customProvider);
+                    eventSourceManifestCache.Add(eventRecord->ProviderId, manifest);
+                }
+
+                operand = BuildOperandFromXml(eventRecord, this.eventSourceManifestCache, eventRecordReader, metadataTableIndex);
+
+                if (operand is not null)
+                    return operand;
+            }
+
             if (eventRecord->ProviderId == CustomParserGuids.KernelTraceControlMetaDataGuid && eventRecord->Opcode == 32)
             {
                 isSpecialKernelTraceMetaDataEvent = true;
                 return EventTraceOperandBuilder.Build((TRACE_EVENT_INFO*)eventRecord->UserData, metadataTableIndex);
             }
 
-            IEventTraceOperand operand;
+            
             if ((operand = BuildOperandFromTdh(eventRecord, metadataTableIndex)) == null)
             {
                 operand = BuildOperandFromXml(eventRecord, this.eventSourceManifestCache, eventRecordReader, metadataTableIndex);
@@ -174,7 +198,7 @@
                 operand = BuildUnknownOperand(eventRecord, metadataTableIndex);
             }
 
-            return operand;
+            return operand!;
         }
 
         /// <summary>

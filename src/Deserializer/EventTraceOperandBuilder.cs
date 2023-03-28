@@ -60,7 +60,7 @@
                                                     {
                                                         string task = definitionTypeItem.task == null ? string.IsNullOrEmpty(definitionTypeItem.symbol) ? "Task" : definitionTypeItem.symbol : definitionTypeItem.task.Name;
                                                         string opcode = definitionTypeItem.opcode == null ? string.Empty : definitionTypeItem.opcode.Name;
-                                                        string version = definitionTypeItem.version;
+                                                        string version = definitionTypeItem.version ?? "0";
                                                         string template = definitionTypeItem.template;
 
                                                         string name = providerName + "/" + task + (opcode == string.Empty ? string.Empty : "/" + opcode);

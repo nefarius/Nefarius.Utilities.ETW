@@ -1,4 +1,6 @@
-﻿namespace ETWDeserializer
+﻿using Microsoft.Xml.Serialization.GeneratedAssembly;
+
+namespace ETWDeserializer
 {
     using System;
     using System.IO;
@@ -33,6 +35,14 @@
             this.minorVersion = minorVersion;
             this.magic = magic;
             this.totalChunks = totalChunks;
+        }
+
+        public EventSourceManifest(Guid providerGuid, Stream source)
+        {
+            this.providerGuid = providerGuid;
+            var serializer = new instrumentationManifestSerializer();
+            this.manifest = (instrumentationManifest)serializer.Deserialize(source);
+            source.Dispose();
         }
 
         public bool IsComplete => this.chunksReceived == this.totalChunks;
