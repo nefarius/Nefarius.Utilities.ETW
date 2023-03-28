@@ -19,9 +19,10 @@ public static class EtwUtil
     /// <param name="jsonWriter">The target JSON writer to write to.</param>
     /// <param name="inputFiles">One or more input files.</param>
     /// <param name="reportError">Potential parsing errors.</param>
+    /// <param name="customProviderManifest">Optionally called to load custom manifests for providers.</param>
     /// <returns>True on success, false otherwise.</returns>
     public static bool ConvertToJson(Utf8JsonWriter jsonWriter, IEnumerable<string> inputFiles,
-        Action<string> reportError)
+        Action<string> reportError, Func<Guid, Stream?>? customProviderManifest = default)
     {
         List<string> list = inputFiles.ToList();
         Deserializer<EtwJsonWriter> deserializer = new Deserializer<EtwJsonWriter>(new EtwJsonWriter(jsonWriter),
