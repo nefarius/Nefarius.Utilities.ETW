@@ -15,7 +15,5 @@
         public static Guid KernelTraceControlMetaDataGuid = new Guid("bbccf6c1-6cd1-48c4-80ff-839482e37671");
 
         public static Guid KernelStackWalkGuid = new Guid("def2fe46-7bd6-4b80-bd94-f57fe20d0ce3");
-
-        public static Guid ViGEmRuntimeGuid = new Guid("{021b2c3c-9dd6-4c0a-a53a-6183f1be11a0}");
     }
 }
