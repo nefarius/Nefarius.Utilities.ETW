@@ -1,4 +1,6 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
+// ReSharper disable InconsistentNaming
 
 namespace Nefarius.Utilities.ETW.Deserializer
 {
@@ -62,6 +64,8 @@ namespace Nefarius.Utilities.ETW.Deserializer
     }
 
     // Intypes and outtypes are defined in winmeta.xml.
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public enum TDH_IN_TYPE
     {
         TDH_INTYPE_NULL,
@@ -99,6 +103,8 @@ namespace Nefarius.Utilities.ETW.Deserializer
         TDH_INTYPE_WBEMSID
     }
 
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public enum TDH_OUT_TYPE
     {
         TDH_OUTTYPE_NULL,
@@ -199,6 +205,7 @@ namespace Nefarius.Utilities.ETW.Deserializer
         }
     }
 
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     internal enum DECODING_SOURCE
     {
         DecodingSourceXMLFile,
@@ -208,6 +215,7 @@ namespace Nefarius.Utilities.ETW.Deserializer
         DecodingSourceMax
     }
 
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     internal enum TEMPLATE_FLAGS
     {
         TEMPLATE_EVENT_DATA = 1, // Used when custom xml is not specified.
