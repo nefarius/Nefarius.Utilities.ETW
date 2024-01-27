@@ -1,196 +1,199 @@
-﻿namespace ETWDeserializer
+﻿using System.Linq.Expressions;
+using System.Reflection;
+
+namespace Nefarius.Utilities.ETW.Deserializer;
+
+internal static class EventTraceOperandExpressionBuilder
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Linq.Expressions;
-    using System.Reflection;
-
-    internal static class EventTraceOperandExpressionBuilder
+    public static Expression Build(
+        IEventTraceOperand operand,
+        ParameterExpression eventRecordReader,
+        ParameterExpression eventRecordWriter,
+        ParameterExpression eventMetadataTable,
+        ParameterExpression runtimeMetadata)
     {
-        public static Expression Build(
-            IEventTraceOperand operand,
-            ParameterExpression eventRecordReader,
-            ParameterExpression eventRecordWriter,
-            ParameterExpression eventMetadataTable,
-            ParameterExpression runtimeMetadata)
-        {
-            return new EventTraceOperandExpressionBuilderImpl().Build(operand, eventRecordReader, eventRecordWriter, eventMetadataTable, runtimeMetadata);
-        }
-
-        public static MethodCallExpression Call(this ParameterExpression instance, string methodName, params Expression[] arguments)
-        {
-            Type[] parameterTypes = arguments.Select(t => t.Type).ToArray();
-            var methodInfo = instance.Type.GetMethod(methodName, parameterTypes);
-            return Expression.Call(instance, methodInfo, arguments);
-        }
+        return new EventTraceOperandExpressionBuilderImpl().Build(operand, eventRecordReader, eventRecordWriter,
+            eventMetadataTable, runtimeMetadata);
     }
 
-    internal sealed class EventTraceOperandExpressionBuilderImpl
+    public static MethodCallExpression Call(this ParameterExpression instance, string methodName,
+        params Expression[] arguments)
     {
-        public Expression Build(IEventTraceOperand operand, ParameterExpression eventRecordReader, ParameterExpression eventRecordWriter, ParameterExpression eventMetadataTable, ParameterExpression runtimeMetadata)
+        Type[] parameterTypes = arguments.Select(t => t.Type).ToArray();
+        MethodInfo? methodInfo = instance.Type.GetMethod(methodName, parameterTypes);
+        return Expression.Call(instance, methodInfo, arguments);
+    }
+}
+
+internal sealed class EventTraceOperandExpressionBuilderImpl
+{
+    public Expression Build(IEventTraceOperand operand, ParameterExpression eventRecordReader,
+        ParameterExpression eventRecordWriter, ParameterExpression eventMetadataTable,
+        ParameterExpression runtimeMetadata)
+    {
+        ParameterExpression eventMetadata = Expression.Parameter(typeof(EventMetadata));
+        ParameterExpression properties = Expression.Parameter(typeof(PropertyMetadata[]));
+
+        List<ParameterExpression> variables = new List<ParameterExpression> { eventMetadata, properties };
+
+        ExpressionGenerator expGenerator = new ExpressionGenerator(eventRecordReader, eventRecordWriter, properties);
+        List<Expression> list = new List<Expression>
         {
-            var eventMetadata = Expression.Parameter(typeof(EventMetadata));
-            var properties = Expression.Parameter(typeof(PropertyMetadata[]));
+            Expression.Assign(eventMetadata,
+                Expression.ArrayAccess(eventMetadataTable, Expression.Constant(operand.EventMetadataTableIndex))),
+            Expression.Assign(properties, Expression.PropertyOrField(eventMetadata, "Properties")),
+            eventRecordWriter.Call("WriteEventBegin", eventMetadata, runtimeMetadata),
+            expGenerator.CodeGenerate(operand.EventPropertyOperands),
+            eventRecordWriter.Call("WriteEventEnd")
+        };
 
-            var variables = new List<ParameterExpression>
-            {
-                eventMetadata,
-                properties
-            };
+        BlockExpression returnExpression = Expression.Block(variables, list);
+        return returnExpression;
+    }
 
-            var expGenerator = new ExpressionGenerator(eventRecordReader, eventRecordWriter, properties);
-            var list = new List<Expression>
-            {
-                Expression.Assign(eventMetadata, Expression.ArrayAccess(eventMetadataTable, Expression.Constant(operand.EventMetadataTableIndex))),
-                Expression.Assign(properties, Expression.PropertyOrField(eventMetadata, "Properties")),
-                eventRecordWriter.Call("WriteEventBegin", eventMetadata, runtimeMetadata),
-                expGenerator.CodeGenerate(operand.EventPropertyOperands),
-                eventRecordWriter.Call("WriteEventEnd")
-            };
+    private sealed class ExpressionGenerator
+    {
+        private readonly ParameterExpression eventRecordReader;
 
-            var returnExpression = Expression.Block(variables, list);
-            return returnExpression;
+        private readonly ParameterExpression eventRecordWriter;
+        private readonly Dictionary<IEventTracePropertyOperand, Expression> operandReferenceTable = new();
+
+        private readonly ParameterExpression properties;
+
+        public ExpressionGenerator(ParameterExpression eventRecordReader, ParameterExpression eventRecordWriter,
+            ParameterExpression properties)
+        {
+            this.eventRecordReader = eventRecordReader;
+            this.eventRecordWriter = eventRecordWriter;
+            this.properties = properties;
         }
 
-        private sealed class ExpressionGenerator
+        public Expression CodeGenerate(IEnumerable<IEventTracePropertyOperand> operands)
         {
-            private readonly Dictionary<IEventTracePropertyOperand, Expression> operandReferenceTable = new Dictionary<IEventTracePropertyOperand, Expression>();
+            List<ParameterExpression> variables = new List<ParameterExpression>();
+            List<Expression> list = new List<Expression>();
 
-            private readonly ParameterExpression eventRecordReader;
-
-            private readonly ParameterExpression eventRecordWriter;
-
-            private readonly ParameterExpression properties;
-
-            public ExpressionGenerator(ParameterExpression eventRecordReader, ParameterExpression eventRecordWriter, ParameterExpression properties)
+            foreach (IEventTracePropertyOperand operand in operands)
             {
-                this.eventRecordReader = eventRecordReader;
-                this.eventRecordWriter = eventRecordWriter;
-                this.properties = properties;
-            }
+                TDH_IN_TYPE inType = operand.Metadata.InType;
+                Expression c; /* running expression for this operand */
 
-            public Expression CodeGenerate(IEnumerable<IEventTracePropertyOperand> operands)
-            {
-                var variables = new List<ParameterExpression>();
-                var list = new List<Expression>();
+                list.Add(eventRecordWriter.Call("WritePropertyBegin",
+                    Expression.ArrayAccess(properties, Expression.Constant(operand.PropertyIndex))));
 
-                foreach (var operand in operands)
+                /* if struct, recurse */
+                if (operand.Children.Count > 0)
                 {
-                    var inType = operand.Metadata.InType;
-                    Expression c; /* running expression for this operand */
-
-                    list.Add(this.eventRecordWriter.Call("WritePropertyBegin", Expression.ArrayAccess(this.properties, Expression.Constant(operand.PropertyIndex))));
-
-                    /* if struct, recurse */
-                    if (operand.Children.Count > 0)
-                    {
-                        c = Expression.Block(
-                            this.eventRecordWriter.Call("WriteStructBegin"),
-                            this.CodeGenerate(operand.Children),
-                            this.eventRecordWriter.Call("WriteStructEnd"));
-                    }
-                    else
-                    {
-                        Expression readValue;
-
-                        /* otherwise, if operand has a length parameter, look it up or make constant */
-                        if (operand.IsVariableLength || operand.IsFixedLength)
-                        {
-                            var length = operand.IsVariableLength
-                                ? this.operandReferenceTable[operand.VariableLengthSize]
-                                : Expression.Constant(operand.FixedLengthSize);
-
-                            readValue = Call(this.eventRecordReader, inType.ReadMethodInfo(this.eventRecordReader.Type, length.Type), length);
-                        }
-
-                        /* otherwise, it's just a normal call, no args */
-                        else
-                        {
-                            readValue = Call(this.eventRecordReader, inType.ReadMethodInfo(this.eventRecordReader.Type));
-                        }
-
-                        /* save the operand because someone else maybe needing it */
-                        /* and change the running variable */
-                        if (operand.IsReferencedByOtherProperties)
-                        {
-                            var local = Expression.Parameter(inType.CSharpType(), operand.Metadata.Name);
-                            this.operandReferenceTable.Add(operand, local);
-                            variables.Add(local);
-                            c = Expression.Block(Expression.Assign(local, readValue), Call(this.eventRecordWriter, inType.WriteMethodInfo(this.eventRecordWriter.Type, local.Type), local));
-                        }
-                        else
-                        {
-                            c = Call(this.eventRecordWriter, inType.WriteMethodInfo(this.eventRecordWriter.Type, inType.CSharpType()), readValue);
-                        }
-                    }
-
-                    if (operand.IsVariableArray || operand.IsFixedArray)
-                    {
-                        var loopVariable = Expression.Parameter(typeof(int));
-                        variables.Add(loopVariable);
-
-                        var end = operand.IsVariableArray
-                            ? this.operandReferenceTable[operand.VariableArraySize]
-                            : Expression.Constant(operand.FixedArraySize);
-
-                        var expr = (Expression)loopVariable;
-                        ConvertIfNecessary(ref expr, ref end);
-                        list.Add(this.eventRecordWriter.Call("WriteArrayBegin"));
-                        list.Add(For(loopVariable, Expression.Constant(0), Expression.LessThan(expr, end), Expression.AddAssign(loopVariable, Expression.Constant(1)), c));
-                        list.Add(this.eventRecordWriter.Call("WriteArrayEnd"));
-                    }
-                    else
-                    {
-                        list.Add(c);
-                    }
-
-                    list.Add(this.eventRecordWriter.Call("WritePropertyEnd"));
-                }
-
-                return list.Count == 0 ? (Expression)Expression.Empty() : Expression.Block(variables, list);
-            }
-
-            private static MethodCallExpression Call(ParameterExpression instance, MethodInfo methodInfo, params Expression[] arguments)
-            {
-                return Expression.Call(instance, methodInfo, arguments);
-            }
-
-            private static Expression For(ParameterExpression parameter, Expression initial, Expression condition, Expression increment, params Expression[] body)
-            {
-                var breakLabel = Expression.Label("break");
-                var loop = Expression.Block(
-                    new[] { parameter },
-                    Expression.Assign(parameter, initial),
-                    Expression.Loop(
-                        Expression.IfThenElse(
-                            condition,
-                            Expression.Block(
-                                body.Concat(new[] { increment })),
-                            Expression.Break(breakLabel)),
-                        breakLabel));
-
-                return loop;
-            }
-
-            private static void ConvertIfNecessary(ref Expression left, ref Expression right)
-            {
-                var leftTypeCode = Type.GetTypeCode(left.Type);
-                var rightTypeCode = Type.GetTypeCode(right.Type);
-
-                if (leftTypeCode == rightTypeCode)
-                {
-                    return;
-                }
-
-                if (leftTypeCode > rightTypeCode)
-                {
-                    right = Expression.Convert(right, left.Type);
+                    c = Expression.Block(
+                        eventRecordWriter.Call("WriteStructBegin"),
+                        CodeGenerate(operand.Children),
+                        eventRecordWriter.Call("WriteStructEnd"));
                 }
                 else
                 {
-                    left = Expression.Convert(left, right.Type);
+                    Expression readValue;
+
+                    /* otherwise, if operand has a length parameter, look it up or make constant */
+                    if (operand.IsVariableLength || operand.IsFixedLength)
+                    {
+                        Expression length = operand.IsVariableLength
+                            ? operandReferenceTable[operand.VariableLengthSize]
+                            : Expression.Constant(operand.FixedLengthSize);
+
+                        readValue = Call(eventRecordReader, inType.ReadMethodInfo(eventRecordReader.Type, length.Type),
+                            length);
+                    }
+                    /* otherwise, it's just a normal call, no args */
+                    else
+                    {
+                        readValue = Call(eventRecordReader, inType.ReadMethodInfo(eventRecordReader.Type));
+                    }
+
+                    /* save the operand because someone else maybe needing it */
+                    /* and change the running variable */
+                    if (operand.IsReferencedByOtherProperties)
+                    {
+                        ParameterExpression local = Expression.Parameter(inType.CSharpType(), operand.Metadata.Name);
+                        operandReferenceTable.Add(operand, local);
+                        variables.Add(local);
+                        c = Expression.Block(Expression.Assign(local, readValue),
+                            Call(eventRecordWriter, inType.WriteMethodInfo(eventRecordWriter.Type, local.Type), local));
+                    }
+                    else
+                    {
+                        c = Call(eventRecordWriter, inType.WriteMethodInfo(eventRecordWriter.Type, inType.CSharpType()),
+                            readValue);
+                    }
                 }
+
+                if (operand.IsVariableArray || operand.IsFixedArray)
+                {
+                    ParameterExpression loopVariable = Expression.Parameter(typeof(int));
+                    variables.Add(loopVariable);
+
+                    Expression end = operand.IsVariableArray
+                        ? operandReferenceTable[operand.VariableArraySize]
+                        : Expression.Constant(operand.FixedArraySize);
+
+                    Expression expr = (Expression)loopVariable;
+                    ConvertIfNecessary(ref expr, ref end);
+                    list.Add(eventRecordWriter.Call("WriteArrayBegin"));
+                    list.Add(For(loopVariable, Expression.Constant(0), Expression.LessThan(expr, end),
+                        Expression.AddAssign(loopVariable, Expression.Constant(1)), c));
+                    list.Add(eventRecordWriter.Call("WriteArrayEnd"));
+                }
+                else
+                {
+                    list.Add(c);
+                }
+
+                list.Add(eventRecordWriter.Call("WritePropertyEnd"));
+            }
+
+            return list.Count == 0 ? Expression.Empty() : Expression.Block(variables, list);
+        }
+
+        private static MethodCallExpression Call(ParameterExpression instance, MethodInfo methodInfo,
+            params Expression[] arguments)
+        {
+            return Expression.Call(instance, methodInfo, arguments);
+        }
+
+        private static Expression For(ParameterExpression parameter, Expression initial, Expression condition,
+            Expression increment, params Expression[] body)
+        {
+            LabelTarget breakLabel = Expression.Label("break");
+            BlockExpression loop = Expression.Block(
+                new[] { parameter },
+                Expression.Assign(parameter, initial),
+                Expression.Loop(
+                    Expression.IfThenElse(
+                        condition,
+                        Expression.Block(
+                            body.Concat(new[] { increment })),
+                        Expression.Break(breakLabel)),
+                    breakLabel));
+
+            return loop;
+        }
+
+        private static void ConvertIfNecessary(ref Expression left, ref Expression right)
+        {
+            TypeCode leftTypeCode = Type.GetTypeCode(left.Type);
+            TypeCode rightTypeCode = Type.GetTypeCode(right.Type);
+
+            if (leftTypeCode == rightTypeCode)
+            {
+                return;
+            }
+
+            if (leftTypeCode > rightTypeCode)
+            {
+                right = Expression.Convert(right, left.Type);
+            }
+            else
+            {
+                left = Expression.Convert(left, right.Type);
             }
         }
     }

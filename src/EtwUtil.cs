@@ -2,8 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
-using ETWDeserializer;
-using ETWDeserializer.CustomParsers;
+using Nefarius.Utilities.ETW.Deserializer;
 
 namespace Nefarius.Utilities.ETW;
 

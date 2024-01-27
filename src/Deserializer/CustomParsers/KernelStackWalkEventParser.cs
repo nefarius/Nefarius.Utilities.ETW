@@ -1,7 +1,5 @@
-﻿namespace ETWDeserializer.CustomParsers
+﻿namespace Nefarius.Utilities.ETW.Deserializer.CustomParsers
 {
-    using System;
-
     internal sealed class KernelStackWalkEventParser : ICustomParser
     {
         private static readonly EventMetadata EventMetadata;

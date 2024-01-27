@@ -1,13 +1,10 @@
-﻿namespace ETWDeserializer
+﻿namespace Nefarius.Utilities.ETW.Deserializer;
+
+public interface IEventTraceOperand
 {
-    using System.Collections.Generic;
+    int EventMetadataTableIndex { get; }
 
-    public interface IEventTraceOperand
-    {
-        int EventMetadataTableIndex { get; }
+    EventMetadata Metadata { get; }
 
-        EventMetadata Metadata { get; }
-
-        IEnumerable<IEventTracePropertyOperand> EventPropertyOperands { get; }
-    }
+    IEnumerable<IEventTracePropertyOperand> EventPropertyOperands { get; }
 }

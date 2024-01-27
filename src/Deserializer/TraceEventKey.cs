@@ -1,7 +1,5 @@
-﻿namespace ETWDeserializer
+﻿namespace Nefarius.Utilities.ETW.Deserializer
 {
-    using System;
-
     internal struct TraceEventKey : IEquatable<TraceEventKey>
     {
         private readonly Guid providerId;

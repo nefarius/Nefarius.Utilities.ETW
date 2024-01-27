@@ -1,19 +1,16 @@
-﻿namespace ETWDeserializer
+﻿namespace Nefarius.Utilities.ETW.Deserializer;
+
+public sealed class MapInformation
 {
-    using System.Collections.Generic;
+    private readonly Dictionary<uint, string> mapOfValues;
 
-    public sealed class MapInformation
+    internal MapInformation(string name, Dictionary<uint, string> mapOfValues)
     {
-        private readonly Dictionary<uint, string> mapOfValues;
-
-        internal MapInformation(string name, Dictionary<uint, string> mapOfValues)
-        {
-            this.Name = name;
-            this.mapOfValues = mapOfValues;
-        }
-
-        public string Name { get; private set; }
-
-        public string this[uint i] => this.mapOfValues[i];
+        Name = name;
+        this.mapOfValues = mapOfValues;
     }
+
+    public string Name { get; private set; }
+
+    public string this[uint i] => mapOfValues[i];
 }

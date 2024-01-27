@@ -1,7 +1,5 @@
-﻿namespace ETWDeserializer
+﻿namespace Nefarius.Utilities.ETW.Deserializer
 {
-    using System;
-
     public sealed class EventMetadata
     {
         internal EventMetadata(Guid providerGuid, ushort id, byte version, string name, PropertyMetadata[] properties)

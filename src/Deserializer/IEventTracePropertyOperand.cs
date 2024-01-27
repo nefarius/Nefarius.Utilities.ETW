@@ -1,33 +1,30 @@
-namespace ETWDeserializer
+namespace Nefarius.Utilities.ETW.Deserializer;
+
+public interface IEventTracePropertyOperand
 {
-    using System.Collections.Generic;
+    PropertyMetadata Metadata { get; }
 
-    public interface IEventTracePropertyOperand
-    {
-        PropertyMetadata Metadata { get; }
+    int PropertyIndex { get; }
 
-        int PropertyIndex { get; }
+    bool IsVariableArray { get; }
 
-        bool IsVariableArray { get; }
+    IEventTracePropertyOperand VariableArraySize { get; }
 
-        IEventTracePropertyOperand VariableArraySize { get; }
+    bool IsVariableLength { get; }
 
-        bool IsVariableLength { get; }
+    IEventTracePropertyOperand VariableLengthSize { get; }
 
-        IEventTracePropertyOperand VariableLengthSize { get; }
+    bool IsFixedArray { get; }
 
-        bool IsFixedArray { get; }
+    int FixedArraySize { get; }
 
-        int FixedArraySize { get; }
+    bool IsFixedLength { get; }
 
-        bool IsFixedLength { get; }
+    int FixedLengthSize { get; }
 
-        int FixedLengthSize { get; }
+    bool IsWbemXMLFragment { get; }
 
-        bool IsWbemXMLFragment { get; }
+    bool IsReferencedByOtherProperties { get; }
 
-        bool IsReferencedByOtherProperties { get; }
-
-        List<IEventTracePropertyOperand> Children { get; }
-    }
+    List<IEventTracePropertyOperand> Children { get; }
 }

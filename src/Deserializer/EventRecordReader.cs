@@ -1,10 +1,9 @@
-﻿namespace ETWDeserializer
-{
-    using System;
-    using System.Runtime.CompilerServices;
-    using System.Runtime.InteropServices;
-    using System.Security.Principal;
+﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Security.Principal;
 
+namespace Nefarius.Utilities.ETW.Deserializer
+{
     public struct EventRecordReader
     {
         private readonly unsafe EVENT_RECORD* eventRecord;

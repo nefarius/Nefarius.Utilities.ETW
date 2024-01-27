@@ -1,8 +1,7 @@
-﻿namespace ETWDeserializer
+﻿using System.Runtime.InteropServices;
+
+namespace Nefarius.Utilities.ETW.Deserializer
 {
-    using System;
-    using System.Runtime.InteropServices;
-    using System.Security;
     using ULONG = System.UInt32;
     using ULONGLONG = System.UInt64;
     using USHORT = System.UInt16;

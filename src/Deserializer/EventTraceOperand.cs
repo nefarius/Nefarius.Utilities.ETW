@@ -1,7 +1,5 @@
-﻿namespace ETWDeserializer
+﻿namespace Nefarius.Utilities.ETW.Deserializer
 {
-    using System.Collections.Generic;
-
     internal sealed class EventTraceOperand : IEventTraceOperand
     {
         internal EventTraceOperand(EventMetadata metadata, int eventMetadataTableIndex, IEnumerable<IEventTracePropertyOperand> operands)

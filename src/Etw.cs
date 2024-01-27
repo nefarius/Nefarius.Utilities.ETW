@@ -1,6 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using System.Security;
-using ETWDeserializer;
+
+using Nefarius.Utilities.ETW.Deserializer;
 
 namespace Nefarius.Utilities.ETW
 {

@@ -1,69 +1,66 @@
-﻿namespace ETWDeserializer
+﻿namespace Nefarius.Utilities.ETW.Deserializer;
+
+public interface IEtwWriter
 {
-    using System;
+    void WriteEventBegin(EventMetadata metadata, RuntimeEventMetadata runtimeMetadata);
 
-    public interface IEtwWriter
-    {
-        void WriteEventBegin(EventMetadata metadata, RuntimeEventMetadata runtimeMetadata);
+    void WriteEventEnd();
 
-        void WriteEventEnd();
+    void WriteStructBegin();
 
-        void WriteStructBegin();
+    void WriteStructEnd();
 
-        void WriteStructEnd();
+    void WritePropertyBegin(PropertyMetadata metadata);
 
-        void WritePropertyBegin(PropertyMetadata metadata);
+    void WritePropertyEnd();
 
-        void WritePropertyEnd();
+    void WriteArrayBegin();
 
-        void WriteArrayBegin();
+    void WriteArrayEnd();
 
-        void WriteArrayEnd();
+    void WriteAnsiString(string value);
 
-        void WriteAnsiString(string value);
+    void WriteUnicodeString(string value);
 
-        void WriteUnicodeString(string value);
+    void WriteInt8(sbyte value);
 
-        void WriteInt8(sbyte value);
+    void WriteUInt8(byte value);
 
-        void WriteUInt8(byte value);
+    void WriteInt16(short value);
 
-        void WriteInt16(short value);
+    void WriteUInt16(ushort value);
 
-        void WriteUInt16(ushort value);
+    void WriteInt32(int value);
 
-        void WriteInt32(int value);
+    void WriteUInt32(uint value);
 
-        void WriteUInt32(uint value);
+    void WriteInt64(long value);
 
-        void WriteInt64(long value);
+    void WriteUInt64(ulong value);
 
-        void WriteUInt64(ulong value);
+    void WriteFloat(float value);
 
-        void WriteFloat(float value);
+    void WriteDouble(double value);
 
-        void WriteDouble(double value);
+    void WriteBoolean(bool value);
 
-        void WriteBoolean(bool value);
+    void WriteBinary(byte[] value);
 
-        void WriteBinary(byte[] value);
+    void WriteGuid(Guid value);
 
-        void WriteGuid(Guid value);
+    void WritePointer(ulong value);
 
-        void WritePointer(ulong value);
+    void WriteFileTime(DateTime value);
 
-        void WriteFileTime(DateTime value);
+    void WriteSystemTime(DateTime value);
 
-        void WriteSystemTime(DateTime value);
+    void WriteSid(string value);
 
-        void WriteSid(string value);
+    void WriteUnicodeChar(char value);
 
-        void WriteUnicodeChar(char value);
+    void WriteAnsiChar(char value);
 
-        void WriteAnsiChar(char value);
+    void WriteHexDump(byte[] value);
 
-        void WriteHexDump(byte[] value);
-
-        void WriteWbemSid(string value);
-    }
+    void WriteWbemSid(string value);
 }

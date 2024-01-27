@@ -1,294 +1,311 @@
-﻿namespace ETWDeserializer
+﻿using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+
+using Nefarius.Utilities.ETW.Deserializer.CustomParsers;
+
+namespace Nefarius.Utilities.ETW.Deserializer;
+
+public sealed class Deserializer<T>
+    where T : IEtwWriter
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq.Expressions;
-    using System.Runtime.CompilerServices;
-    using System.Runtime.InteropServices;
-    using System.Text.RegularExpressions;
+    private static readonly Type ReaderType = typeof(EventRecordReader);
 
-    using CustomParsers;
+    private static readonly Type EventMetadataArrayType = typeof(EventMetadata[]);
 
-    public sealed class Deserializer<T>
-        where T : IEtwWriter
+    private static readonly Type RuntimeMetadataType = typeof(RuntimeEventMetadata);
+
+    private static readonly Regex InvalidCharacters = new("[:\\/*?\"<>|\"-]");
+
+    private static readonly Type WriterType = typeof(T);
+
+    private readonly Func<Guid, Stream?>? _customProviderManifest;
+
+    private readonly Dictionary<TraceEventKey, Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata>>
+        actionTable = new();
+
+    private readonly List<EventMetadata> eventMetadataTableList = new();
+
+    private readonly Dictionary<Guid, EventSourceManifest> eventSourceManifestCache = new();
+
+    private EventMetadata[] eventMetadataTable;
+
+    private T writer;
+
+    public Deserializer(T writer)
     {
-        private static readonly Type ReaderType = typeof(EventRecordReader);
+        this.writer = writer;
+    }
 
-        private static readonly Type EventMetadataArrayType = typeof(EventMetadata[]);
+    public Deserializer(T writer, Func<Guid, Stream?>? customProviderManifest) : this(writer)
+    {
+        _customProviderManifest = customProviderManifest;
+    }
 
-        private static readonly Type RuntimeMetadataType = typeof(RuntimeEventMetadata);
+    public void ResetWriter(T writer)
+    {
+        this.writer = writer;
+    }
 
-        private static readonly Regex InvalidCharacters = new Regex("[:\\/*?\"<>|\"-]");
+    [AllowReversePInvokeCalls]
+    public bool BufferCallback(IntPtr logfile)
+    {
+        return true;
+    }
 
-        private static readonly Type WriterType = typeof(T);
+    [AllowReversePInvokeCalls]
+    public unsafe void Deserialize(EVENT_RECORD* eventRecord)
+    {
+        eventRecord->UserDataFixed = eventRecord->UserData;
+        EventRecordReader eventRecordReader = new EventRecordReader(eventRecord);
+        RuntimeEventMetadata runtimeMetadata = new RuntimeEventMetadata(eventRecord);
 
-        private readonly Dictionary<TraceEventKey, Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata>> actionTable = new Dictionary<TraceEventKey, Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata>>();
+        TraceEventKey key = new TraceEventKey(
+            eventRecord->ProviderId,
+            (eventRecord->Flags & Etw.EVENT_HEADER_FLAG_CLASSIC_HEADER) != 0 ? eventRecord->Opcode : eventRecord->Id,
+            eventRecord->Version);
 
-        private readonly Dictionary<Guid, EventSourceManifest> eventSourceManifestCache = new Dictionary<Guid, EventSourceManifest>();
-
-        private readonly List<EventMetadata> eventMetadataTableList = new List<EventMetadata>();
-
-        private T writer;
-
-        private EventMetadata[] eventMetadataTable;
-
-        private readonly Func<Guid, Stream?>? _customProviderManifest;
-
-        public Deserializer(T writer)
+        Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata> action;
+        if (actionTable.TryGetValue(key, out action))
         {
-            this.writer = writer;
+            action(eventRecordReader, writer, eventMetadataTable, runtimeMetadata);
+        }
+        else
+        {
+            SlowLookup(eventRecord, eventRecordReader, runtimeMetadata, ref key);
+        }
+    }
+
+    private static unsafe IEventTraceOperand? BuildOperandFromXml(EVENT_RECORD* eventRecord,
+        Dictionary<Guid, EventSourceManifest> cache, EventRecordReader eventRecordReader, int metadataTableIndex)
+    {
+        Guid providerGuid = eventRecord->ProviderId;
+        if (!cache.TryGetValue(providerGuid, out EventSourceManifest? manifest))
+        {
+            manifest = CreateEventSourceManifest(providerGuid, cache, eventRecord, eventRecordReader);
         }
 
-        public Deserializer(T writer, Func<Guid, Stream?>? customProviderManifest) : this(writer)
+        if (manifest == null)
         {
-            _customProviderManifest = customProviderManifest;
+            return null;
         }
 
-        public void ResetWriter(T writer)
+        return !manifest.IsComplete
+            ? null
+            : EventTraceOperandBuilder.Build(manifest.Schema, eventRecord->Id, metadataTableIndex);
+    }
+
+    private static unsafe IEventTraceOperand BuildOperandFromTdh(EVENT_RECORD* eventRecord, int metadataTableIndex)
+    {
+        uint bufferSize;
+        byte* buffer = (byte*)0;
+
+        // Not Found
+        if (Tdh.GetEventInformation(eventRecord, 0, IntPtr.Zero, buffer, out bufferSize) == 1168)
         {
-            this.writer = writer;
+            return null;
         }
 
-        [AllowReversePInvokeCalls]
-        public bool BufferCallback(IntPtr logfile)
+        buffer = (byte*)Marshal.AllocHGlobal((int)bufferSize);
+        Tdh.GetEventInformation(eventRecord, 0, IntPtr.Zero, buffer, out bufferSize);
+
+        TRACE_EVENT_INFO* traceEventInfo = (TRACE_EVENT_INFO*)buffer;
+        IEventTraceOperand traceEventOperand = EventTraceOperandBuilder.Build(traceEventInfo, metadataTableIndex);
+
+        Marshal.FreeHGlobal((IntPtr)buffer);
+
+        return traceEventOperand;
+    }
+
+    private static unsafe IEventTraceOperand BuildUnknownOperand(EVENT_RECORD* eventRecord, int metadataTableIndex)
+    {
+        return new UnknownOperandBuilder(eventRecord->ProviderId, metadataTableIndex);
+    }
+
+    private static unsafe EventSourceManifest? CreateEventSourceManifest(Guid providerGuid,
+        Dictionary<Guid, EventSourceManifest> cache, EVENT_RECORD* eventRecord, EventRecordReader eventRecordReader)
+    {
+        // EventSource Schema events have the following signature:
+        // { byte Format, byte MajorVersion, byte MinorVersion, byte Magic, ushort TotalChunks, ushort ChunkNumber } == 8 bytes, followed by the XML schema
+        if (eventRecord->UserDataLength <= 8)
         {
-            return true;
+            return null;
         }
 
-        [AllowReversePInvokeCalls]
-        public unsafe void Deserialize(EVENT_RECORD* eventRecord)
+        byte format = eventRecordReader.ReadUInt8();
+        byte majorVersion = eventRecordReader.ReadUInt8();
+        byte minorVersion = eventRecordReader.ReadUInt8();
+        byte magic = eventRecordReader.ReadUInt8();
+        ushort totalChunks = eventRecordReader.ReadUInt16();
+        ushort chunkNumber = eventRecordReader.ReadUInt16();
+
+        if (!(format == 1 && magic == 0x5B))
         {
-            eventRecord->UserDataFixed = eventRecord->UserData;
-            var eventRecordReader = new EventRecordReader(eventRecord);
-            var runtimeMetadata = new RuntimeEventMetadata(eventRecord);
+            return null;
+        }
 
-            var key = new TraceEventKey(
-                eventRecord->ProviderId,
-                (eventRecord->Flags & Etw.EVENT_HEADER_FLAG_CLASSIC_HEADER) != 0 ? eventRecord->Opcode : eventRecord->Id,
-                eventRecord->Version);
+        EventSourceManifest? manifest;
+        if (!cache.TryGetValue(providerGuid, out manifest))
+        {
+            manifest = new EventSourceManifest(eventRecord->ProviderId, format, majorVersion, minorVersion, magic,
+                totalChunks);
+            cache.Add(providerGuid, manifest);
+        }
 
-            Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata> action;
-            if (this.actionTable.TryGetValue(key, out action))
+        // if manifest is complete, maybe the data changed? ideally version should have changed
+        // this is essentially a reset
+        if (manifest.IsComplete && chunkNumber == 0)
+        {
+            cache[providerGuid] = manifest;
+        }
+
+        string schemaChunk = eventRecordReader.ReadAnsiString();
+        manifest.AddChunk(schemaChunk);
+
+        return manifest;
+    }
+
+    private unsafe IEventTraceOperand BuildOperand(EVENT_RECORD* eventRecord, EventRecordReader eventRecordReader,
+        int metadataTableIndex, ref bool isSpecialKernelTraceMetaDataEvent)
+    {
+        IEventTraceOperand? operand;
+        Stream? customProvider = _customProviderManifest?.Invoke(eventRecord->ProviderId);
+
+        if (customProvider is not null)
+        {
+            if (!eventSourceManifestCache.TryGetValue(eventRecord->ProviderId, out EventSourceManifest? manifest))
             {
-                action(eventRecordReader, this.writer, this.eventMetadataTable, runtimeMetadata);
+                manifest = new EventSourceManifest(eventRecord->ProviderId, customProvider);
+                eventSourceManifestCache.Add(eventRecord->ProviderId, manifest);
             }
-            else
+
+            operand = BuildOperandFromXml(eventRecord, eventSourceManifestCache, eventRecordReader, metadataTableIndex);
+
+            if (operand is not null)
             {
-                this.SlowLookup(eventRecord, eventRecordReader, runtimeMetadata, ref key);
+                return operand;
             }
         }
 
-        private static unsafe IEventTraceOperand? BuildOperandFromXml(EVENT_RECORD* eventRecord, Dictionary<Guid, EventSourceManifest> cache, EventRecordReader eventRecordReader, int metadataTableIndex)
+        if (eventRecord->ProviderId == CustomParserGuids.KernelTraceControlMetaDataGuid && eventRecord->Opcode == 32)
         {
-            Guid providerGuid = eventRecord->ProviderId;
-            if (!cache.TryGetValue(providerGuid, out EventSourceManifest? manifest))
-            {
-                manifest = CreateEventSourceManifest(providerGuid, cache, eventRecord, eventRecordReader);
-            }
-
-            if (manifest == null)
-            {
-                return null;
-            }
-
-            return !manifest.IsComplete ? null : EventTraceOperandBuilder.Build(manifest.Schema, eventRecord->Id, metadataTableIndex);
+            isSpecialKernelTraceMetaDataEvent = true;
+            return EventTraceOperandBuilder.Build((TRACE_EVENT_INFO*)eventRecord->UserData, metadataTableIndex);
         }
 
-        private static unsafe IEventTraceOperand BuildOperandFromTdh(EVENT_RECORD* eventRecord, int metadataTableIndex)
+
+        if ((operand = BuildOperandFromTdh(eventRecord, metadataTableIndex)) == null)
         {
-            uint bufferSize;
-            byte* buffer = (byte*)0;
-
-            // Not Found
-            if (Tdh.GetEventInformation(eventRecord, 0, IntPtr.Zero, buffer, out bufferSize) == 1168)
-            {
-                return null;
-            }
-
-            buffer = (byte*)Marshal.AllocHGlobal((int)bufferSize);
-            Tdh.GetEventInformation(eventRecord, 0, IntPtr.Zero, buffer, out bufferSize);
-
-            var traceEventInfo = (TRACE_EVENT_INFO*)buffer;
-            IEventTraceOperand traceEventOperand = EventTraceOperandBuilder.Build(traceEventInfo, metadataTableIndex);
-
-            Marshal.FreeHGlobal((IntPtr)buffer);
-
-            return traceEventOperand;
+            operand = BuildOperandFromXml(eventRecord, eventSourceManifestCache, eventRecordReader, metadataTableIndex);
         }
 
-        private static unsafe IEventTraceOperand BuildUnknownOperand(EVENT_RECORD* eventRecord, int metadataTableIndex)
+        if (operand == null && eventRecord->Id != 65534) // don't show manifest events
         {
-            return new UnknownOperandBuilder(eventRecord->ProviderId, metadataTableIndex);
+            operand = BuildUnknownOperand(eventRecord, metadataTableIndex);
         }
 
-        private static unsafe EventSourceManifest? CreateEventSourceManifest(Guid providerGuid, Dictionary<Guid, EventSourceManifest> cache, EVENT_RECORD* eventRecord, EventRecordReader eventRecordReader)
+        return operand!;
+    }
+
+    /// <summary>
+    ///     Here happens the decision making on which parser to use for a given provider.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private unsafe bool CustomParserLookup(EVENT_RECORD* eventRecord, ref TraceEventKey key)
+    {
+        bool success;
+
+        // events added by KernelTraceControl.dll (i.e. Microsoft tools like WPR and PerfView)
+        if (eventRecord->ProviderId == CustomParserGuids.KernelTraceControlImageIdGuid)
         {
-            // EventSource Schema events have the following signature:
-            // { byte Format, byte MajorVersion, byte MinorVersion, byte Magic, ushort TotalChunks, ushort ChunkNumber } == 8 bytes, followed by the XML schema
-            if (eventRecord->UserDataLength <= 8)
+            switch (eventRecord->Opcode)
             {
-                return null;
-            }
-
-            var format = eventRecordReader.ReadUInt8();
-            var majorVersion = eventRecordReader.ReadUInt8();
-            var minorVersion = eventRecordReader.ReadUInt8();
-            var magic = eventRecordReader.ReadUInt8();
-            ushort totalChunks = eventRecordReader.ReadUInt16();
-            ushort chunkNumber = eventRecordReader.ReadUInt16();
-
-            if (!(format == 1 && magic == 0x5B))
-            {
-                return null;
-            }
-
-            EventSourceManifest? manifest;
-            if (!cache.TryGetValue(providerGuid, out manifest))
-            {
-                manifest = new EventSourceManifest(eventRecord->ProviderId, format, majorVersion, minorVersion, magic, totalChunks);
-                cache.Add(providerGuid, manifest);
-            }
-
-            // if manifest is complete, maybe the data changed? ideally version should have changed
-            // this is essentially a reset
-            if (manifest.IsComplete && chunkNumber == 0)
-            {
-                cache[providerGuid] = manifest;
-            }
-
-            string schemaChunk = eventRecordReader.ReadAnsiString();
-            manifest.AddChunk(schemaChunk);
-
-            return manifest;
-        }
-
-        private unsafe IEventTraceOperand BuildOperand(EVENT_RECORD* eventRecord, EventRecordReader eventRecordReader, int metadataTableIndex, ref bool isSpecialKernelTraceMetaDataEvent)
-        {
-            IEventTraceOperand? operand;
-            var customProvider = _customProviderManifest?.Invoke(eventRecord->ProviderId);
-
-            if (customProvider is not null)
-            {
-                if (!eventSourceManifestCache.TryGetValue(eventRecord->ProviderId, out EventSourceManifest? manifest))
-                {
-                    manifest = new EventSourceManifest(eventRecord->ProviderId, customProvider);
-                    eventSourceManifestCache.Add(eventRecord->ProviderId, manifest);
-                }
-
-                operand = BuildOperandFromXml(eventRecord, this.eventSourceManifestCache, eventRecordReader, metadataTableIndex);
-
-                if (operand is not null)
-                    return operand;
-            }
-
-            if (eventRecord->ProviderId == CustomParserGuids.KernelTraceControlMetaDataGuid && eventRecord->Opcode == 32)
-            {
-                isSpecialKernelTraceMetaDataEvent = true;
-                return EventTraceOperandBuilder.Build((TRACE_EVENT_INFO*)eventRecord->UserData, metadataTableIndex);
-            }
-
-            
-            if ((operand = BuildOperandFromTdh(eventRecord, metadataTableIndex)) == null)
-            {
-                operand = BuildOperandFromXml(eventRecord, this.eventSourceManifestCache, eventRecordReader, metadataTableIndex);
-            }
-
-            if (operand == null && eventRecord->Id != 65534) // don't show manifest events
-            {
-                operand = BuildUnknownOperand(eventRecord, metadataTableIndex);
-            }
-
-            return operand!;
-        }
-
-        /// <summary>
-        ///     Here happens the decision making on which parser to use for a given provider.
-        /// </summary>
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private unsafe bool CustomParserLookup(EVENT_RECORD* eventRecord, ref TraceEventKey key)
-        {
-            bool success;
-
-            // events added by KernelTraceControl.dll (i.e. Microsoft tools like WPR and PerfView)
-            if (eventRecord->ProviderId == CustomParserGuids.KernelTraceControlImageIdGuid)
-            {
-                switch (eventRecord->Opcode)
-                {
-                    case 0:
-                        this.actionTable.Add(key, new KernelTraceControlImageIdParser().Parse);
-                        success = true;
-                        break;
-                    case 36:
-                        this.actionTable.Add(key, new KernelTraceControlDbgIdParser().Parse);
-                        success = true;
-                        break;
-                    case 64:
-                        this.actionTable.Add(key, new KernelTraceControlImageIdFileVersionParser().Parse);
-                        success = true;
-                        break;
-                    default:
-                        success = false;
-                        break;
-                }
-            }
-
-            // events by the Kernel Stack Walker (need this because the MOF events always says 32 stacks, but in reality there can be fewer or more
-            else if (eventRecord->ProviderId == CustomParserGuids.KernelStackWalkGuid)
-            {
-                if (eventRecord->Opcode == 32)
-                {
-                    this.actionTable.Add(key, new KernelStackWalkEventParser().Parse);
+                case 0:
+                    actionTable.Add(key, new KernelTraceControlImageIdParser().Parse);
                     success = true;
-                }
-                else
-                {
+                    break;
+                case 36:
+                    actionTable.Add(key, new KernelTraceControlDbgIdParser().Parse);
+                    success = true;
+                    break;
+                case 64:
+                    actionTable.Add(key, new KernelTraceControlImageIdFileVersionParser().Parse);
+                    success = true;
+                    break;
+                default:
                     success = false;
-                }
+                    break;
+            }
+        }
+
+        // events by the Kernel Stack Walker (need this because the MOF events always says 32 stacks, but in reality there can be fewer or more
+        else if (eventRecord->ProviderId == CustomParserGuids.KernelStackWalkGuid)
+        {
+            if (eventRecord->Opcode == 32)
+            {
+                actionTable.Add(key, new KernelStackWalkEventParser().Parse);
+                success = true;
             }
             else
             {
                 success = false;
             }
-
-            return success;
+        }
+        else
+        {
+            success = false;
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private unsafe void SlowLookup(EVENT_RECORD* eventRecord, EventRecordReader eventRecordReader, RuntimeEventMetadata runtimeMetadata, ref TraceEventKey key)
+        return success;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private unsafe void SlowLookup(EVENT_RECORD* eventRecord, EventRecordReader eventRecordReader,
+        RuntimeEventMetadata runtimeMetadata, ref TraceEventKey key)
+    {
+        if (CustomParserLookup(eventRecord, ref key))
         {
-            if (this.CustomParserLookup(eventRecord, ref key))
+            return;
+        }
+
+        bool isSpecialKernelTraceMetaDataEvent = false;
+        IEventTraceOperand? operand = BuildOperand(eventRecord, eventRecordReader, eventMetadataTableList.Count,
+            ref isSpecialKernelTraceMetaDataEvent);
+        if (operand != null)
+        {
+            eventMetadataTableList.Add(operand.Metadata);
+            eventMetadataTable = eventMetadataTableList.ToArray(); // TODO: Need to improve this
+
+            ParameterExpression eventRecordReaderParam = Expression.Parameter(ReaderType);
+            ParameterExpression eventWriterParam = Expression.Parameter(WriterType);
+            ParameterExpression eventMetadataTableParam = Expression.Parameter(EventMetadataArrayType);
+            ParameterExpression runtimeMetadataParam = Expression.Parameter(RuntimeMetadataType);
+
+            ParameterExpression[] parameters = new[]
             {
-                return;
+                eventRecordReaderParam, eventWriterParam, eventMetadataTableParam, runtimeMetadataParam
+            };
+            string name = Regex.Replace(InvalidCharacters.Replace(operand.Metadata.Name, "_"), @"\s+", "_");
+            Expression body = EventTraceOperandExpressionBuilder.Build(operand, eventRecordReaderParam,
+                eventWriterParam, eventMetadataTableParam, runtimeMetadataParam);
+            LambdaExpression expression =
+                Expression.Lambda<Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata>>(body,
+                    "Read_" + name, parameters);
+            Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata> action =
+                (Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata>)expression.Compile(false);
+
+            if (isSpecialKernelTraceMetaDataEvent)
+            {
+                TRACE_EVENT_INFO* e = (TRACE_EVENT_INFO*)eventRecord->UserDataFixed;
+                actionTable.AddOrUpdate(
+                    new TraceEventKey(e->ProviderGuid, e->EventGuid == Guid.Empty ? e->Id : e->Opcode, e->Version),
+                    action);
             }
-
-            bool isSpecialKernelTraceMetaDataEvent = false;
-            var operand = this.BuildOperand(eventRecord, eventRecordReader, this.eventMetadataTableList.Count, ref isSpecialKernelTraceMetaDataEvent);
-            if (operand != null)
+            else
             {
-                this.eventMetadataTableList.Add(operand.Metadata);
-                this.eventMetadataTable = this.eventMetadataTableList.ToArray(); // TODO: Need to improve this
-
-                var eventRecordReaderParam = Expression.Parameter(ReaderType);
-                var eventWriterParam = Expression.Parameter(WriterType);
-                var eventMetadataTableParam = Expression.Parameter(EventMetadataArrayType);
-                var runtimeMetadataParam = Expression.Parameter(RuntimeMetadataType);
-
-                var parameters = new[] { eventRecordReaderParam, eventWriterParam, eventMetadataTableParam, runtimeMetadataParam };
-                var name = Regex.Replace(InvalidCharacters.Replace(operand.Metadata.Name, "_"), @"\s+", "_");
-                var body = EventTraceOperandExpressionBuilder.Build(operand, eventRecordReaderParam, eventWriterParam, eventMetadataTableParam, runtimeMetadataParam);
-                LambdaExpression expression = Expression.Lambda<Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata>>(body, "Read_" + name, parameters);
-                var action = (Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata>)expression.Compile(false);
-
-                if (isSpecialKernelTraceMetaDataEvent)
-                {
-                    var e = (TRACE_EVENT_INFO*)eventRecord->UserDataFixed;
-                    this.actionTable.AddOrUpdate(new TraceEventKey(e->ProviderGuid, e->EventGuid == Guid.Empty ? e->Id : e->Opcode, e->Version), action);
-                }
-                else
-                {
-                    this.actionTable.Add(key, action);
-                    action(eventRecordReader, this.writer, this.eventMetadataTable, runtimeMetadata);
-                }
+                actionTable.Add(key, action);
+                action(eventRecordReader, writer, eventMetadataTable, runtimeMetadata);
             }
         }
     }

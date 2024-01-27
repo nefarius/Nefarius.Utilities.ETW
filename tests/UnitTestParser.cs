@@ -29,9 +29,9 @@ public class Tests
 
         ms.Seek(0, SeekOrigin.Begin);
 
-        var sr = new StreamReader(ms);
+        StreamReader sr = new StreamReader(ms);
 
-        var json = sr.ReadToEnd();
+        string json = sr.ReadToEnd();
 
         Assert.Pass();
     }

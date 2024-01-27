@@ -1,12 +1,9 @@
-﻿using Microsoft.Xml.Serialization.GeneratedAssembly;
+﻿using System.Text;
 
-namespace ETWDeserializer
+using Microsoft.Xml.Serialization.GeneratedAssembly;
+
+namespace Nefarius.Utilities.ETW.Deserializer
 {
-    using System;
-    using System.IO;
-    using System.Text;
-    using System.Xml.Serialization;
-
     internal sealed class EventSourceManifest
     {
         private readonly StringBuilder chunkBuilder = new StringBuilder();
