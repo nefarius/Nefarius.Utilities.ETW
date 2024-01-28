@@ -333,7 +333,7 @@ namespace Nefarius.Utilities.ETW.Deserializer
         TDH_OUTTYPE_TID,
 
         /// <summary>
-        ///     A signed 16-bit integer that represents an IP address port. Pass the value to the ntohs function and format the
+        ///     A signed 16-bit integer that represents an IP address port. Pass the value to the <c>ntohs</c> function and format the
         ///     result as a decimal integer.
         /// </summary>
         TDH_OUTTYPE_PORT,
