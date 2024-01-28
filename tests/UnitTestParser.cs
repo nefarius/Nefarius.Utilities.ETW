@@ -31,6 +31,7 @@ public class Tests
                             return File.OpenRead(
                                 @"D:\Development\git.nefarius.at\ViGEm Framework\library\VPadRuntimeETW.man");
                         case "AFEBAD70-D5DB-4A74-BDA2-764D2A875AAF":
+                            // this should never hit since WPP doesn't use a manifest
                             throw new NotImplementedException();
                         default:
                             return null;
