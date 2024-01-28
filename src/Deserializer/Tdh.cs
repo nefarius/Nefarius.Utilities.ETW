@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 // ReSharper disable InconsistentNaming
+// ReSharper disable RedundantNameQualifier
 
 namespace Nefarius.Utilities.ETW.Deserializer
 {
@@ -24,6 +25,7 @@ namespace Nefarius.Utilities.ETW.Deserializer
     }
 
     [Flags]
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     internal enum MAP_FLAGS
     {
         EVENTMAP_INFO_FLAG_MANIFEST_VALUEMAP = 0x1,
@@ -35,6 +37,7 @@ namespace Nefarius.Utilities.ETW.Deserializer
         EVENTMAP_INFO_FLAG_WBEM_NO_MAP = 0x40
     }
 
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     internal enum MAP_VALUETYPE
     {
         EVENTMAP_ENTRY_VALUETYPE_ULONG,
@@ -63,7 +66,10 @@ namespace Nefarius.Utilities.ETW.Deserializer
         public EVENT_MAP_ENTRY* MapEntryArray;
     }
 
-    // Intypes and outtypes are defined in winmeta.xml.
+    /// <summary>
+    ///     The following table lists values defined in the Winmeta.xml file.
+    /// </summary>
+    /// <remarks>https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-inputtype-complextype#remarks</remarks>
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public enum TDH_IN_TYPE
@@ -103,6 +109,10 @@ namespace Nefarius.Utilities.ETW.Deserializer
         TDH_INTYPE_WBEMSID
     }
 
+    /// <summary>
+    ///     The following lists the recognized output types that you can specify in your manifest. 
+    /// </summary>
+    /// <remarks>https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-outputtype-complextype#remarks</remarks>
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public enum TDH_OUT_TYPE
