@@ -1,6 +1,4 @@
-<img src="assets/NSS-128x128.png" align="right" />
-
-# Nefarius.Utilities.ETW
+# <img src="assets/NSS-128x128.png" align="left" />Nefarius.Utilities.ETW
 
 ETW2JSON is a tool that converts ETW Log Files (.ETL) to JSON using the Newtonsoft.Json library. It can be used as a stand-alone command line tool that will take as input locations of ETL files and an output path, or it can take your implementation of Newtonsoft.Json's ``JsonWriter`` class.
 
