@@ -166,7 +166,7 @@ public sealed class Deserializer<T>
         return manifest;
     }
 
-    private unsafe IEventTraceOperand BuildOperand(EVENT_RECORD* eventRecord, EventRecordReader eventRecordReader,
+    private unsafe IEventTraceOperand? BuildOperand(EVENT_RECORD* eventRecord, EventRecordReader eventRecordReader,
         int metadataTableIndex, ref bool isSpecialKernelTraceMetaDataEvent)
     {
         IEventTraceOperand? operand;
@@ -205,7 +205,7 @@ public sealed class Deserializer<T>
             operand = BuildUnknownOperand(eventRecord, metadataTableIndex);
         }
 
-        return operand!;
+        return operand;
     }
 
     /// <summary>
@@ -272,41 +272,43 @@ public sealed class Deserializer<T>
         bool isSpecialKernelTraceMetaDataEvent = false;
         IEventTraceOperand? operand = BuildOperand(eventRecord, eventRecordReader, eventMetadataTableList.Count,
             ref isSpecialKernelTraceMetaDataEvent);
-        if (operand != null)
+        if (operand == null)
         {
-            eventMetadataTableList.Add(operand.Metadata);
-            eventMetadataTable = eventMetadataTableList.ToArray(); // TODO: Need to improve this
+            return;
+        }
 
-            ParameterExpression eventRecordReaderParam = Expression.Parameter(ReaderType);
-            ParameterExpression eventWriterParam = Expression.Parameter(WriterType);
-            ParameterExpression eventMetadataTableParam = Expression.Parameter(EventMetadataArrayType);
-            ParameterExpression runtimeMetadataParam = Expression.Parameter(RuntimeMetadataType);
+        eventMetadataTableList.Add(operand.Metadata);
+        eventMetadataTable = eventMetadataTableList.ToArray(); // TODO: Need to improve this
 
-            ParameterExpression[] parameters = new[]
-            {
-                eventRecordReaderParam, eventWriterParam, eventMetadataTableParam, runtimeMetadataParam
-            };
-            string name = Regex.Replace(InvalidCharacters.Replace(operand.Metadata.Name, "_"), @"\s+", "_");
-            Expression body = EventTraceOperandExpressionBuilder.Build(operand, eventRecordReaderParam,
-                eventWriterParam, eventMetadataTableParam, runtimeMetadataParam);
-            LambdaExpression expression =
-                Expression.Lambda<Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata>>(body,
-                    "Read_" + name, parameters);
-            Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata> action =
-                (Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata>)expression.Compile(false);
+        ParameterExpression eventRecordReaderParam = Expression.Parameter(ReaderType);
+        ParameterExpression eventWriterParam = Expression.Parameter(WriterType);
+        ParameterExpression eventMetadataTableParam = Expression.Parameter(EventMetadataArrayType);
+        ParameterExpression runtimeMetadataParam = Expression.Parameter(RuntimeMetadataType);
 
-            if (isSpecialKernelTraceMetaDataEvent)
-            {
-                TRACE_EVENT_INFO* e = (TRACE_EVENT_INFO*)eventRecord->UserDataFixed;
-                actionTable.AddOrUpdate(
-                    new TraceEventKey(e->ProviderGuid, e->EventGuid == Guid.Empty ? e->Id : e->Opcode, e->Version),
-                    action);
-            }
-            else
-            {
-                actionTable.Add(key, action);
-                action(eventRecordReader, writer, eventMetadataTable, runtimeMetadata);
-            }
+        ParameterExpression[] parameters =
+        [
+            eventRecordReaderParam, eventWriterParam, eventMetadataTableParam, runtimeMetadataParam
+        ];
+        string name = Regex.Replace(InvalidCharacters.Replace(operand.Metadata.Name, "_"), @"\s+", "_");
+        Expression body = EventTraceOperandExpressionBuilder.Build(operand, eventRecordReaderParam,
+            eventWriterParam, eventMetadataTableParam, runtimeMetadataParam);
+        LambdaExpression expression =
+            Expression.Lambda<Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata>>(body,
+                "Read_" + name, parameters);
+        Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata> action =
+            (Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata>)expression.Compile(false);
+
+        if (isSpecialKernelTraceMetaDataEvent)
+        {
+            TRACE_EVENT_INFO* e = (TRACE_EVENT_INFO*)eventRecord->UserDataFixed;
+            actionTable.AddOrUpdate(
+                new TraceEventKey(e->ProviderGuid, e->EventGuid == Guid.Empty ? e->Id : e->Opcode, e->Version),
+                action);
+        }
+        else
+        {
+            actionTable.Add(key, action);
+            action(eventRecordReader, writer, eventMetadataTable, runtimeMetadata);
         }
     }
 }
