@@ -14,7 +14,7 @@ public class Tests
     [Test]
     public void Test1()
     {
-        string etwFilePath = @"C:\VPadRuntime.etl";
+        string etwFilePath = @".\traces\VPadRuntime.etl";
 
         MemoryStream ms = new();
         Utf8JsonWriter jsonWriter = new(ms);
@@ -46,6 +46,8 @@ public class Tests
         StreamReader sr = new(ms);
 
         string json = sr.ReadToEnd();
+        
+        File.WriteAllText("output.json", json);
 
         Assert.Pass();
     }

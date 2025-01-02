@@ -27,4 +27,10 @@
     <ProjectReference Include="..\src\Nefarius.Utilities.ETW.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="traces\VPadRuntime.etl">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

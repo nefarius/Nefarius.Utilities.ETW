@@ -342,3 +342,4 @@ ASALocalRun/
 /Installer/Setup Files x64
 /Installer/Vapour.Installer.x64-cache
 *.aip
+/tests/traces/*.etl

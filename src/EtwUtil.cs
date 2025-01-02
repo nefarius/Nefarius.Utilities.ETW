@@ -21,7 +21,7 @@ public static class EtwUtil
     /// <param name="customProviderManifest">Optionally called to load custom manifests for providers.</param>
     /// <returns>True on success, false otherwise.</returns>
     public static bool ConvertToJson(Utf8JsonWriter jsonWriter, IEnumerable<string> inputFiles,
-        Action<string> reportError, Func<Guid, Stream?>? customProviderManifest = default)
+        Action<string> reportError, Func<Guid, Stream?>? customProviderManifest = null)
     {
         List<string> list = inputFiles.ToList();
         Deserializer<EtwJsonWriter> deserializer = new(new EtwJsonWriter(jsonWriter), customProviderManifest);
