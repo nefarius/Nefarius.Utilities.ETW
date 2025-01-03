@@ -11,6 +11,7 @@
         <PackageProjectUrl>https://github.com/nefarius/Nefarius.Utilities.ETW</PackageProjectUrl>
         <Description>Summary. README takes priority over this but nice to have.</Description>
         <NoWarn Condition="'$(CI)' == 'true'">CS1591;CS8618;CS8600;CS8601;CS8603;CS8604;CS8765;CS0219;CS8625;CS8625;CS8714</NoWarn>
+        <NoWarn>CS8765;CS1591</NoWarn>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -20,6 +21,10 @@
     <Import Project="$(SolutionDir)CommonProjectProperties.targets"/>
 
     <ItemGroup>
+        <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.106">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
         <PackageReference Include="MinVer" Version="6.0.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

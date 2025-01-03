@@ -47,14 +47,12 @@ public sealed class Deserializer<T>
     {
         this.writer = writer;
     }
-
-    [AllowReversePInvokeCalls]
+    
     public bool BufferCallback(IntPtr logfile)
     {
         return true;
     }
 
-    [AllowReversePInvokeCalls]
     public unsafe void Deserialize(EVENT_RECORD* eventRecord)
     {
         eventRecord->UserDataFixed = eventRecord->UserData;

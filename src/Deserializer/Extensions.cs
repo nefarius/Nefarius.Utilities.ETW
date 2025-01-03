@@ -5,7 +5,7 @@ namespace Nefarius.Utilities.ETW.Deserializer;
 
 internal static class Extensions
 {
-    public static void AddOrUpdate<K, V>(this Dictionary<K, V> dict, K k, V v)
+    public static void AddOrUpdate<TK, TV>(this Dictionary<TK, TV> dict, TK k, TV v) where TK : notnull
     {
         if (dict.ContainsKey(k))
         {
@@ -70,7 +70,7 @@ internal static class Extensions
         }
     }
 
-    public static Expression SizeOF(this TDH_IN_TYPE tdhType)
+    public static Expression SizeOf(this TDH_IN_TYPE tdhType)
     {
         switch (tdhType)
         {
