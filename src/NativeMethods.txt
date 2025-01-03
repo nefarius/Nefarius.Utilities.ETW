@@ -1,4 +1,6 @@
-﻿TdhLoadManifest
+﻿TdhGetEventInformation
+TdhGetEventMapInformation
+TdhLoadManifest
 TdhLoadManifestFromBinary
 OpenTraceW
 ProcessTrace
