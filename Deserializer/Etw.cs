@@ -11,36 +11,6 @@
     using UCHAR = System.Byte;
 
     [StructLayout(LayoutKind.Sequential)]
-    public unsafe struct EVENT_RECORD
-    {
-        public USHORT Size; // Event Size
-        public USHORT HeaderType; // Header Type
-        public USHORT Flags; // Flags
-        public USHORT EventProperty; // User given event property
-        public ULONG ThreadId; // Thread Id
-        public ULONG ProcessId; // Process Id
-        public LARGE_INTEGER TimeStamp; // Event Timestamp
-        public GUID ProviderId; // Provider Id
-        public USHORT Id;
-        public UCHAR Version;
-        public UCHAR Channel;
-        public UCHAR Level;
-        public UCHAR Opcode;
-        public USHORT Task;
-        public ULONGLONG Keyword;
-        public ULONG64 ProcessorTime; // Processor Clock
-        public GUID ActivityId; // Activity Id
-        public UCHAR ProcessorNumber;
-        public UCHAR Alignment;
-        public USHORT LoggerId;
-        public USHORT ExtendedDataCount; // Number of extended // data items
-        public USHORT UserDataLength; // User data length
-        public EVENT_HEADER_EXTENDED_DATA_ITEM* ExtendedData; // Pointer to an array of extended data items
-        public byte* UserData; // Pointer to user data
-        public byte* UserDataFixed; // NOTE: actual field is "UserContext", but since we don't use it, using it for other purposes :-)
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
     public struct EVENT_HEADER_EXTENDED_DATA_ITEM
     {
         public USHORT Reserved1;
