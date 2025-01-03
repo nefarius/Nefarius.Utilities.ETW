@@ -64,7 +64,7 @@ public sealed class Deserializer<T>
 
         TraceEventKey key = new TraceEventKey(
             eventRecord->EventHeader.ProviderId,
-            (eventRecord->EventHeader.Flags & Etw.EVENT_HEADER_FLAG_CLASSIC_HEADER) != 0 ? eventRecord->EventHeader.EventDescriptor.Opcode : eventRecord->EventHeader.EventDescriptor.Id,
+            (eventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_CLASSIC_HEADER) != 0 ? eventRecord->EventHeader.EventDescriptor.Opcode : eventRecord->EventHeader.EventDescriptor.Id,
             eventRecord->EventHeader.EventDescriptor.Version);
 
         Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata> action;

@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 
+using Windows.Win32;
 using Windows.Win32.System.Diagnostics.Etw;
 
 namespace Nefarius.Utilities.ETW.Deserializer;
@@ -324,8 +325,8 @@ public struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe ulong ReadPointer()
     {
-        if ((_eventRecord->EventHeader.Flags & Etw.EVENT_HEADER_FLAG_32_BIT_HEADER) ==
-            Etw.EVENT_HEADER_FLAG_32_BIT_HEADER)
+        if ((_eventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_32_BIT_HEADER) ==
+            PInvoke.EVENT_HEADER_FLAG_32_BIT_HEADER)
         {
             return ReadUInt32();
         }
@@ -472,8 +473,8 @@ public struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe string ReadWbemSid()
     {
-        int pointerSize = (_eventRecord->EventHeader.Flags & Etw.EVENT_HEADER_FLAG_32_BIT_HEADER) ==
-                          Etw.EVENT_HEADER_FLAG_32_BIT_HEADER
+        int pointerSize = (_eventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_32_BIT_HEADER) ==
+                          PInvoke.EVENT_HEADER_FLAG_32_BIT_HEADER
             ? 4
             : 8;
         IncrementBy(ref _eventRecord->UserData, pointerSize * 2);

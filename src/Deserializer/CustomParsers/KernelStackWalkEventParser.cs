@@ -1,4 +1,6 @@
-﻿namespace Nefarius.Utilities.ETW.Deserializer.CustomParsers
+﻿using Windows.Win32;
+
+namespace Nefarius.Utilities.ETW.Deserializer.CustomParsers
 {
     internal sealed class KernelStackWalkEventParser : ICustomParser
     {
@@ -31,7 +33,7 @@
         {
             writer.WriteEventBegin(EventMetadata, runtimeMetadata);
 
-            int pointerSize = (runtimeMetadata.Flags & Etw.EVENT_HEADER_FLAG_32_BIT_HEADER) != 0 ? 4 : 8;
+            int pointerSize = (runtimeMetadata.Flags & PInvoke.EVENT_HEADER_FLAG_32_BIT_HEADER) != 0 ? 4 : 8;
             int numberOfStacks = (runtimeMetadata.UserDataLength - 16) / pointerSize;
 
             writer.WritePropertyBegin(EventTimeStampMetadata);

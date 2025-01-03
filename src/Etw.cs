@@ -166,11 +166,6 @@ namespace Nefarius.Utilities.ETW
         internal const ULONG EVENT_TRACE_FILE_MODE_NEWFILE = 0x00000008;
         
 
-        internal const USHORT EVENT_HEADER_FLAG_STRING_ONLY = 0x0004;
-        internal const USHORT EVENT_HEADER_FLAG_TRACE_MESSAGE = 0x0008;
-        internal const USHORT EVENT_HEADER_FLAG_32_BIT_HEADER = 0x0020;
-        internal const USHORT EVENT_HEADER_FLAG_64_BIT_HEADER = 0x0040;
-        internal const USHORT EVENT_HEADER_FLAG_CLASSIC_HEADER = 0x0100;
 
         internal const ULONG PROCESS_TRACE_MODE_EVENT_RECORD = 0x10000000;
         internal const ULONG PROCESS_TRACE_MODE_REAL_TIME = 0x00000100;
