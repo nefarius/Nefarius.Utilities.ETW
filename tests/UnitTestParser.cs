@@ -16,8 +16,13 @@ public class Tests
     {
         string etwFilePath = @"C:\Users\Nefarius\Documents\WPR Files\WIN11-DEV-VM.01-03-2025.20-55-29.etl";
 
+        var options = new JsonWriterOptions
+        {
+            Indented = true
+        };
+        
         using MemoryStream ms = new();
-        using Utf8JsonWriter jsonWriter = new(ms);
+        using Utf8JsonWriter jsonWriter = new(ms, options);
 
         if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], error =>
             {
