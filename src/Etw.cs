@@ -1,6 +1,8 @@
 ﻿using System.Runtime.InteropServices;
 using System.Security;
 
+using Windows.Win32.System.Diagnostics.Etw;
+
 using Nefarius.Utilities.ETW.Deserializer;
 
 namespace Nefarius.Utilities.ETW

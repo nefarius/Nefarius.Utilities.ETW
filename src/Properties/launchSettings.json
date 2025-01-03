@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ETW2JSON": {
+      "commandName": "Project",
+      "commandLineArgs": "\"C:\\ProgramData\\ViGEmRuntime.etl\" -output=ViGEmRuntime.json"
+    }
+  }
+}

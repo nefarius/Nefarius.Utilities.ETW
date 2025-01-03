@@ -1,4 +1,6 @@
-﻿namespace Nefarius.Utilities.ETW.Deserializer;
+﻿using Windows.Win32.System.Diagnostics.Etw;
+
+namespace Nefarius.Utilities.ETW.Deserializer;
 
 public struct RuntimeEventMetadata
 {
@@ -15,7 +17,7 @@ public struct RuntimeEventMetadata
         {
             unsafe
             {
-                return eventRecord->Flags;
+                return eventRecord->EventHeader.Flags;
             }
         }
     }
@@ -26,7 +28,7 @@ public struct RuntimeEventMetadata
         {
             unsafe
             {
-                return eventRecord->ThreadId;
+                return eventRecord->EventHeader.ThreadId;
             }
         }
     }
@@ -37,7 +39,7 @@ public struct RuntimeEventMetadata
         {
             unsafe
             {
-                return eventRecord->ProcessId;
+                return eventRecord->EventHeader.ProcessId;
             }
         }
     }
@@ -48,7 +50,7 @@ public struct RuntimeEventMetadata
         {
             unsafe
             {
-                return eventRecord->TimeStamp;
+                return eventRecord->EventHeader.TimeStamp;
             }
         }
     }
@@ -59,7 +61,7 @@ public struct RuntimeEventMetadata
         {
             unsafe
             {
-                return eventRecord->ProviderId;
+                return eventRecord->EventHeader.ProviderId;
             }
         }
     }

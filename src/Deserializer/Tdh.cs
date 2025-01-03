@@ -544,13 +544,4 @@ namespace Nefarius.Utilities.ETW.Deserializer
         public ULONG ArrayIndex; // Array Index.
         public ULONG Reserved;
     }
-
-    internal static class Tdh
-    {
-        [DllImport("tdh.dll", EntryPoint = "TdhGetEventInformation")]
-        internal static extern unsafe int GetEventInformation(EVENT_RECORD* pEvent, uint TdhContextCount, IntPtr pTdhContext, byte* pBuffer, out uint pBufferSize);
-
-        [DllImport("tdh.dll", EntryPoint = "TdhGetEventMapInformation", CharSet = CharSet.Unicode)]
-        internal static extern unsafe int GetEventMapInformation(EVENT_RECORD* pEvent, string pMapName, byte* pBuffer, out uint pBufferSize);
-    }
 }

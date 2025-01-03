@@ -3,6 +3,9 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
+using Windows.Win32;
+using Windows.Win32.System.Diagnostics.Etw;
+
 using Nefarius.Utilities.ETW.Deserializer.CustomParsers;
 
 namespace Nefarius.Utilities.ETW.Deserializer;
@@ -53,7 +56,7 @@ public sealed class Deserializer<T>
         return true;
     }
 
-    public unsafe void Deserialize(EVENT_RECORD* eventRecord)
+    internal unsafe void Deserialize(EVENT_RECORD* eventRecord)
     {
         eventRecord->UserDataFixed = eventRecord->UserData;
         EventRecordReader eventRecordReader = new EventRecordReader(eventRecord);
@@ -100,13 +103,13 @@ public sealed class Deserializer<T>
         byte* buffer = (byte*)0;
 
         // Not Found
-        if (Tdh.GetEventInformation(eventRecord, 0, IntPtr.Zero, buffer, out bufferSize) == 1168)
+        if (PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, out bufferSize) == 1168)
         {
             return null;
         }
 
         buffer = (byte*)Marshal.AllocHGlobal((int)bufferSize);
-        Tdh.GetEventInformation(eventRecord, 0, IntPtr.Zero, buffer, out bufferSize);
+        PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, out bufferSize);
 
         TRACE_EVENT_INFO* traceEventInfo = (TRACE_EVENT_INFO*)buffer;
         IEventTraceOperand traceEventOperand = EventTraceOperandBuilder.Build(traceEventInfo, metadataTableIndex);
@@ -118,7 +121,7 @@ public sealed class Deserializer<T>
 
     private static unsafe IEventTraceOperand BuildUnknownOperand(EVENT_RECORD* eventRecord, int metadataTableIndex)
     {
-        return new UnknownOperandBuilder(eventRecord->ProviderId, metadataTableIndex);
+        return new UnknownOperandBuilder(eventRecord->EventHeader.ProviderId, metadataTableIndex);
     }
 
     private static unsafe EventSourceManifest? CreateEventSourceManifest(Guid providerGuid,
@@ -146,7 +149,7 @@ public sealed class Deserializer<T>
         EventSourceManifest? manifest;
         if (!cache.TryGetValue(providerGuid, out manifest))
         {
-            manifest = new EventSourceManifest(eventRecord->ProviderId, format, majorVersion, minorVersion, magic,
+            manifest = new EventSourceManifest(eventRecord->EventHeader.ProviderId, format, majorVersion, minorVersion, magic,
                 totalChunks);
             cache.Add(providerGuid, manifest);
         }
@@ -168,14 +171,14 @@ public sealed class Deserializer<T>
         int metadataTableIndex, ref bool isSpecialKernelTraceMetaDataEvent)
     {
         IEventTraceOperand? operand;
-        Stream? customProvider = _customProviderManifest?.Invoke(eventRecord->ProviderId);
+        Stream? customProvider = _customProviderManifest?.Invoke(eventRecord->EventHeader.ProviderId);
 
         if (customProvider is not null)
         {
-            if (!eventSourceManifestCache.TryGetValue(eventRecord->ProviderId, out EventSourceManifest? manifest))
+            if (!eventSourceManifestCache.TryGetValue(eventRecord->EventHeader.ProviderId, out EventSourceManifest? manifest))
             {
-                manifest = new EventSourceManifest(eventRecord->ProviderId, customProvider);
-                eventSourceManifestCache.Add(eventRecord->ProviderId, manifest);
+                manifest = new EventSourceManifest(eventRecord->EventHeader.ProviderId, customProvider);
+                eventSourceManifestCache.Add(eventRecord->EventHeader.ProviderId, manifest);
             }
 
             operand = BuildOperandFromXml(eventRecord, eventSourceManifestCache, eventRecordReader, metadataTableIndex);
@@ -186,7 +189,7 @@ public sealed class Deserializer<T>
             }
         }
 
-        if (eventRecord->ProviderId == CustomParserGuids.KernelTraceControlMetaDataGuid && eventRecord->Opcode == 32)
+        if (eventRecord->EventHeader.ProviderId == CustomParserGuids.KernelTraceControlMetaDataGuid && eventRecord->Opcode == 32)
         {
             isSpecialKernelTraceMetaDataEvent = true;
             return EventTraceOperandBuilder.Build((TRACE_EVENT_INFO*)eventRecord->UserData, metadataTableIndex);
