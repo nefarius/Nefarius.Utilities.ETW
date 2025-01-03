@@ -58,14 +58,14 @@ public sealed class Deserializer<T>
 
     internal unsafe void Deserialize(EVENT_RECORD* eventRecord)
     {
-        eventRecord->UserDataFixed = eventRecord->UserData;
+        eventRecord->UserContext = eventRecord->UserData;
         EventRecordReader eventRecordReader = new EventRecordReader(eventRecord);
         RuntimeEventMetadata runtimeMetadata = new RuntimeEventMetadata(eventRecord);
 
         TraceEventKey key = new TraceEventKey(
-            eventRecord->ProviderId,
-            (eventRecord->Flags & Etw.EVENT_HEADER_FLAG_CLASSIC_HEADER) != 0 ? eventRecord->Opcode : eventRecord->Id,
-            eventRecord->Version);
+            eventRecord->EventHeader.ProviderId,
+            (eventRecord->EventHeader.Flags & Etw.EVENT_HEADER_FLAG_CLASSIC_HEADER) != 0 ? eventRecord->EventHeader.EventDescriptor.Opcode : eventRecord->EventHeader.EventDescriptor.Id,
+            eventRecord->EventHeader.EventDescriptor.Version);
 
         Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata> action;
         if (actionTable.TryGetValue(key, out action))
@@ -81,7 +81,7 @@ public sealed class Deserializer<T>
     private static unsafe IEventTraceOperand? BuildOperandFromXml(EVENT_RECORD* eventRecord,
         Dictionary<Guid, EventSourceManifest> cache, EventRecordReader eventRecordReader, int metadataTableIndex)
     {
-        Guid providerGuid = eventRecord->ProviderId;
+        Guid providerGuid = eventRecord->EventHeader.ProviderId;
         if (!cache.TryGetValue(providerGuid, out EventSourceManifest? manifest))
         {
             manifest = CreateEventSourceManifest(providerGuid, cache, eventRecord, eventRecordReader);
@@ -94,22 +94,22 @@ public sealed class Deserializer<T>
 
         return !manifest.IsComplete
             ? null
-            : EventTraceOperandBuilder.Build(manifest.Schema, eventRecord->Id, metadataTableIndex);
+            : EventTraceOperandBuilder.Build(manifest.Schema, eventRecord->EventHeader.EventDescriptor.Id, metadataTableIndex);
     }
 
-    private static unsafe IEventTraceOperand BuildOperandFromTdh(EVENT_RECORD* eventRecord, int metadataTableIndex)
+    private static unsafe IEventTraceOperand? BuildOperandFromTdh(EVENT_RECORD* eventRecord, int metadataTableIndex)
     {
         uint bufferSize;
-        byte* buffer = (byte*)0;
+        Windows.Win32.System.Diagnostics.Etw.TRACE_EVENT_INFO* buffer = null;
 
         // Not Found
-        if (PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, out bufferSize) == 1168)
+        if (PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, &bufferSize) == 1168)
         {
             return null;
         }
 
-        buffer = (byte*)Marshal.AllocHGlobal((int)bufferSize);
-        PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, out bufferSize);
+        buffer = (Windows.Win32.System.Diagnostics.Etw.TRACE_EVENT_INFO*)Marshal.AllocHGlobal((int)bufferSize);
+        PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, &bufferSize);
 
         TRACE_EVENT_INFO* traceEventInfo = (TRACE_EVENT_INFO*)buffer;
         IEventTraceOperand traceEventOperand = EventTraceOperandBuilder.Build(traceEventInfo, metadataTableIndex);
@@ -189,7 +189,7 @@ public sealed class Deserializer<T>
             }
         }
 
-        if (eventRecord->EventHeader.ProviderId == CustomParserGuids.KernelTraceControlMetaDataGuid && eventRecord->Opcode == 32)
+        if (eventRecord->EventHeader.ProviderId == CustomParserGuids.KernelTraceControlMetaDataGuid && eventRecord->EventHeader.EventDescriptor.Opcode == 32)
         {
             isSpecialKernelTraceMetaDataEvent = true;
             return EventTraceOperandBuilder.Build((TRACE_EVENT_INFO*)eventRecord->UserData, metadataTableIndex);
@@ -201,7 +201,7 @@ public sealed class Deserializer<T>
             operand = BuildOperandFromXml(eventRecord, eventSourceManifestCache, eventRecordReader, metadataTableIndex);
         }
 
-        if (operand == null && eventRecord->Id != 65534) // don't show manifest events
+        if (operand == null && eventRecord->EventHeader.EventDescriptor.Id != 65534) // don't show manifest events
         {
             operand = BuildUnknownOperand(eventRecord, metadataTableIndex);
         }
@@ -218,9 +218,9 @@ public sealed class Deserializer<T>
         bool success;
 
         // events added by KernelTraceControl.dll (i.e. Microsoft tools like WPR and PerfView)
-        if (eventRecord->ProviderId == CustomParserGuids.KernelTraceControlImageIdGuid)
+        if (eventRecord->EventHeader.ProviderId == CustomParserGuids.KernelTraceControlImageIdGuid)
         {
-            switch (eventRecord->Opcode)
+            switch (eventRecord->EventHeader.EventDescriptor.Opcode)
             {
                 case 0:
                     actionTable.Add(key, new KernelTraceControlImageIdParser().Parse);
@@ -241,9 +241,9 @@ public sealed class Deserializer<T>
         }
 
         // events by the Kernel Stack Walker (need this because the MOF events always says 32 stacks, but in reality there can be fewer or more
-        else if (eventRecord->ProviderId == CustomParserGuids.KernelStackWalkGuid)
+        else if (eventRecord->EventHeader.ProviderId == CustomParserGuids.KernelStackWalkGuid)
         {
-            if (eventRecord->Opcode == 32)
+            if (eventRecord->EventHeader.EventDescriptor.Opcode == 32)
             {
                 actionTable.Add(key, new KernelStackWalkEventParser().Parse);
                 success = true;
@@ -301,9 +301,9 @@ public sealed class Deserializer<T>
 
         if (isSpecialKernelTraceMetaDataEvent)
         {
-            TRACE_EVENT_INFO* e = (TRACE_EVENT_INFO*)eventRecord->UserDataFixed;
+            TRACE_EVENT_INFO* e = (TRACE_EVENT_INFO*)eventRecord->UserContext;
             actionTable.AddOrUpdate(
-                new TraceEventKey(e->ProviderGuid, e->EventGuid == Guid.Empty ? e->Id : e->Opcode, e->Version),
+                new TraceEventKey(e->ProviderGuid, e->EventGuid == Guid.Empty ? e->EventDescriptor.Id : e->EventDescriptor.Opcode, e->EventDescriptor.Version),
                 action);
         }
         else

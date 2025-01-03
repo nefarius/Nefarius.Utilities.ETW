@@ -10,15 +10,6 @@ namespace Nefarius.Utilities.ETW.Deserializer
     using GUID = System.Guid;
     using UCHAR = System.Byte;
 
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EVENT_HEADER_EXTENDED_DATA_ITEM
-    {
-        public USHORT Reserved1;
-        public USHORT ExtType;
-        public USHORT Reserved2;
-        public USHORT DataSize;
-        public ULONGLONG DataPtr;
-    }
 
     internal static class Etw
     {

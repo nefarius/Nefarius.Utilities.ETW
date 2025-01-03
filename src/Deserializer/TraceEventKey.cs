@@ -1,23 +1,23 @@
 ﻿namespace Nefarius.Utilities.ETW.Deserializer
 {
-    internal struct TraceEventKey : IEquatable<TraceEventKey>
+    internal readonly struct TraceEventKey : IEquatable<TraceEventKey>
     {
-        private readonly Guid providerId;
+        private readonly Guid _providerId;
 
-        private readonly ushort id;
+        private readonly ushort _id;
 
-        private readonly byte version;
+        private readonly byte _version;
 
         public TraceEventKey(Guid providerId, ushort id, byte version)
         {
-            this.providerId = providerId;
-            this.id = id;
-            this.version = version;
+            this._providerId = providerId;
+            this._id = id;
+            this._version = version;
         }
 
         public bool Equals(TraceEventKey other)
         {
-            return this.providerId.Equals(other.providerId) && this.id == other.id && this.version == other.version;
+            return this._providerId.Equals(other._providerId) && this._id == other._id && this._version == other._version;
         }
 
         public override bool Equals(object obj)
@@ -34,9 +34,9 @@
         {
             unchecked
             {
-                var hashCode = this.providerId.GetHashCode();
-                hashCode = (hashCode * 397) ^ this.id.GetHashCode();
-                hashCode = (hashCode * 397) ^ this.version.GetHashCode();
+                var hashCode = this._providerId.GetHashCode();
+                hashCode = (hashCode * 397) ^ this._id.GetHashCode();
+                hashCode = (hashCode * 397) ^ this._version.GetHashCode();
                 return hashCode;
             }
         }

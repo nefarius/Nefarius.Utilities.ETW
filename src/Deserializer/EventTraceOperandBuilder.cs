@@ -1,5 +1,9 @@
 ﻿using System.Runtime.InteropServices;
 
+using Windows.Win32;
+using Windows.Win32.Foundation;
+using Windows.Win32.System.Diagnostics.Etw;
+
 namespace Nefarius.Utilities.ETW.Deserializer;
 
 internal static unsafe class EventTraceOperandBuilder
@@ -43,7 +47,7 @@ internal static unsafe class EventTraceOperandBuilder
                                 if (providerType != null)
                                 {
                                     string? providerName = providerType.name;
-                                    Guid providerGuid = new Guid(providerType.guid);
+                                    Guid providerGuid = new(providerType.guid);
 
                                     foreach (object? providerTypeItem in providerType.Items)
                                     {
@@ -69,8 +73,7 @@ internal static unsafe class EventTraceOperandBuilder
                                                                   (opcode == string.Empty
                                                                       ? string.Empty
                                                                       : "/" + opcode);
-                                                    List<IEventTracePropertyOperand> properties =
-                                                        new List<IEventTracePropertyOperand>();
+                                                    List<IEventTracePropertyOperand> properties = new();
 
                                                     foreach (object? item in providerType.Items)
                                                     {
@@ -92,7 +95,7 @@ internal static unsafe class EventTraceOperandBuilder
                                                                         TDH_OUT_TYPE outType =
                                                                             TDH_OUT_TYPE.TDH_OUTTYPE_NOPRINT;
                                                                         PropertyMetadata metadata =
-                                                                            new PropertyMetadata(inType, outType,
+                                                                            new(inType, outType,
                                                                                 propertyItem.name, false, false, 0,
                                                                                 null);
                                                                         properties.Add(
@@ -104,7 +107,7 @@ internal static unsafe class EventTraceOperandBuilder
                                                         }
                                                     }
 
-                                                    EventTraceOperand operand = new EventTraceOperand(
+                                                    EventTraceOperand operand = new(
                                                         new EventMetadata(
                                                             providerGuid,
                                                             eventId,
@@ -146,8 +149,10 @@ internal static unsafe class EventTraceOperandBuilder
 
             string provider = BuildName("Provider", traceEventInfo->ProviderGuid.ToString(),
                 traceEventInfo->ProviderNameOffset);
-            string task = BuildName("EventID", traceEventInfo->Id.ToString(), traceEventInfo->TaskNameOffset);
-            string opcode = BuildName("Opcode", traceEventInfo->Opcode.ToString(), traceEventInfo->OpcodeNameOffset);
+            string task = BuildName("EventID", traceEventInfo->EventDescriptor.Id.ToString(),
+                traceEventInfo->TaskNameOffset);
+            string opcode = BuildName("Opcode", traceEventInfo->EventDescriptor.Opcode.ToString(),
+                traceEventInfo->OpcodeNameOffset);
 
             //WPP properties not supported
             int end = traceEventInfo->DecodingSource == DECODING_SOURCE.DecodingSourceWPP
@@ -155,7 +160,8 @@ internal static unsafe class EventTraceOperandBuilder
                 : (int)traceEventInfo->TopLevelPropertyCount;
             List<EventTracePropertyOperand> topLevelOperands = IterateProperties(buffer, 0, end, eventPropertyInfoArr);
             return new EventTraceOperand(
-                new EventMetadata(traceEventInfo->ProviderGuid, traceEventInfo->Id, traceEventInfo->Version,
+                new EventMetadata(traceEventInfo->ProviderGuid, traceEventInfo->EventDescriptor.Id,
+                    traceEventInfo->EventDescriptor.Version,
                     provider + "/" + task + "/" + opcode, flatPropertyList.Select(t => t.Metadata).ToArray()),
                 eventMetadataTableIndex, topLevelOperands);
         }
@@ -175,14 +181,14 @@ internal static unsafe class EventTraceOperandBuilder
         private List<EventTracePropertyOperand> IterateProperties(byte* buffer, int start, int end,
             EVENT_PROPERTY_INFO* eventPropertyInfoArr)
         {
-            List<EventTracePropertyOperand> operands = new List<EventTracePropertyOperand>();
+            List<EventTracePropertyOperand> operands = new();
             return IterateProperties(buffer, operands, start, end, eventPropertyInfoArr);
         }
 
         private List<EventTracePropertyOperand> IterateProperties(byte* buffer,
             List<EventTracePropertyOperand> operands, int start, int end, EVENT_PROPERTY_INFO* eventPropertyInfoArr)
         {
-            List<EventTracePropertyOperand> returnList = new List<EventTracePropertyOperand>();
+            List<EventTracePropertyOperand> returnList = new();
             for (int i = start; i < end; ++i)
             {
                 EVENT_PROPERTY_INFO* eventPropertyInfo = &eventPropertyInfoArr[i];
@@ -208,23 +214,26 @@ internal static unsafe class EventTraceOperandBuilder
                     isFixedArray = true;
                 }
 
-                string mapName = null;
+                PWSTR mapName = null;
                 Dictionary<uint, string> mapOfValues = null;
                 if (eventPropertyInfo->NonStructType.MapNameOffset != 0)
                 {
-                    byte* mapBuffer = (byte*)0;
+                    EVENT_MAP_INFO* mapBuffer = null;
                     uint bufferSize;
 
-                    EVENT_RECORD fakeEventRecord = new EVENT_RECORD { ProviderId = traceEventInfo->ProviderGuid };
+                    EVENT_RECORD fakeEventRecord = new()
+                    {
+                        EventHeader = new EVENT_HEADER { ProviderId = traceEventInfo->ProviderGuid }
+                    };
 
-                    mapName = new string((char*)&buffer[eventPropertyInfo->NonStructType.MapNameOffset]);
+                    mapName = new PWSTR((char*)&buffer[eventPropertyInfo->NonStructType.MapNameOffset]);
 
-                    Tdh.GetEventMapInformation(&fakeEventRecord, mapName, mapBuffer, out bufferSize);
-                    mapBuffer = (byte*)Marshal.AllocHGlobal((int)bufferSize);
-                    Tdh.GetEventMapInformation(&fakeEventRecord, mapName, mapBuffer, out bufferSize);
+                    PInvoke.TdhGetEventMapInformation(&fakeEventRecord, mapName, mapBuffer, &bufferSize);
+                    mapBuffer = (EVENT_MAP_INFO*)Marshal.AllocHGlobal((int)bufferSize);
+                    PInvoke.TdhGetEventMapInformation(&fakeEventRecord, mapName, mapBuffer, &bufferSize);
 
-                    EVENT_MAP_INFO* mapInfo = (EVENT_MAP_INFO*)mapBuffer;
-                    if (mapInfo->MapEntryValueType == MAP_VALUETYPE.EVENTMAP_ENTRY_VALUETYPE_ULONG)
+                    EVENT_MAP_INFO* mapInfo = mapBuffer;
+                    if (mapInfo->Anonymous.MapEntryValueType == MAP_VALUETYPE.EVENTMAP_ENTRY_VALUETYPE_ULONG)
                     {
                         EVENT_MAP_ENTRY* mapEntry = (EVENT_MAP_ENTRY*)&mapInfo->MapEntryArray;
                         mapOfValues = new Dictionary<uint, string>();
@@ -253,10 +262,10 @@ internal static unsafe class EventTraceOperandBuilder
                 }
 
                 /* save important information in an object */
-                EventTracePropertyOperand operand = new EventTracePropertyOperand(
+                EventTracePropertyOperand operand = new(
                     new PropertyMetadata((TDH_IN_TYPE)eventPropertyInfo->NonStructType.InType,
                         (TDH_OUT_TYPE)eventPropertyInfo->NonStructType.OutType, propertyName, mapOfValues != null,
-                        isStruct, isStruct ? structchildren : 0, new MapInformation(mapName, mapOfValues)),
+                        isStruct, isStruct ? structchildren : 0, new MapInformation(mapName.ToString(), mapOfValues)),
                     i,
                     isVariableArray,
                     isFixedArray,

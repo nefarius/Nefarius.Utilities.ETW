@@ -4,11 +4,11 @@ namespace Nefarius.Utilities.ETW.Deserializer;
 
 public struct RuntimeEventMetadata
 {
-    private readonly unsafe EVENT_RECORD* eventRecord;
+    private readonly unsafe EVENT_RECORD* _eventRecord;
 
     internal unsafe RuntimeEventMetadata(EVENT_RECORD* eventRecord)
     {
-        this.eventRecord = eventRecord;
+        this._eventRecord = eventRecord;
     }
 
     public ushort Flags
@@ -17,7 +17,7 @@ public struct RuntimeEventMetadata
         {
             unsafe
             {
-                return eventRecord->EventHeader.Flags;
+                return _eventRecord->EventHeader.Flags;
             }
         }
     }
@@ -28,7 +28,7 @@ public struct RuntimeEventMetadata
         {
             unsafe
             {
-                return eventRecord->EventHeader.ThreadId;
+                return _eventRecord->EventHeader.ThreadId;
             }
         }
     }
@@ -39,7 +39,7 @@ public struct RuntimeEventMetadata
         {
             unsafe
             {
-                return eventRecord->EventHeader.ProcessId;
+                return _eventRecord->EventHeader.ProcessId;
             }
         }
     }
@@ -50,7 +50,7 @@ public struct RuntimeEventMetadata
         {
             unsafe
             {
-                return eventRecord->EventHeader.TimeStamp;
+                return _eventRecord->EventHeader.TimeStamp;
             }
         }
     }
@@ -61,7 +61,7 @@ public struct RuntimeEventMetadata
         {
             unsafe
             {
-                return eventRecord->EventHeader.ProviderId;
+                return _eventRecord->EventHeader.ProviderId;
             }
         }
     }
@@ -72,7 +72,7 @@ public struct RuntimeEventMetadata
         {
             unsafe
             {
-                return eventRecord->Id;
+                return _eventRecord->EventHeader.EventDescriptor.Id;
             }
         }
     }
@@ -83,7 +83,7 @@ public struct RuntimeEventMetadata
         {
             unsafe
             {
-                return eventRecord->ActivityId;
+                return _eventRecord->EventHeader.ActivityId;
             }
         }
     }
@@ -94,7 +94,7 @@ public struct RuntimeEventMetadata
         {
             unsafe
             {
-                return eventRecord->UserDataLength;
+                return _eventRecord->UserDataLength;
             }
         }
     }
@@ -105,8 +105,8 @@ public struct RuntimeEventMetadata
         {
             unsafe
             {
-                EVENT_HEADER_EXTENDED_DATA_ITEM* extendedData = eventRecord->ExtendedData;
-                for (int i = 0; i < eventRecord->ExtendedDataCount; ++i)
+                EVENT_HEADER_EXTENDED_DATA_ITEM* extendedData = _eventRecord->ExtendedData;
+                for (int i = 0; i < _eventRecord->ExtendedDataCount; ++i)
                 {
                     if (extendedData[i].ExtType == Etw.EVENT_HEADER_EXT_TYPE_RELATED_ACTIVITYID)
                     {
@@ -119,13 +119,13 @@ public struct RuntimeEventMetadata
         }
     }
 
-    public ushort ProcessorNumber
+    public ulong ProcessorNumber
     {
         get
         {
             unsafe
             {
-                return eventRecord->ProcessorNumber;
+                return _eventRecord->EventHeader.Anonymous.ProcessorTime;
             }
         }
     }
@@ -135,8 +135,8 @@ public struct RuntimeEventMetadata
     {
         unsafe
         {
-            EVENT_HEADER_EXTENDED_DATA_ITEM* extendedData = eventRecord->ExtendedData;
-            for (int i = 0; i < eventRecord->ExtendedDataCount; ++i)
+            EVENT_HEADER_EXTENDED_DATA_ITEM* extendedData = _eventRecord->ExtendedData;
+            for (int i = 0; i < _eventRecord->ExtendedDataCount; ++i)
             {
                 switch (extendedData[i].ExtType)
                 {

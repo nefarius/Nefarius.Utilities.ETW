@@ -36,35 +36,7 @@ namespace Nefarius.Utilities.ETW.Deserializer
         EVENTMAP_INFO_FLAG_WBEM_FLAG = 0x20,
         EVENTMAP_INFO_FLAG_WBEM_NO_MAP = 0x40
     }
-
-    [SuppressMessage("ReSharper", "UnusedMember.Global")]
-    internal enum MAP_VALUETYPE
-    {
-        EVENTMAP_ENTRY_VALUETYPE_ULONG,
-        EVENTMAP_ENTRY_VALUETYPE_STRING
-    }
-
-    [StructLayout(LayoutKind.Explicit)]
-    internal unsafe struct EVENT_MAP_INFO
-    {
-        [FieldOffset(0)]
-        public ULONG NameOffset;
-
-        [FieldOffset(4)]
-        public MAP_FLAGS Flag;
-
-        [FieldOffset(8)]
-        public ULONG EntryCount;
-
-        [FieldOffset(12)]
-        public MAP_VALUETYPE MapEntryValueType;
-
-        [FieldOffset(12)]
-        public ULONG FormatStringOffset;
-
-        [FieldOffset(16)]
-        public EVENT_MAP_ENTRY* MapEntryArray;
-    }
+    
 
     /// <summary>
     ///     The following table lists values defined in the Winmeta.xml file.
@@ -490,51 +462,10 @@ namespace Nefarius.Utilities.ETW.Deserializer
     }
 
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
-    internal enum DECODING_SOURCE
-    {
-        DecodingSourceXMLFile,
-        DecodingSourceWbem,
-        DecodingSourceWPP,
-        DecodingSourceTlg,
-        DecodingSourceMax
-    }
-
-    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     internal enum TEMPLATE_FLAGS
     {
         TEMPLATE_EVENT_DATA = 1, // Used when custom xml is not specified.
         TEMPLATE_USER_DATA = 2 // Used when custom xml is specified.
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    internal unsafe struct TRACE_EVENT_INFO
-    {
-        public GUID ProviderGuid;
-        public GUID EventGuid;
-        public USHORT Id;
-        public UCHAR Version;
-        public UCHAR Channel;
-        public UCHAR Level;
-        public UCHAR Opcode;
-        public USHORT Task;
-        public ULONGLONG Keyword;
-        public DECODING_SOURCE DecodingSource;
-        public ULONG ProviderNameOffset;
-        public ULONG LevelNameOffset;
-        public ULONG ChannelNameOffset;
-        public ULONG KeywordsNameOffset;
-        public ULONG TaskNameOffset;
-        public ULONG OpcodeNameOffset;
-        public ULONG EventMessageOffset;
-        public ULONG ProviderMessageOffset;
-        public ULONG BinaryXMLOffset;
-        public ULONG BinaryXMLSize;
-        public ULONG ActivityIDNameOffset;
-        public ULONG RelatedActivityIDNameOffset;
-        public ULONG PropertyCount;
-        public ULONG TopLevelPropertyCount;
-        public TEMPLATE_FLAGS Flags;
-        public EVENT_PROPERTY_INFO* EventPropertyInfoArray;
     }
 
     [StructLayout(LayoutKind.Sequential)]
