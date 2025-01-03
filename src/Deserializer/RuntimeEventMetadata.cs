@@ -1,14 +1,15 @@
-﻿using Windows.Win32.System.Diagnostics.Etw;
+﻿using Windows.Win32;
+using Windows.Win32.System.Diagnostics.Etw;
 
 namespace Nefarius.Utilities.ETW.Deserializer;
 
-public struct RuntimeEventMetadata
+public readonly struct RuntimeEventMetadata
 {
     private readonly unsafe EVENT_RECORD* _eventRecord;
 
     internal unsafe RuntimeEventMetadata(EVENT_RECORD* eventRecord)
     {
-        this._eventRecord = eventRecord;
+        _eventRecord = eventRecord;
     }
 
     public ushort Flags
@@ -108,7 +109,7 @@ public struct RuntimeEventMetadata
                 EVENT_HEADER_EXTENDED_DATA_ITEM* extendedData = _eventRecord->ExtendedData;
                 for (int i = 0; i < _eventRecord->ExtendedDataCount; ++i)
                 {
-                    if (extendedData[i].ExtType == Etw.EVENT_HEADER_EXT_TYPE_RELATED_ACTIVITYID)
+                    if (extendedData[i].ExtType == PInvoke.EVENT_HEADER_EXT_TYPE_RELATED_ACTIVITYID)
                     {
                         return *(Guid*)extendedData[i].DataPtr;
                     }
@@ -131,7 +132,7 @@ public struct RuntimeEventMetadata
     }
 
     // logic from: https://msdn.microsoft.com/en-us/library/windows/desktop/dd392308(v=vs.85).aspx
-    public ulong[] GetStacks(out ulong matchId)
+    public ulong[]? GetStacks(out ulong matchId)
     {
         unsafe
         {
@@ -140,13 +141,13 @@ public struct RuntimeEventMetadata
             {
                 switch (extendedData[i].ExtType)
                 {
-                    case Etw.EVENT_HEADER_EXT_TYPE_STACK_TRACE32:
+                    case (ushort)PInvoke.EVENT_HEADER_EXT_TYPE_STACK_TRACE32:
                         {
                             int numberOfInstructionPointers = (extendedData[i].DataSize - sizeof(ulong)) / sizeof(uint);
                             return GetStacks32(numberOfInstructionPointers, ref extendedData[i], out matchId);
                         }
 
-                    case Etw.EVENT_HEADER_EXT_TYPE_STACK_TRACE64:
+                    case (ushort)PInvoke.EVENT_HEADER_EXT_TYPE_STACK_TRACE64:
                         {
                             int numberOfInstructionPointers =
                                 (extendedData[i].DataSize - sizeof(ulong)) / sizeof(ulong);
