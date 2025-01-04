@@ -1,4 +1,5 @@
 ﻿using Windows.Win32;
+using Windows.Win32.System.Diagnostics.Etw;
 
 namespace Nefarius.Utilities.ETW.Deserializer.CustomParsers
 {
@@ -16,10 +17,10 @@ namespace Nefarius.Utilities.ETW.Deserializer.CustomParsers
 
         static KernelStackWalkEventParser()
         {
-            EventTimeStampMetadata = new PropertyMetadata(TDH_IN_TYPE.TDH_INTYPE_INT64, TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDLONG, "EventTimeStamp", false, false, 0, null);
-            StackProcessMetadata = new PropertyMetadata(TDH_IN_TYPE.TDH_INTYPE_INT32, TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT, "StackProcess", false, false, 0, null);
-            StackThreadMetadata = new PropertyMetadata(TDH_IN_TYPE.TDH_INTYPE_INT32, TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT, "StackThread", false, false, 0, null);
-            StacksPropertyMetadata = new PropertyMetadata(TDH_IN_TYPE.TDH_INTYPE_POINTER, TDH_OUT_TYPE.TDH_OUTTYPE_HEXINT64, "Stacks", false, false, 0, null);
+            EventTimeStampMetadata = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_INT64, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDLONG, "EventTimeStamp", false, false, 0, null);
+            StackProcessMetadata = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_INT32, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT, "StackProcess", false, false, 0, null);
+            StackThreadMetadata = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_INT32, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT, "StackThread", false, false, 0, null);
+            StacksPropertyMetadata = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_POINTER, _TDH_OUT_TYPE.TDH_OUTTYPE_HEXINT64, "Stacks", false, false, 0, null);
             EventMetadata = new EventMetadata(
                 new Guid("def2fe46-7bd6-4b80-bd94-f57fe20d0ce3"),
                 32,

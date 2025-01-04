@@ -1,4 +1,6 @@
-﻿namespace Nefarius.Utilities.ETW.Deserializer.CustomParsers
+﻿using Windows.Win32.System.Diagnostics.Etw;
+
+namespace Nefarius.Utilities.ETW.Deserializer.CustomParsers
 {
     internal sealed class KernelTraceControlImageIdParser : ICustomParser
     {
@@ -14,10 +16,10 @@
 
         static KernelTraceControlImageIdParser()
         {
-            ImageBase = new PropertyMetadata(TDH_IN_TYPE.TDH_INTYPE_POINTER, TDH_OUT_TYPE.TDH_OUTTYPE_HEXINT64, "ImageBase", false, false, 0, null);
-            ImageSize = new PropertyMetadata(TDH_IN_TYPE.TDH_INTYPE_UINT32, TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT, "ImageSize", false, false, 0, null);
-            TimeDateStamp = new PropertyMetadata(TDH_IN_TYPE.TDH_INTYPE_UINT32, TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT, "TimeDateStamp", false, false, 0, null);
-            OriginalFileName = new PropertyMetadata(TDH_IN_TYPE.TDH_INTYPE_UNICODESTRING, TDH_OUT_TYPE.TDH_OUTTYPE_STRING, "OriginalFileName", false, false, 0, null);
+            ImageBase = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_POINTER, _TDH_OUT_TYPE.TDH_OUTTYPE_HEXINT64, "ImageBase", false, false, 0, null);
+            ImageSize = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_UINT32, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT, "ImageSize", false, false, 0, null);
+            TimeDateStamp = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_UINT32, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT, "TimeDateStamp", false, false, 0, null);
+            OriginalFileName = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_UNICODESTRING, _TDH_OUT_TYPE.TDH_OUTTYPE_STRING, "OriginalFileName", false, false, 0, null);
             EventMetadata = new EventMetadata(
                 new Guid("b3e675d7-2554-4f18-830b-2762732560de"),
                 36,

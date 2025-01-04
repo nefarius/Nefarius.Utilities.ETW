@@ -1,6 +1,6 @@
 ﻿namespace Nefarius.Utilities.ETW.Deserializer;
 
-public interface IEventTraceOperand
+internal interface IEventTraceOperand
 {
     int EventMetadataTableIndex { get; }
 

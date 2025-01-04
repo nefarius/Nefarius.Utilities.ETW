@@ -1,6 +1,6 @@
 ﻿namespace Nefarius.Utilities.ETW.Deserializer;
 
-public interface IEtwWriter
+internal interface IEtwWriter
 {
     void WriteEventBegin(EventMetadata metadata, RuntimeEventMetadata runtimeMetadata);
 

@@ -1,6 +1,8 @@
 ﻿using System.Linq.Expressions;
 using System.Reflection;
 
+using Windows.Win32.System.Diagnostics.Etw;
+
 namespace Nefarius.Utilities.ETW.Deserializer;
 
 internal static class EventTraceOperandExpressionBuilder
@@ -75,7 +77,7 @@ internal sealed class EventTraceOperandExpressionBuilderImpl
 
             foreach (IEventTracePropertyOperand operand in operands)
             {
-                TDH_IN_TYPE inType = operand.Metadata.InType;
+                _TDH_IN_TYPE inType = operand.Metadata.InType;
                 Expression c; /* running expression for this operand */
 
                 list.Add(eventRecordWriter.Call("WritePropertyBegin",

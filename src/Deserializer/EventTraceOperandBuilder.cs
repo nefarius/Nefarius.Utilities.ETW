@@ -89,11 +89,11 @@ internal static unsafe class EventTraceOperandBuilder
                                                                     foreach (DataDefinitionType propertyItem in
                                                                              templateTid.Items)
                                                                     {
-                                                                        TDH_IN_TYPE inType =
+                                                                        _TDH_IN_TYPE inType =
                                                                             Extensions.ToTdhInType(propertyItem.inType
                                                                                 .Name);
-                                                                        TDH_OUT_TYPE outType =
-                                                                            TDH_OUT_TYPE.TDH_OUTTYPE_NOPRINT;
+                                                                        _TDH_OUT_TYPE outType =
+                                                                            _TDH_OUT_TYPE.TDH_OUTTYPE_NOPRINT;
                                                                         PropertyMetadata metadata =
                                                                             new(inType, outType,
                                                                                 propertyItem.name, false, false, 0,
@@ -263,8 +263,8 @@ internal static unsafe class EventTraceOperandBuilder
 
                 /* save important information in an object */
                 EventTracePropertyOperand operand = new(
-                    new PropertyMetadata((TDH_IN_TYPE)eventPropertyInfo->NonStructType.InType,
-                        (TDH_OUT_TYPE)eventPropertyInfo->NonStructType.OutType, propertyName, mapOfValues != null,
+                    new PropertyMetadata((_TDH_IN_TYPE)eventPropertyInfo->NonStructType.InType,
+                        (_TDH_OUT_TYPE)eventPropertyInfo->NonStructType.OutType, propertyName, mapOfValues != null,
                         isStruct, isStruct ? structchildren : 0, new MapInformation(mapName.ToString(), mapOfValues)),
                     i,
                     isVariableArray,

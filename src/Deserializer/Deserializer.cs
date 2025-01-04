@@ -10,7 +10,7 @@ using Nefarius.Utilities.ETW.Deserializer.CustomParsers;
 
 namespace Nefarius.Utilities.ETW.Deserializer;
 
-public sealed class Deserializer<T>
+internal sealed class Deserializer<T>
     where T : IEtwWriter
 {
     private static readonly Type ReaderType = typeof(EventRecordReader);

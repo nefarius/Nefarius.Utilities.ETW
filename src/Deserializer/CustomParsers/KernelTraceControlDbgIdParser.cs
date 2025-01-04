@@ -1,4 +1,6 @@
-﻿namespace Nefarius.Utilities.ETW.Deserializer.CustomParsers
+﻿using Windows.Win32.System.Diagnostics.Etw;
+
+namespace Nefarius.Utilities.ETW.Deserializer.CustomParsers
 {
     internal sealed class KernelTraceControlDbgIdParser : ICustomParser
     {
@@ -16,11 +18,11 @@
 
         static KernelTraceControlDbgIdParser()
         {
-            ImageBase = new PropertyMetadata(TDH_IN_TYPE.TDH_INTYPE_INT64, TDH_OUT_TYPE.TDH_OUTTYPE_HEXINT64, "ImageBase", false, false, 0, null);
-            ProcessId = new PropertyMetadata(TDH_IN_TYPE.TDH_INTYPE_UINT32, TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT, "ProcessID", false, false, 0, null);
-            GuidSig = new PropertyMetadata(TDH_IN_TYPE.TDH_INTYPE_GUID, TDH_OUT_TYPE.TDH_OUTTYPE_GUID, "GuidSig", false, false, 0, null);
-            Age = new PropertyMetadata(TDH_IN_TYPE.TDH_INTYPE_UINT32, TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT, "Age", false, false, 0, null);
-            PdbFileName = new PropertyMetadata(TDH_IN_TYPE.TDH_INTYPE_UNICODESTRING, TDH_OUT_TYPE.TDH_OUTTYPE_STRING, "PdbFileName", false, false, 0, null);
+            ImageBase = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_INT64, _TDH_OUT_TYPE.TDH_OUTTYPE_HEXINT64, "ImageBase", false, false, 0, null);
+            ProcessId = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_UINT32, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT, "ProcessID", false, false, 0, null);
+            GuidSig = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_GUID, _TDH_OUT_TYPE.TDH_OUTTYPE_GUID, "GuidSig", false, false, 0, null);
+            Age = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_UINT32, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT, "Age", false, false, 0, null);
+            PdbFileName = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_UNICODESTRING, _TDH_OUT_TYPE.TDH_OUTTYPE_STRING, "PdbFileName", false, false, 0, null);
             EventMetadata = new EventMetadata(
                 new Guid("b3e675d7-2554-4f18-830b-2762732560de"),
                 36,

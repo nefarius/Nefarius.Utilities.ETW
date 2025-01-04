@@ -5,7 +5,7 @@ using Nefarius.Utilities.ETW.Deserializer;
 
 namespace Nefarius.Utilities.ETW;
 
-public struct EtwJsonWriter : IEtwWriter
+internal struct EtwJsonWriter : IEtwWriter
 {
     private readonly Utf8JsonWriter writer;
 

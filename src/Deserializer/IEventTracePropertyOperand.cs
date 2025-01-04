@@ -1,6 +1,6 @@
 namespace Nefarius.Utilities.ETW.Deserializer;
 
-public interface IEventTracePropertyOperand
+internal interface IEventTracePropertyOperand
 {
     PropertyMetadata Metadata { get; }
 
