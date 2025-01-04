@@ -1,11 +1,9 @@
-﻿using Windows.Win32.System.Diagnostics.Etw;
-
-namespace Nefarius.Utilities.ETW.Deserializer;
+﻿namespace Nefarius.Utilities.ETW.Deserializer;
 
 internal sealed class PropertyMetadata
 {
     internal PropertyMetadata(_TDH_IN_TYPE inType, _TDH_OUT_TYPE outType, string name, bool isMapValue, bool isStruct,
-        int childrenCount, MapInformation map)
+        int childrenCount, MapInformation? map)
     {
         InType = inType;
         OutType = outType;
@@ -26,7 +24,7 @@ internal sealed class PropertyMetadata
 
     public int ChildrenCount { get; private set; }
 
-    public MapInformation Map { get; private set; }
+    public MapInformation? Map { get; private set; }
 
     public string Name { get; private set; }
 }

@@ -2,12 +2,9 @@
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 
-using Windows.Win32;
-using Windows.Win32.System.Diagnostics.Etw;
-
 namespace Nefarius.Utilities.ETW.Deserializer;
 
-public struct EventRecordReader
+internal readonly struct EventRecordReader
 {
     private readonly unsafe EVENT_RECORD* _eventRecord;
 

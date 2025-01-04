@@ -1,8 +1,6 @@
 ﻿using System.Linq.Expressions;
 using System.Reflection;
 
-using Windows.Win32.System.Diagnostics.Etw;
-
 namespace Nefarius.Utilities.ETW.Deserializer;
 
 internal static class EventTraceOperandExpressionBuilder
@@ -36,10 +34,10 @@ internal sealed class EventTraceOperandExpressionBuilderImpl
         ParameterExpression eventMetadata = Expression.Parameter(typeof(EventMetadata));
         ParameterExpression properties = Expression.Parameter(typeof(PropertyMetadata[]));
 
-        List<ParameterExpression> variables = new List<ParameterExpression> { eventMetadata, properties };
+        List<ParameterExpression> variables = new() { eventMetadata, properties };
 
-        ExpressionGenerator expGenerator = new ExpressionGenerator(eventRecordReader, eventRecordWriter, properties);
-        List<Expression> list = new List<Expression>
+        ExpressionGenerator expGenerator = new(eventRecordReader, eventRecordWriter, properties);
+        List<Expression> list = new()
         {
             Expression.Assign(eventMetadata,
                 Expression.ArrayAccess(eventMetadataTable, Expression.Constant(operand.EventMetadataTableIndex))),
@@ -72,8 +70,8 @@ internal sealed class EventTraceOperandExpressionBuilderImpl
 
         public Expression CodeGenerate(IEnumerable<IEventTracePropertyOperand> operands)
         {
-            List<ParameterExpression> variables = new List<ParameterExpression>();
-            List<Expression> list = new List<Expression>();
+            List<ParameterExpression> variables = new();
+            List<Expression> list = new();
 
             foreach (IEventTracePropertyOperand operand in operands)
             {
@@ -137,7 +135,7 @@ internal sealed class EventTraceOperandExpressionBuilderImpl
                         ? operandReferenceTable[operand.VariableArraySize]
                         : Expression.Constant(operand.FixedArraySize);
 
-                    Expression expr = (Expression)loopVariable;
+                    Expression expr = loopVariable;
                     ConvertIfNecessary(ref expr, ref end);
                     list.Add(eventRecordWriter.Call("WriteArrayBegin"));
                     list.Add(For(loopVariable, Expression.Constant(0), Expression.LessThan(expr, end),

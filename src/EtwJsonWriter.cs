@@ -5,109 +5,109 @@ using Nefarius.Utilities.ETW.Deserializer;
 
 namespace Nefarius.Utilities.ETW;
 
-internal struct EtwJsonWriter : IEtwWriter
+internal readonly struct EtwJsonWriter : IEtwWriter
 {
-    private readonly Utf8JsonWriter writer;
+    private readonly Utf8JsonWriter _writer;
 
     public EtwJsonWriter(Utf8JsonWriter writer)
     {
-        this.writer = writer;
+        this._writer = writer;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void WriteEventBegin(EventMetadata metadata, RuntimeEventMetadata runtimeMetadata)
     {
-        writer.WriteStartObject();
-        writer.WritePropertyName("Event");
-        writer.WriteStartObject();
+        _writer.WriteStartObject();
+        _writer.WritePropertyName("Event");
+        _writer.WriteStartObject();
 
-        writer.WritePropertyName("Timestamp");
-        writer.WriteNumberValue(runtimeMetadata.Timestamp);
+        _writer.WritePropertyName("Timestamp");
+        _writer.WriteNumberValue(runtimeMetadata.Timestamp);
 
-        writer.WritePropertyName("ProviderGuid");
-        writer.WriteStringValue(metadata.ProviderGuid.ToString("D"));
+        _writer.WritePropertyName("ProviderGuid");
+        _writer.WriteStringValue(metadata.ProviderGuid.ToString("D"));
 
-        writer.WritePropertyName("Id");
-        writer.WriteNumberValue(metadata.Id);
+        _writer.WritePropertyName("Id");
+        _writer.WriteNumberValue(metadata.Id);
 
-        writer.WritePropertyName("Version");
-        writer.WriteNumberValue(metadata.Version);
+        _writer.WritePropertyName("Version");
+        _writer.WriteNumberValue(metadata.Version);
 
-        writer.WritePropertyName("ProcessId");
-        writer.WriteNumberValue(runtimeMetadata.ProcessId);
+        _writer.WritePropertyName("ProcessId");
+        _writer.WriteNumberValue(runtimeMetadata.ProcessId);
 
-        writer.WritePropertyName("ThreadId");
-        writer.WriteNumberValue(runtimeMetadata.ThreadId);
+        _writer.WritePropertyName("ThreadId");
+        _writer.WriteNumberValue(runtimeMetadata.ThreadId);
 
-        writer.WritePropertyName("ProcessorNumber");
-        writer.WriteNumberValue(runtimeMetadata.ProcessorNumber);
+        _writer.WritePropertyName("ProcessorNumber");
+        _writer.WriteNumberValue(runtimeMetadata.ProcessorNumber);
 
         Guid activityId = runtimeMetadata.ActivityId;
         if (activityId != Guid.Empty)
         {
-            writer.WritePropertyName("ActivityId");
-            writer.WriteStringValue(activityId.ToString("D"));
+            _writer.WritePropertyName("ActivityId");
+            _writer.WriteStringValue(activityId.ToString("D"));
         }
 
         Guid relatedActivityId = runtimeMetadata.RelatedActivityId;
         if (relatedActivityId != Guid.Empty)
         {
-            writer.WritePropertyName("RelatedActivityId");
-            writer.WriteStringValue(relatedActivityId.ToString("D"));
+            _writer.WritePropertyName("RelatedActivityId");
+            _writer.WriteStringValue(relatedActivityId.ToString("D"));
         }
 
         ulong[]? stacks = runtimeMetadata.GetStacks(out ulong matchId);
         if (matchId != 0)
         {
-            writer.WritePropertyName("StackMatchId");
-            writer.WriteNumberValue(matchId);
+            _writer.WritePropertyName("StackMatchId");
+            _writer.WriteNumberValue(matchId);
         }
 
         if (stacks != null)
         {
-            writer.WritePropertyName("Stacks");
-            writer.WriteStartArray();
+            _writer.WritePropertyName("Stacks");
+            _writer.WriteStartArray();
             for (int i = 0; i < stacks.Length; ++i)
             {
-                writer.WriteNumberValue(stacks[i]);
+                _writer.WriteNumberValue(stacks[i]);
             }
 
-            writer.WriteEndArray();
+            _writer.WriteEndArray();
         }
 
-        writer.WritePropertyName("Name");
-        writer.WriteStringValue(metadata.Name);
+        _writer.WritePropertyName("Name");
+        _writer.WriteStringValue(metadata.Name);
 
-        writer.WritePropertyName("Properties");
-        writer.WriteStartArray();
-        writer.WriteStartObject();
+        _writer.WritePropertyName("Properties");
+        _writer.WriteStartArray();
+        _writer.WriteStartObject();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteEventEnd()
     {
-        writer.WriteEndObject();
-        writer.WriteEndArray();
-        writer.WriteEndObject();
-        writer.WriteEndObject();
+        _writer.WriteEndObject();
+        _writer.WriteEndArray();
+        _writer.WriteEndObject();
+        _writer.WriteEndObject();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteStructBegin()
     {
-        writer.WriteStartObject();
+        _writer.WriteStartObject();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteStructEnd()
     {
-        writer.WriteEndObject();
+        _writer.WriteEndObject();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WritePropertyBegin(PropertyMetadata metadata)
     {
-        writer.WritePropertyName(metadata.Name);
+        _writer.WritePropertyName(metadata.Name);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -118,150 +118,150 @@ internal struct EtwJsonWriter : IEtwWriter
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteArrayBegin()
     {
-        writer.WriteStartArray();
+        _writer.WriteStartArray();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteArrayEnd()
     {
-        writer.WriteEndArray();
+        _writer.WriteEndArray();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteAnsiString(string value)
     {
-        writer.WriteStringValue(value);
+        _writer.WriteStringValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteUnicodeString(string value)
     {
-        writer.WriteStringValue(value);
+        _writer.WriteStringValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteInt8(sbyte value)
     {
-        writer.WriteNumberValue(value);
+        _writer.WriteNumberValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteUInt8(byte value)
     {
-        writer.WriteNumberValue(value);
+        _writer.WriteNumberValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteInt16(short value)
     {
-        writer.WriteNumberValue(value);
+        _writer.WriteNumberValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteUInt16(ushort value)
     {
-        writer.WriteNumberValue(value);
+        _writer.WriteNumberValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteInt32(int value)
     {
-        writer.WriteNumberValue(value);
+        _writer.WriteNumberValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteUInt32(uint value)
     {
-        writer.WriteNumberValue(value);
+        _writer.WriteNumberValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteInt64(long value)
     {
-        writer.WriteNumberValue(value);
+        _writer.WriteNumberValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteUInt64(ulong value)
     {
-        writer.WriteNumberValue(value);
+        _writer.WriteNumberValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteFloat(float value)
     {
-        writer.WriteNumberValue(value);
+        _writer.WriteNumberValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteDouble(double value)
     {
-        writer.WriteNumberValue(value);
+        _writer.WriteNumberValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteBoolean(bool value)
     {
-        writer.WriteBooleanValue(value);
+        _writer.WriteBooleanValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteBinary(byte[] value)
     {
-        writer.WriteBase64StringValue(value);
+        _writer.WriteBase64StringValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteGuid(Guid value)
     {
-        writer.WriteStringValue(value.ToString("D"));
+        _writer.WriteStringValue(value.ToString("D"));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WritePointer(ulong value)
     {
-        writer.WriteNumberValue(value);
+        _writer.WriteNumberValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteFileTime(DateTime value)
     {
-        writer.WriteStringValue(value);
+        _writer.WriteStringValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteSystemTime(DateTime value)
     {
-        writer.WriteStringValue(value);
+        _writer.WriteStringValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteSid(string value)
     {
-        writer.WriteStringValue(value);
+        _writer.WriteStringValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteUnicodeChar(char value)
     {
-        writer.WriteNumberValue(value);
+        _writer.WriteNumberValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteAnsiChar(char value)
     {
-        writer.WriteNumberValue(value);
+        _writer.WriteNumberValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteHexDump(byte[] value)
     {
-        writer.WriteBase64StringValue(value);
+        _writer.WriteBase64StringValue(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteWbemSid(string value)
     {
-        writer.WriteStringValue(value);
+        _writer.WriteStringValue(value);
     }
 }

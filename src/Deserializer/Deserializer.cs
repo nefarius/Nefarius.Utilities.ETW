@@ -3,9 +3,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
-using Windows.Win32;
-using Windows.Win32.System.Diagnostics.Etw;
-
 using Nefarius.Utilities.ETW.Deserializer.CustomParsers;
 
 namespace Nefarius.Utilities.ETW.Deserializer;
@@ -50,7 +47,7 @@ internal sealed class Deserializer<T>
     {
         this.writer = writer;
     }
-    
+
     public bool BufferCallback(IntPtr logfile)
     {
         return true;
@@ -59,12 +56,14 @@ internal sealed class Deserializer<T>
     internal unsafe void Deserialize(EVENT_RECORD* eventRecord)
     {
         eventRecord->UserContext = eventRecord->UserData;
-        EventRecordReader eventRecordReader = new EventRecordReader(eventRecord);
-        RuntimeEventMetadata runtimeMetadata = new RuntimeEventMetadata(eventRecord);
+        EventRecordReader eventRecordReader = new(eventRecord);
+        RuntimeEventMetadata runtimeMetadata = new(eventRecord);
 
-        TraceEventKey key = new TraceEventKey(
+        TraceEventKey key = new(
             eventRecord->EventHeader.ProviderId,
-            (eventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_CLASSIC_HEADER) != 0 ? eventRecord->EventHeader.EventDescriptor.Opcode : eventRecord->EventHeader.EventDescriptor.Id,
+            (eventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_CLASSIC_HEADER) != 0
+                ? eventRecord->EventHeader.EventDescriptor.Opcode
+                : eventRecord->EventHeader.EventDescriptor.Id,
             eventRecord->EventHeader.EventDescriptor.Version);
 
         Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata> action;
@@ -94,13 +93,14 @@ internal sealed class Deserializer<T>
 
         return !manifest.IsComplete
             ? null
-            : EventTraceOperandBuilder.Build(manifest.Schema, eventRecord->EventHeader.EventDescriptor.Id, metadataTableIndex);
+            : EventTraceOperandBuilder.Build(manifest.Schema, eventRecord->EventHeader.EventDescriptor.Id,
+                metadataTableIndex);
     }
 
     private static unsafe IEventTraceOperand? BuildOperandFromTdh(EVENT_RECORD* eventRecord, int metadataTableIndex)
     {
         uint bufferSize;
-        Windows.Win32.System.Diagnostics.Etw.TRACE_EVENT_INFO* buffer = null;
+        TRACE_EVENT_INFO* buffer = null;
 
         // Not Found
         if (PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, &bufferSize) == 1168)
@@ -108,10 +108,10 @@ internal sealed class Deserializer<T>
             return null;
         }
 
-        buffer = (Windows.Win32.System.Diagnostics.Etw.TRACE_EVENT_INFO*)Marshal.AllocHGlobal((int)bufferSize);
+        buffer = (TRACE_EVENT_INFO*)Marshal.AllocHGlobal((int)bufferSize);
         PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, &bufferSize);
 
-        TRACE_EVENT_INFO* traceEventInfo = (TRACE_EVENT_INFO*)buffer;
+        TRACE_EVENT_INFO* traceEventInfo = buffer;
         IEventTraceOperand traceEventOperand = EventTraceOperandBuilder.Build(traceEventInfo, metadataTableIndex);
 
         Marshal.FreeHGlobal((IntPtr)buffer);
@@ -149,7 +149,8 @@ internal sealed class Deserializer<T>
         EventSourceManifest? manifest;
         if (!cache.TryGetValue(providerGuid, out manifest))
         {
-            manifest = new EventSourceManifest(eventRecord->EventHeader.ProviderId, format, majorVersion, minorVersion, magic,
+            manifest = new EventSourceManifest(eventRecord->EventHeader.ProviderId, format, majorVersion, minorVersion,
+                magic,
                 totalChunks);
             cache.Add(providerGuid, manifest);
         }
@@ -175,7 +176,8 @@ internal sealed class Deserializer<T>
 
         if (customProvider is not null)
         {
-            if (!eventSourceManifestCache.TryGetValue(eventRecord->EventHeader.ProviderId, out EventSourceManifest? manifest))
+            if (!eventSourceManifestCache.TryGetValue(eventRecord->EventHeader.ProviderId,
+                    out EventSourceManifest? manifest))
             {
                 manifest = new EventSourceManifest(eventRecord->EventHeader.ProviderId, customProvider);
                 eventSourceManifestCache.Add(eventRecord->EventHeader.ProviderId, manifest);
@@ -189,7 +191,8 @@ internal sealed class Deserializer<T>
             }
         }
 
-        if (eventRecord->EventHeader.ProviderId == CustomParserGuids.KernelTraceControlMetaDataGuid && eventRecord->EventHeader.EventDescriptor.Opcode == 32)
+        if (eventRecord->EventHeader.ProviderId == CustomParserGuids.KernelTraceControlMetaDataGuid &&
+            eventRecord->EventHeader.EventDescriptor.Opcode == 32)
         {
             isSpecialKernelTraceMetaDataEvent = true;
             return EventTraceOperandBuilder.Build((TRACE_EVENT_INFO*)eventRecord->UserData, metadataTableIndex);
@@ -303,7 +306,9 @@ internal sealed class Deserializer<T>
         {
             TRACE_EVENT_INFO* e = (TRACE_EVENT_INFO*)eventRecord->UserContext;
             actionTable.AddOrUpdate(
-                new TraceEventKey(e->ProviderGuid, e->EventGuid == Guid.Empty ? e->EventDescriptor.Id : e->EventDescriptor.Opcode, e->EventDescriptor.Version),
+                new TraceEventKey(e->ProviderGuid,
+                    e->EventGuid == Guid.Empty ? e->EventDescriptor.Id : e->EventDescriptor.Opcode,
+                    e->EventDescriptor.Version),
                 action);
         }
         else
