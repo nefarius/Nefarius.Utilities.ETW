@@ -18,18 +18,18 @@ internal static unsafe class EventTraceOperandBuilder
 
     private sealed class TraceEventOperandBuilderFromXml
     {
-        private readonly ushort eventId;
-        private readonly instrumentationManifest manifest;
+        private readonly ushort _eventId;
+        private readonly instrumentationManifest _manifest;
 
         public TraceEventOperandBuilderFromXml(instrumentationManifest manifest, ushort eventId)
         {
-            this.manifest = manifest;
-            this.eventId = eventId;
+            this._manifest = manifest;
+            this._eventId = eventId;
         }
 
         public IEventTraceOperand Build(int eventMetadataTableIndex)
         {
-            foreach (object? instrumentationManifestTypeItem in manifest.Items)
+            foreach (object? instrumentationManifestTypeItem in _manifest.Items)
             {
                 InstrumentationType? instrumentationType = instrumentationManifestTypeItem as InstrumentationType;
                 if (instrumentationType != null)
@@ -54,7 +54,7 @@ internal static unsafe class EventTraceOperandBuilder
                                         {
                                             foreach (EventDefinitionType definitionTypeItem in definitionType.Items)
                                             {
-                                                if (string.Equals(definitionTypeItem.value, eventId.ToString("D")))
+                                                if (string.Equals(definitionTypeItem.value, _eventId.ToString("D")))
                                                 {
                                                     string task = definitionTypeItem.task == null
                                                         ? string.IsNullOrEmpty(definitionTypeItem.symbol)
@@ -108,7 +108,7 @@ internal static unsafe class EventTraceOperandBuilder
                                                     EventTraceOperand operand = new(
                                                         new EventMetadata(
                                                             providerGuid,
-                                                            eventId,
+                                                            _eventId,
                                                             byte.Parse(version),
                                                             name,
                                                             properties.Select(t => t.Metadata).ToArray()),
