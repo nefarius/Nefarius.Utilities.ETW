@@ -23,103 +23,104 @@ internal static unsafe class EventTraceOperandBuilder
 
         public TraceEventOperandBuilderFromXml(instrumentationManifest manifest, ushort eventId)
         {
-            this._manifest = manifest;
-            this._eventId = eventId;
+            _manifest = manifest;
+            _eventId = eventId;
         }
 
         public IEventTraceOperand Build(int eventMetadataTableIndex)
         {
             foreach (object? instrumentationManifestTypeItem in _manifest.Items)
             {
-                InstrumentationType? instrumentationType = instrumentationManifestTypeItem as InstrumentationType;
-                if (instrumentationType != null)
+                if (instrumentationManifestTypeItem is not InstrumentationType instrumentationType)
                 {
-                    foreach (object? instrumentationTypeItem in instrumentationType.Items)
+                    continue;
+                }
+
+                foreach (object? instrumentationTypeItem in instrumentationType.Items)
+                {
+                    if (instrumentationTypeItem is not EventsType eventTypes)
                     {
-                        EventsType? eventTypes = instrumentationTypeItem as EventsType;
-                        if (eventTypes != null)
+                        continue;
+                    }
+
+                    foreach (object? eventTypeItem in eventTypes.Items)
+                    {
+                        if (eventTypeItem is not ProviderType providerType)
                         {
-                            foreach (object? eventTypeItem in eventTypes.Items)
+                            continue;
+                        }
+
+                        string? providerName = providerType.name;
+                        Guid providerGuid = new(providerType.guid);
+
+                        foreach (object? providerTypeItem in providerType.Items)
+                        {
+                            if (providerTypeItem is not DefinitionType definitionType)
                             {
-                                ProviderType? providerType = eventTypeItem as ProviderType;
-                                if (providerType != null)
+                                continue;
+                            }
+
+                            foreach (EventDefinitionType definitionTypeItem in definitionType.Items)
+                            {
+                                if (!string.Equals(definitionTypeItem.value, _eventId.ToString("D")))
                                 {
-                                    string? providerName = providerType.name;
-                                    Guid providerGuid = new(providerType.guid);
+                                    continue;
+                                }
 
-                                    foreach (object? providerTypeItem in providerType.Items)
+                                string task = definitionTypeItem.task == null
+                                    ? string.IsNullOrEmpty(definitionTypeItem.symbol)
+                                        ? "Task"
+                                        : definitionTypeItem.symbol
+                                    : definitionTypeItem.task.Name;
+                                string opcode = definitionTypeItem.opcode == null
+                                    ? string.Empty
+                                    : definitionTypeItem.opcode.Name;
+                                string version = definitionTypeItem.version ?? "0";
+                                string template = definitionTypeItem.template;
+
+                                string name = providerName + "/" + task +
+                                              (opcode == string.Empty
+                                                  ? string.Empty
+                                                  : "/" + opcode);
+                                List<IEventTracePropertyOperand> properties = new();
+
+                                foreach (object? item in providerType.Items)
+                                {
+                                    if (item is not TemplateListType templateList)
                                     {
-                                        DefinitionType? definitionType = providerTypeItem as DefinitionType;
-                                        if (definitionType != null)
+                                        continue;
+                                    }
+
+                                    foreach (TemplateItemType? templateTid in templateList
+                                                 .template)
+                                    {
+                                        if (!string.Equals(templateTid.tid, template))
                                         {
-                                            foreach (EventDefinitionType definitionTypeItem in definitionType.Items)
-                                            {
-                                                if (string.Equals(definitionTypeItem.value, _eventId.ToString("D")))
-                                                {
-                                                    string task = definitionTypeItem.task == null
-                                                        ? string.IsNullOrEmpty(definitionTypeItem.symbol)
-                                                            ? "Task"
-                                                            : definitionTypeItem.symbol
-                                                        : definitionTypeItem.task.Name;
-                                                    string opcode = definitionTypeItem.opcode == null
-                                                        ? string.Empty
-                                                        : definitionTypeItem.opcode.Name;
-                                                    string version = definitionTypeItem.version ?? "0";
-                                                    string template = definitionTypeItem.template;
-
-                                                    string name = providerName + "/" + task +
-                                                                  (opcode == string.Empty
-                                                                      ? string.Empty
-                                                                      : "/" + opcode);
-                                                    List<IEventTracePropertyOperand> properties = new();
-
-                                                    foreach (object? item in providerType.Items)
-                                                    {
-                                                        TemplateListType? templateList = item as TemplateListType;
-                                                        if (templateList != null)
-                                                        {
-                                                            foreach (TemplateItemType? templateTid in templateList
-                                                                         .template)
-                                                            {
-                                                                if (string.Equals(templateTid.tid, template))
-                                                                {
-                                                                    int i = 0;
-                                                                    foreach (DataDefinitionType propertyItem in
-                                                                             templateTid.Items)
-                                                                    {
-                                                                        _TDH_IN_TYPE inType =
-                                                                            Extensions.ToTdhInType(propertyItem.inType
-                                                                                .Name);
-                                                                        _TDH_OUT_TYPE outType =
-                                                                            _TDH_OUT_TYPE.TDH_OUTTYPE_NOPRINT;
-                                                                        PropertyMetadata metadata =
-                                                                            new(inType, outType,
-                                                                                propertyItem.name, false, false, 0,
-                                                                                null);
-                                                                        properties.Add(
-                                                                            new EventTracePropertyOperand(metadata, i++,
-                                                                                false, false, false, false, false));
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-
-                                                    EventTraceOperand operand = new(
-                                                        new EventMetadata(
-                                                            providerGuid,
-                                                            _eventId,
-                                                            byte.Parse(version),
-                                                            name,
-                                                            properties.Select(t => t.Metadata).ToArray()),
-                                                        eventMetadataTableIndex,
-                                                        properties);
-                                                    return operand;
-                                                }
-                                            }
+                                            continue;
                                         }
+
+                                        int i = 0;
+                                        properties.AddRange((from DataDefinitionType propertyItem in templateTid.Items
+                                            let inType = Extensions.ToTdhInType(propertyItem.inType.Name)
+                                            let outType = _TDH_OUT_TYPE.TDH_OUTTYPE_NOPRINT
+                                            select new PropertyMetadata(inType, outType, propertyItem.name, false,
+                                                false, 0, null)
+                                            into metadata
+                                            select new EventTracePropertyOperand(metadata, i++, false, false, false,
+                                                false, false)));
                                     }
                                 }
+
+                                EventTraceOperand operand = new(
+                                    new EventMetadata(
+                                        providerGuid,
+                                        _eventId,
+                                        byte.Parse(version),
+                                        name,
+                                        properties.Select(t => t.Metadata).ToArray()),
+                                    eventMetadataTableIndex,
+                                    properties);
+                                return operand;
                             }
                         }
                     }
@@ -132,41 +133,41 @@ internal static unsafe class EventTraceOperandBuilder
 
     private sealed class EventTraceOperandBuilderFromTDH
     {
-        private readonly List<IEventTracePropertyOperand> flatPropertyList = new();
-        private readonly TRACE_EVENT_INFO* traceEventInfo;
+        private readonly List<IEventTracePropertyOperand> _flatPropertyList = new();
+        private readonly TRACE_EVENT_INFO* _traceEventInfo;
 
         public EventTraceOperandBuilderFromTDH(TRACE_EVENT_INFO* traceEventInfo)
         {
-            this.traceEventInfo = traceEventInfo;
+            this._traceEventInfo = traceEventInfo;
         }
 
         public IEventTraceOperand Build(int eventMetadataTableIndex)
         {
-            byte* buffer = (byte*)traceEventInfo;
-            EVENT_PROPERTY_INFO* eventPropertyInfoArr = (EVENT_PROPERTY_INFO*)&traceEventInfo->EventPropertyInfoArray;
+            byte* buffer = (byte*)_traceEventInfo;
+            EVENT_PROPERTY_INFO* eventPropertyInfoArr = (EVENT_PROPERTY_INFO*)&_traceEventInfo->EventPropertyInfoArray;
 
-            string provider = BuildName("Provider", traceEventInfo->ProviderGuid.ToString(),
-                traceEventInfo->ProviderNameOffset);
-            string task = BuildName("EventID", traceEventInfo->EventDescriptor.Id.ToString(),
-                traceEventInfo->TaskNameOffset);
-            string opcode = BuildName("Opcode", traceEventInfo->EventDescriptor.Opcode.ToString(),
-                traceEventInfo->OpcodeNameOffset);
+            string provider = BuildName("Provider", _traceEventInfo->ProviderGuid.ToString(),
+                _traceEventInfo->ProviderNameOffset);
+            string task = BuildName("EventID", _traceEventInfo->EventDescriptor.Id.ToString(),
+                _traceEventInfo->TaskNameOffset);
+            string opcode = BuildName("Opcode", _traceEventInfo->EventDescriptor.Opcode.ToString(),
+                _traceEventInfo->OpcodeNameOffset);
 
-            //WPP properties not supported
-            int end = traceEventInfo->DecodingSource == DECODING_SOURCE.DecodingSourceWPP
+            // TODO: WPP properties not supported
+            int end = _traceEventInfo->DecodingSource == DECODING_SOURCE.DecodingSourceWPP
                 ? 0
-                : (int)traceEventInfo->TopLevelPropertyCount;
+                : (int)_traceEventInfo->TopLevelPropertyCount;
             List<EventTracePropertyOperand> topLevelOperands = IterateProperties(buffer, 0, end, eventPropertyInfoArr);
             return new EventTraceOperand(
-                new EventMetadata(traceEventInfo->ProviderGuid, traceEventInfo->EventDescriptor.Id,
-                    traceEventInfo->EventDescriptor.Version,
-                    provider + "/" + task + "/" + opcode, flatPropertyList.Select(t => t.Metadata).ToArray()),
+                new EventMetadata(_traceEventInfo->ProviderGuid, _traceEventInfo->EventDescriptor.Id,
+                    _traceEventInfo->EventDescriptor.Version,
+                    provider + "/" + task + "/" + opcode, _flatPropertyList.Select(t => t.Metadata).ToArray()),
                 eventMetadataTableIndex, topLevelOperands);
         }
 
         private string BuildName(string prefix, string value, uint offset)
         {
-            byte* buffer = (byte*)traceEventInfo;
+            byte* buffer = (byte*)_traceEventInfo;
             string item = prefix + "(" + value + ")";
             if (offset != 0)
             {
@@ -221,7 +222,7 @@ internal static unsafe class EventTraceOperandBuilder
 
                     EVENT_RECORD fakeEventRecord = new()
                     {
-                        EventHeader = new EVENT_HEADER { ProviderId = traceEventInfo->ProviderGuid }
+                        EventHeader = new EVENT_HEADER { ProviderId = _traceEventInfo->ProviderGuid }
                     };
 
                     mapName = new PWSTR((char*)&buffer[eventPropertyInfo->NonStructType.MapNameOffset]);
@@ -271,7 +272,7 @@ internal static unsafe class EventTraceOperandBuilder
                     isFixedLength,
                     isWbemXmlFragment);
 
-                flatPropertyList.Add(operand);
+                _flatPropertyList.Add(operand);
                 operands.Add(operand);
                 returnList.Add(operand);
 
