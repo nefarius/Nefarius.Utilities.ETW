@@ -2,6 +2,10 @@
 
 ETW2JSON is a tool that converts ETW Log Files (.ETL) to JSON using the Newtonsoft.Json library. It can be used as a stand-alone command line tool that will take as input locations of ETL files and an output path, or it can take your implementation of Newtonsoft.Json's ``JsonWriter`` class.
 
+Huge refactoring in the works!
+
+<!--
+
 ## Library usage
 
 ``ConvertToJson(JsonWriter jsonWriter, IEnumerable<string> inputFiles, Action<string> reportError)``
@@ -62,3 +66,5 @@ This is the output of ETW2JSON for a single event record of type ``CLRTrace/CLR 
 ## Microsoft Open Source Code of Conduct
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+-->
