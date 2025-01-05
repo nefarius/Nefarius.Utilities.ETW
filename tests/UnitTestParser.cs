@@ -14,7 +14,7 @@ public class Tests
     [Test]
     public void Test1()
     {
-        string etwFilePath = @"C:\Users\Nefarius\Documents\WPR Files\WIN11-DEV-VM.01-03-2025.20-55-29.etl";
+        string etwFilePath = @".\traces\VPadRuntime.etl";
 
         var options = new JsonWriterOptions
         {
