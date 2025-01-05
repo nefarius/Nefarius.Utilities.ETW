@@ -153,23 +153,6 @@ namespace Nefarius.Utilities.ETW
         [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true), SuppressUnmanagedCodeSecurity]
         internal extern static int CloseTrace([In] ULONGLONG TraceHandle);
 
-        internal const ULONG EVENT_TRACE_REAL_TIME_MODE = 0x00000100; // Real time mode on
-        internal const ULONG ENABLE_TRACE_PARAMETERS_VERSION = 1;
-        internal const ULONG EVENT_CONTROL_CODE_DISABLE_PROVIDER = 0;
-        internal const ULONG EVENT_CONTROL_CODE_ENABLE_PROVIDER = 1;
-        internal const ULONG EVENT_CONTROL_CODE_CAPTURE_STATE = 2;
-
-        internal const ULONG EVENT_TRACE_FILE_MODE_NONE = 0x00000000;
-        internal const ULONG EVENT_TRACE_FILE_MODE_SEQUENTIAL = 0x00000001;
-        internal const ULONG EVENT_TRACE_FILE_MODE_CIRCULAR = 0x00000002;
-        internal const ULONG EVENT_TRACE_FILE_MODE_APPEND = 0x00000004;
-        internal const ULONG EVENT_TRACE_FILE_MODE_NEWFILE = 0x00000008;
-        
-
-
-        internal const ULONG PROCESS_TRACE_MODE_EVENT_RECORD = 0x10000000;
-        internal const ULONG PROCESS_TRACE_MODE_REAL_TIME = 0x00000100;
-        internal const ULONG PROCESS_TRACE_MODE_RAW_TIMESTAMP = 0x00001000;
 
         internal const ULONG EVENT_TRACE_CONTROL_QUERY = 0;
         internal const ULONG EVENT_TRACE_CONTROL_STOP = 1;
