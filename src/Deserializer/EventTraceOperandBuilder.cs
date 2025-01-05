@@ -246,7 +246,7 @@ internal static unsafe class EventTraceOperandBuilder
                             }
                             else
                             {
-                                uint mapEntryValue = mapEntry[j].Value;
+                                uint mapEntryValue = mapEntry[j].Anonymous.Value;
                                 if (!mapOfValues.TryGetValue(mapEntryValue, out string mapEntryName))
                                 {
                                     mapEntryName = new string((char*)&mapBuffer[offset]);
