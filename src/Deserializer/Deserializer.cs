@@ -268,12 +268,6 @@ internal sealed partial class Deserializer<T>
                 success = false;
             }
         }
-        // EventTraceGuid is used to identify a event tracing session
-        /* else if (eventRecord->EventHeader.ProviderId == PInvoke.EventTraceGuid)
-        {
-            _actionTable.Add(key, new EventTracingSessionParser().Parse);
-            success = true;
-        } */
         else
         {
             success = false;
