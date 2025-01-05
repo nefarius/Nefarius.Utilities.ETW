@@ -10,6 +10,10 @@ using Nefarius.Utilities.ETW.Deserializer.CustomParsers;
 
 namespace Nefarius.Utilities.ETW.Deserializer;
 
+/// <summary>
+///     <see cref="EVENT_RECORD"/> parsing logic.
+/// </summary>
+/// <typeparam name="T">Implementation of <see cref="IEtwWriter"/>.</typeparam>
 internal sealed partial class Deserializer<T>
     where T : IEtwWriter
 {

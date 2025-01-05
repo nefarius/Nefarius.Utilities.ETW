@@ -39,6 +39,8 @@ TdhFormatProperty
 TdhGetEventInformation
 TdhGetEventMapInformation
 TdhGetProperty
+TdhGetWppMessage
+TdhGetWppProperty
 TdhLoadManifest
 TdhLoadManifestFromBinary
 WIN32_ERROR
