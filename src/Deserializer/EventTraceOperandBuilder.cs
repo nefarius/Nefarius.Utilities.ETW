@@ -193,7 +193,7 @@ internal static unsafe class EventTraceOperandBuilder
                 EVENT_PROPERTY_INFO* eventPropertyInfo = &eventPropertyInfoArr[i];
                 string propertyName = new((char*)&buffer[eventPropertyInfo->NameOffset]);
 
-                int structchildren = eventPropertyInfo->StructType.NumOfStructMembers;
+                int structchildren = eventPropertyInfo->Anonymous1.structType.NumOfStructMembers;
                 bool isStruct = (eventPropertyInfo->Flags & PROPERTY_FLAGS.PropertyStruct) ==
                                 PROPERTY_FLAGS.PropertyStruct;
                 bool isVariableArray = (eventPropertyInfo->Flags & PROPERTY_FLAGS.PropertyParamCount) ==
@@ -208,14 +208,14 @@ internal static unsafe class EventTraceOperandBuilder
                                          PROPERTY_FLAGS.PropertyWBEMXmlFragment;
 
                 // NOTE: Do not remove this special case, there are cases like this, we just assume it's a fixed array
-                if (!isFixedArray && !isVariableArray && eventPropertyInfo->count > 1)
+                if (!isFixedArray && !isVariableArray && eventPropertyInfo->Anonymous2.count > 1)
                 {
                     isFixedArray = true;
                 }
 
                 PWSTR mapName = null;
                 Dictionary<uint, string> mapOfValues = null;
-                if (eventPropertyInfo->NonStructType.MapNameOffset != 0)
+                if (eventPropertyInfo->Anonymous1.nonStructType.MapNameOffset != 0)
                 {
                     EVENT_MAP_INFO* mapBuffer = null;
                     uint bufferSize;
@@ -225,7 +225,7 @@ internal static unsafe class EventTraceOperandBuilder
                         EventHeader = new EVENT_HEADER { ProviderId = _traceEventInfo->ProviderGuid }
                     };
 
-                    mapName = new PWSTR((char*)&buffer[eventPropertyInfo->NonStructType.MapNameOffset]);
+                    mapName = new PWSTR((char*)&buffer[eventPropertyInfo->Anonymous1.nonStructType.MapNameOffset]);
 
                     PInvoke.TdhGetEventMapInformation(&fakeEventRecord, mapName, mapBuffer, &bufferSize);
                     mapBuffer = (EVENT_MAP_INFO*)Marshal.AllocHGlobal((int)bufferSize);
@@ -261,8 +261,8 @@ internal static unsafe class EventTraceOperandBuilder
 
                 /* save important information in an object */
                 EventTracePropertyOperand operand = new(
-                    new PropertyMetadata((_TDH_IN_TYPE)eventPropertyInfo->NonStructType.InType,
-                        (_TDH_OUT_TYPE)eventPropertyInfo->NonStructType.OutType, propertyName, mapOfValues != null,
+                    new PropertyMetadata((_TDH_IN_TYPE)eventPropertyInfo->Anonymous1.nonStructType.InType,
+                        (_TDH_OUT_TYPE)eventPropertyInfo->Anonymous1.nonStructType.OutType, propertyName, mapOfValues != null,
                         isStruct, isStruct ? structchildren : 0, new MapInformation(mapName.ToString(), mapOfValues)),
                     i,
                     isVariableArray,
@@ -278,25 +278,25 @@ internal static unsafe class EventTraceOperandBuilder
                 /* if this references a previous field, we need to capture that as a local */
                 if (isVariableArray)
                 {
-                    EventTracePropertyOperand reference = operands[eventPropertyInfo->countPropertyIndex];
+                    EventTracePropertyOperand reference = operands[eventPropertyInfo->Anonymous2.countPropertyIndex];
                     reference.IsReferencedByOtherProperties = true;
                     operand.SetVariableArraySize(reference);
                 }
                 else if (isFixedArray)
                 {
-                    operand.SetFixedArraySize(eventPropertyInfo->count);
+                    operand.SetFixedArraySize(eventPropertyInfo->Anonymous2.count);
                 }
 
                 /* if this references a previous field, we need to capture that as a local */
                 if (isVariableLength)
                 {
-                    EventTracePropertyOperand reference = operands[eventPropertyInfo->lengthPropertyIndex];
+                    EventTracePropertyOperand reference = operands[eventPropertyInfo->Anonymous3.lengthPropertyIndex];
                     reference.IsReferencedByOtherProperties = true;
                     operand.SetVariableLengthSize(reference);
                 }
                 else if (isFixedLength)
                 {
-                    operand.SetFixedLengthSize(eventPropertyInfo->length);
+                    operand.SetFixedLengthSize(eventPropertyInfo->Anonymous3.length);
                 }
 
                 if ((eventPropertyInfo->Flags & PROPERTY_FLAGS.PropertyStruct) == PROPERTY_FLAGS.PropertyStruct)
@@ -304,9 +304,9 @@ internal static unsafe class EventTraceOperandBuilder
                     List<EventTracePropertyOperand> innerProps = IterateProperties(
                         buffer,
                         operands,
-                        eventPropertyInfo->StructType.StructStartIndex,
-                        eventPropertyInfo->StructType.StructStartIndex +
-                        eventPropertyInfo->StructType.NumOfStructMembers,
+                        eventPropertyInfo->Anonymous1.structType.StructStartIndex,
+                        eventPropertyInfo->Anonymous1.structType.StructStartIndex +
+                        eventPropertyInfo->Anonymous1.structType.NumOfStructMembers,
                         eventPropertyInfoArr);
 
                     foreach (EventTracePropertyOperand innerProp in innerProps)

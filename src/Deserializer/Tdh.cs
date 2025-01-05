@@ -37,6 +37,7 @@ namespace Nefarius.Utilities.ETW.Deserializer
         EVENTMAP_INFO_FLAG_WBEM_NO_MAP = 0x40
     }
 
+    /*
     [Flags]
     internal enum PROPERTY_FLAGS
     {
@@ -48,53 +49,7 @@ namespace Nefarius.Utilities.ETW.Deserializer
         PropertyParamFixedCount = 0x20, // Count of the parameter is fixed.
         PropertyHasTags = 0x40 // The Tags field has been initialized.
     }
-
-    [StructLayout(LayoutKind.Explicit)]
-    internal struct EVENT_PROPERTY_INFO
-    {
-        [FieldOffset(0)]
-        public PROPERTY_FLAGS Flags;
-
-        [FieldOffset(4)]
-        public ULONG NameOffset;
-
-        [FieldOffset(8)]
-        public nonStructType NonStructType;
-
-        [FieldOffset(8)]
-        public structType StructType;
-
-        [FieldOffset(16)]
-        public USHORT count;
-
-        [FieldOffset(16)]
-        public USHORT countPropertyIndex;
-
-        [FieldOffset(18)]
-        public USHORT length;
-
-        [FieldOffset(18)]
-        public USHORT lengthPropertyIndex;
-
-        [FieldOffset(18)]
-        public ULONG Reserved;
-
-        [StructLayout(LayoutKind.Sequential)]
-        internal struct nonStructType
-        {
-            public USHORT InType;
-            public USHORT OutType;
-            public ULONG MapNameOffset;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        internal struct structType
-        {
-            public USHORT StructStartIndex;
-            public USHORT NumOfStructMembers;
-            public ULONG padding;
-        }
-    }
+    */
 
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
     internal enum TEMPLATE_FLAGS
