@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
@@ -12,20 +13,24 @@ namespace Nefarius.Utilities.ETW.Deserializer;
 internal sealed partial class Deserializer<T>
     where T : IEtwWriter
 {
+    [SuppressMessage("ReSharper", "StaticMemberInGenericType")]
     private static readonly Type ReaderType = typeof(EventRecordReader);
 
+    [SuppressMessage("ReSharper", "StaticMemberInGenericType")]
     private static readonly Type EventMetadataArrayType = typeof(EventMetadata[]);
 
+    [SuppressMessage("ReSharper", "StaticMemberInGenericType")]
     private static readonly Type RuntimeMetadataType = typeof(RuntimeEventMetadata);
 
+    [SuppressMessage("ReSharper", "StaticMemberInGenericType")]
     private static readonly Regex InvalidCharacters = InvalidCharactersRegex();
 
     private static readonly Type WriterType = typeof(T);
 
-    private readonly Func<Guid, Stream?>? _customProviderManifest;
-
     private readonly Dictionary<TraceEventKey, Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata>>
         _actionTable = new();
+
+    private readonly Func<Guid, Stream?>? _customProviderManifest;
 
     private readonly List<EventMetadata> _eventMetadataTableList = new();
 
@@ -37,7 +42,7 @@ internal sealed partial class Deserializer<T>
 
     private Deserializer(T writer)
     {
-        this._writer = writer;
+        _writer = writer;
     }
 
     public Deserializer(T writer, Func<Guid, Stream?>? customProviderManifest) : this(writer)
@@ -47,7 +52,7 @@ internal sealed partial class Deserializer<T>
 
     public void ResetWriter(T writer)
     {
-        this._writer = writer;
+        _writer = writer;
     }
 
     public bool BufferCallback(IntPtr logfile)
@@ -185,7 +190,8 @@ internal sealed partial class Deserializer<T>
                 _eventSourceManifestCache.Add(eventRecord->EventHeader.ProviderId, manifest);
             }
 
-            operand = BuildOperandFromXml(eventRecord, _eventSourceManifestCache, eventRecordReader, metadataTableIndex);
+            operand = BuildOperandFromXml(eventRecord, _eventSourceManifestCache, eventRecordReader,
+                metadataTableIndex);
 
             if (operand is not null)
             {
@@ -203,7 +209,8 @@ internal sealed partial class Deserializer<T>
 
         if ((operand = BuildOperandFromTdh(eventRecord, metadataTableIndex)) == null)
         {
-            operand = BuildOperandFromXml(eventRecord, _eventSourceManifestCache, eventRecordReader, metadataTableIndex);
+            operand = BuildOperandFromXml(eventRecord, _eventSourceManifestCache, eventRecordReader,
+                metadataTableIndex);
         }
 
         if (operand == null && eventRecord->EventHeader.EventDescriptor.Id != 65534) // don't show manifest events
