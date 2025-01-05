@@ -3,6 +3,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
+using Windows.Win32.Foundation;
+
 using Nefarius.Utilities.ETW.Deserializer.CustomParsers;
 
 namespace Nefarius.Utilities.ETW.Deserializer;
@@ -103,7 +105,8 @@ internal sealed partial class Deserializer<T>
         TRACE_EVENT_INFO* buffer = null;
 
         // Not Found
-        if (PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, &bufferSize) == 1168)
+        if (PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, &bufferSize) ==
+            (uint)WIN32_ERROR.ERROR_NOT_FOUND)
         {
             return null;
         }
@@ -146,8 +149,7 @@ internal sealed partial class Deserializer<T>
             return null;
         }
 
-        EventSourceManifest? manifest;
-        if (!cache.TryGetValue(providerGuid, out manifest))
+        if (!cache.TryGetValue(providerGuid, out EventSourceManifest? manifest))
         {
             manifest = new EventSourceManifest(eventRecord->EventHeader.ProviderId, format, majorVersion, minorVersion,
                 magic,
