@@ -2,6 +2,8 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
+using Windows.Win32.Foundation;
+
 using Nefarius.Utilities.ETW.Deserializer;
 
 namespace Nefarius.Utilities.ETW;
@@ -52,17 +54,17 @@ public static class EtwUtil
             {
                 if (handles[i] == (ulong)~0)
                 {
-                    switch (Marshal.GetLastWin32Error())
+                    switch ((WIN32_ERROR)Marshal.GetLastWin32Error())
                     {
-                        case 0x57:
+                        case WIN32_ERROR.ERROR_INVALID_PARAMETER:
                             reportError("ERROR: For file: " + list[i] +
                                         " Windows returned 0x57 -- The Logfile parameter is NULL.");
                             return false;
-                        case 0xA1:
+                        case WIN32_ERROR.ERROR_BAD_PATHNAME:
                             reportError("ERROR: For file: " + list[i] +
                                         " Windows returned 0xA1 -- The specified path is invalid.");
                             return false;
-                        case 0x5:
+                        case WIN32_ERROR.ERROR_ACCESS_DENIED:
                             reportError("ERROR: For file: " + list[i] + " Windows returned 0x5 -- Access is denied.");
                             return false;
                         default:
