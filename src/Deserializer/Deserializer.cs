@@ -7,7 +7,7 @@ using Nefarius.Utilities.ETW.Deserializer.CustomParsers;
 
 namespace Nefarius.Utilities.ETW.Deserializer;
 
-internal sealed class Deserializer<T>
+internal sealed partial class Deserializer<T>
     where T : IEtwWriter
 {
     private static readonly Type ReaderType = typeof(EventRecordReader);
@@ -16,26 +16,26 @@ internal sealed class Deserializer<T>
 
     private static readonly Type RuntimeMetadataType = typeof(RuntimeEventMetadata);
 
-    private static readonly Regex InvalidCharacters = new("[:\\/*?\"<>|\"-]");
+    private static readonly Regex InvalidCharacters = InvalidCharactersRegex();
 
     private static readonly Type WriterType = typeof(T);
 
     private readonly Func<Guid, Stream?>? _customProviderManifest;
 
     private readonly Dictionary<TraceEventKey, Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata>>
-        actionTable = new();
+        _actionTable = new();
 
-    private readonly List<EventMetadata> eventMetadataTableList = new();
+    private readonly List<EventMetadata> _eventMetadataTableList = new();
 
-    private readonly Dictionary<Guid, EventSourceManifest> eventSourceManifestCache = new();
+    private readonly Dictionary<Guid, EventSourceManifest> _eventSourceManifestCache = new();
 
-    private EventMetadata[] eventMetadataTable;
+    private EventMetadata[] _eventMetadataTable;
 
-    private T writer;
+    private T _writer;
 
-    public Deserializer(T writer)
+    private Deserializer(T writer)
     {
-        this.writer = writer;
+        this._writer = writer;
     }
 
     public Deserializer(T writer, Func<Guid, Stream?>? customProviderManifest) : this(writer)
@@ -45,7 +45,7 @@ internal sealed class Deserializer<T>
 
     public void ResetWriter(T writer)
     {
-        this.writer = writer;
+        this._writer = writer;
     }
 
     public bool BufferCallback(IntPtr logfile)
@@ -66,9 +66,10 @@ internal sealed class Deserializer<T>
                 : eventRecord->EventHeader.EventDescriptor.Id,
             eventRecord->EventHeader.EventDescriptor.Version);
 
-        if (actionTable.TryGetValue(key, out Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata> action))
+        if (_actionTable.TryGetValue(key,
+                out Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata> action))
         {
-            action(eventRecordReader, writer, eventMetadataTable, runtimeMetadata);
+            action(eventRecordReader, _writer, _eventMetadataTable, runtimeMetadata);
         }
         else
         {
@@ -175,14 +176,14 @@ internal sealed class Deserializer<T>
 
         if (customProvider is not null)
         {
-            if (!eventSourceManifestCache.TryGetValue(eventRecord->EventHeader.ProviderId,
+            if (!_eventSourceManifestCache.TryGetValue(eventRecord->EventHeader.ProviderId,
                     out EventSourceManifest? manifest))
             {
                 manifest = new EventSourceManifest(eventRecord->EventHeader.ProviderId, customProvider);
-                eventSourceManifestCache.Add(eventRecord->EventHeader.ProviderId, manifest);
+                _eventSourceManifestCache.Add(eventRecord->EventHeader.ProviderId, manifest);
             }
 
-            operand = BuildOperandFromXml(eventRecord, eventSourceManifestCache, eventRecordReader, metadataTableIndex);
+            operand = BuildOperandFromXml(eventRecord, _eventSourceManifestCache, eventRecordReader, metadataTableIndex);
 
             if (operand is not null)
             {
@@ -200,7 +201,7 @@ internal sealed class Deserializer<T>
 
         if ((operand = BuildOperandFromTdh(eventRecord, metadataTableIndex)) == null)
         {
-            operand = BuildOperandFromXml(eventRecord, eventSourceManifestCache, eventRecordReader, metadataTableIndex);
+            operand = BuildOperandFromXml(eventRecord, _eventSourceManifestCache, eventRecordReader, metadataTableIndex);
         }
 
         if (operand == null && eventRecord->EventHeader.EventDescriptor.Id != 65534) // don't show manifest events
@@ -225,15 +226,15 @@ internal sealed class Deserializer<T>
             switch (eventRecord->EventHeader.EventDescriptor.Opcode)
             {
                 case 0:
-                    actionTable.Add(key, new KernelTraceControlImageIdParser().Parse);
+                    _actionTable.Add(key, new KernelTraceControlImageIdParser().Parse);
                     success = true;
                     break;
                 case 36:
-                    actionTable.Add(key, new KernelTraceControlDbgIdParser().Parse);
+                    _actionTable.Add(key, new KernelTraceControlDbgIdParser().Parse);
                     success = true;
                     break;
                 case 64:
-                    actionTable.Add(key, new KernelTraceControlImageIdFileVersionParser().Parse);
+                    _actionTable.Add(key, new KernelTraceControlImageIdFileVersionParser().Parse);
                     success = true;
                     break;
                 default:
@@ -247,7 +248,7 @@ internal sealed class Deserializer<T>
         {
             if (eventRecord->EventHeader.EventDescriptor.Opcode == 32)
             {
-                actionTable.Add(key, new KernelStackWalkEventParser().Parse);
+                _actionTable.Add(key, new KernelStackWalkEventParser().Parse);
                 success = true;
             }
             else
@@ -273,15 +274,15 @@ internal sealed class Deserializer<T>
         }
 
         bool isSpecialKernelTraceMetaDataEvent = false;
-        IEventTraceOperand? operand = BuildOperand(eventRecord, eventRecordReader, eventMetadataTableList.Count,
+        IEventTraceOperand? operand = BuildOperand(eventRecord, eventRecordReader, _eventMetadataTableList.Count,
             ref isSpecialKernelTraceMetaDataEvent);
         if (operand == null)
         {
             return;
         }
 
-        eventMetadataTableList.Add(operand.Metadata);
-        eventMetadataTable = eventMetadataTableList.ToArray(); // TODO: Need to improve this
+        _eventMetadataTableList.Add(operand.Metadata);
+        _eventMetadataTable = _eventMetadataTableList.ToArray(); // TODO: Need to improve this
 
         ParameterExpression eventRecordReaderParam = Expression.Parameter(ReaderType);
         ParameterExpression eventWriterParam = Expression.Parameter(WriterType);
@@ -304,7 +305,7 @@ internal sealed class Deserializer<T>
         if (isSpecialKernelTraceMetaDataEvent)
         {
             TRACE_EVENT_INFO* e = (TRACE_EVENT_INFO*)eventRecord->UserContext;
-            actionTable.AddOrUpdate(
+            _actionTable.AddOrUpdate(
                 new TraceEventKey(e->ProviderGuid,
                     e->EventGuid == Guid.Empty ? e->EventDescriptor.Id : e->EventDescriptor.Opcode,
                     e->EventDescriptor.Version),
@@ -312,8 +313,11 @@ internal sealed class Deserializer<T>
         }
         else
         {
-            actionTable.Add(key, action);
-            action(eventRecordReader, writer, eventMetadataTable, runtimeMetadata);
+            _actionTable.Add(key, action);
+            action(eventRecordReader, _writer, _eventMetadataTable, runtimeMetadata);
         }
     }
+
+    [GeneratedRegex("[:\\/*?\"<>|\"-]")]
+    private static partial Regex InvalidCharactersRegex();
 }
