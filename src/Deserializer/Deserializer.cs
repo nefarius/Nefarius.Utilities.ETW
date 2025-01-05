@@ -66,8 +66,7 @@ internal sealed class Deserializer<T>
                 : eventRecord->EventHeader.EventDescriptor.Id,
             eventRecord->EventHeader.EventDescriptor.Version);
 
-        Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata> action;
-        if (actionTable.TryGetValue(key, out action))
+        if (actionTable.TryGetValue(key, out Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata> action))
         {
             action(eventRecordReader, writer, eventMetadataTable, runtimeMetadata);
         }
