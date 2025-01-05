@@ -64,6 +64,9 @@ internal sealed partial class Deserializer<T>
         return true;
     }
 
+    /// <summary>
+    ///     Gets invoked for each record in the trace file(s).
+    /// </summary>
     internal unsafe void Deserialize(EVENT_RECORD* eventRecord)
     {
         eventRecord->UserContext = eventRecord->UserData;
