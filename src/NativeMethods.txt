@@ -35,6 +35,7 @@ PROCESS_TRACE_MODE_RAW_TIMESTAMP
 PROPERTY_DATA_DESCRIPTOR
 ProcessTrace
 TRACE_EVENT_INFO
+TdhFormatProperty
 TdhGetEventInformation
 TdhGetEventMapInformation
 TdhGetProperty
