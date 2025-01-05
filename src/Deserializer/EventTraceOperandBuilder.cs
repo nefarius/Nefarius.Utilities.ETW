@@ -241,14 +241,13 @@ internal static unsafe class EventTraceOperandBuilder
                             uint offset = mapEntry[j].OutputOffset;
                             if (offset > bufferSize)
                             {
-                                // TDH has a bug (it seems) that is giving rogue values here
+                                // TODO: TDH has a bug (it seems) that is giving rogue values here
                                 // We should log this
                             }
                             else
                             {
                                 uint mapEntryValue = mapEntry[j].Value;
-                                string mapEntryName;
-                                if (!mapOfValues.TryGetValue(mapEntryValue, out mapEntryName))
+                                if (!mapOfValues.TryGetValue(mapEntryValue, out string mapEntryName))
                                 {
                                     mapEntryName = new string((char*)&mapBuffer[offset]);
                                     mapOfValues.Add(mapEntryValue, mapEntryName);
