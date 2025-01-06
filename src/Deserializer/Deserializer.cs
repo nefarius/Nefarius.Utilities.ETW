@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.Design;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -9,9 +8,6 @@ using Windows.Win32.Foundation;
 
 using Nefarius.Utilities.ETW.Deserializer.CustomParsers;
 using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
-
-using Smx.PDBSharp;
-using Smx.PDBSharp.Symbols;
 
 namespace Nefarius.Utilities.ETW.Deserializer;
 
@@ -46,12 +42,18 @@ internal sealed partial class Deserializer<T>
     private readonly Dictionary<Guid, EventSourceManifest> _eventSourceManifestCache = new();
 
     private EventMetadata[] _eventMetadataTable;
+    private IReadOnlyList<TraceMessageFormat> _tmf;
+
+    private readonly Parser _wppParser;
 
     private T _writer;
 
     private Deserializer(T writer)
     {
         _writer = writer;
+
+        _wppParser = new Parser();
+        _tmf = _wppParser.ParseDirectory(@"D:\Downloads\tmftest");
     }
 
     public Deserializer(T writer, Func<Guid, Stream?>? customProviderManifest) : this(writer)
@@ -79,6 +81,10 @@ internal sealed partial class Deserializer<T>
         return (eventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_TRACE_MESSAGE) != 0;
     }
 
+    private unsafe void ProcessWppEvent(EVENT_RECORD* eventRecord)
+    {
+    }
+
     /// <summary>
     ///     Gets invoked for each record in the trace file(s).
     /// </summary>
@@ -90,13 +96,8 @@ internal sealed partial class Deserializer<T>
 
         if (IsWppEvent(eventRecord))
         {
-            //var tmfPath = @"D:\Downloads\tmftest\0e10805c-4632-3a74-c514-84b39bf9e7ba.tmf";
-            var tmfPath = @"D:\Downloads\tmftest\1cd9540d-3b93-37c1-6f28-f268613fca07.tmf";
-
-            using var fs = File.OpenText(tmfPath);
-            var p = new Parser();
-            p.Parse(fs);
-
+            ProcessWppEvent(eventRecord);
+            return;
         }
 
         TraceEventKey key = new(

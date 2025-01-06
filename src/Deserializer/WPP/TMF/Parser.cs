@@ -6,9 +6,9 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 internal sealed partial class Parser
 {
     [GeneratedRegex(
-        @"(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1})")]
-    private partial Regex GuidRegex();
-
+        @"(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1}) ([a-zA-Z0-9_\.]*)")]
+    private partial Regex HeaderRegex();
+    
     [GeneratedRegex(@"\/\/ SRC=([\w\-. ]+) MJ=")]
     private partial Regex FileNameRegex();
 
@@ -26,18 +26,36 @@ internal sealed partial class Parser
     private partial Regex ParameterBodyRegex();
 
     /// <summary>
-    ///     Parses a <c>.TMF</c> file and extracts all containing <see cref="TraceMessageFormat"/>s.
+    ///     Processes a given directory of <c>.TMF</c> files and parses them. 
     /// </summary>
-    /// <param name="streamReader">Source file stream.</param>
-    /// <returns>A collection of extracted <see cref="TraceMessageFormat"/> entries.</returns>
-    public IReadOnlyList<TraceMessageFormat> Parse(StreamReader streamReader)
+    /// <param name="path">The directory to search in.</param>
+    /// <returns>A collection of extracted <see cref="TraceMessageFormat" /> entries.</returns>
+    public IReadOnlyList<TraceMessageFormat> ParseDirectory(string path)
     {
         List<TraceMessageFormat> messages = [];
 
-        // ReSharper disable once TooWideLocalVariableScope
+        foreach (string filePath in Directory.EnumerateFiles(path, "*.tmf"))
+        {
+            using StreamReader fs = File.OpenText(filePath);
+
+            messages.AddRange(ParseFile(fs));
+        }
+
+        return messages.Distinct().ToList().AsReadOnly();
+    }
+
+    /// <summary>
+    ///     Parses a <c>.TMF</c> file and extracts all containing <see cref="TraceMessageFormat" />s.
+    /// </summary>
+    /// <param name="streamReader">Source file stream.</param>
+    /// <returns>A collection of extracted <see cref="TraceMessageFormat" /> entries.</returns>
+    public IReadOnlyList<TraceMessageFormat> ParseFile(StreamReader streamReader)
+    {
+        List<TraceMessageFormat> messages = [];
+
         Guid messageGuid = Guid.NewGuid();
-        // ReSharper disable once TooWideLocalVariableScope
         string fileName = string.Empty;
+        string providerName = string.Empty;
 
         while (streamReader.ReadLine() is { } line)
         {
@@ -47,13 +65,14 @@ internal sealed partial class Parser
                 continue;
             }
 
-            Match guidStringMatch = GuidRegex().Match(line);
+            Match headerMatch = HeaderRegex().Match(line);
             string? typeDefLine = null;
 
             // the first occurrence is expected to be the message GUID and module name
-            if (guidStringMatch.Success)
+            if (headerMatch.Success)
             {
-                messageGuid = Guid.Parse(GuidRegex().Match(line).Groups[1].Value);
+                messageGuid = Guid.Parse(HeaderRegex().Match(line).Groups[1].Value);
+                providerName = headerMatch.Groups[7].Value;
                 fileName = FileNameRegex().Match(line).Groups[1].Value;
                 typeDefLine = streamReader.ReadLine();
             }
@@ -84,6 +103,7 @@ internal sealed partial class Parser
             TraceMessageFormat tmf = new()
             {
                 MessageGuid = messageGuid,
+                Provider = providerName,
                 FileName = fileName,
                 Opcode = opcode,
                 Id = id,
@@ -134,6 +154,6 @@ internal sealed partial class Parser
             messages.Add(tmf);
         }
 
-        return messages;
+        return messages.AsReadOnly();
     }
 }

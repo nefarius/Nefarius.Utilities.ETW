@@ -57,7 +57,8 @@ internal enum ItemType
     ///     been encoded using the event provider s ANSI code page. When used with the win:Xml, win:Json, or win:Utf8 output
     ///     types, the string is assumed to have been encoded using UTF-8.
     /// </summary>
-    ItemString
+    ItemString,
+    ItemGuid
 }
 
 internal struct FunctionParameter
