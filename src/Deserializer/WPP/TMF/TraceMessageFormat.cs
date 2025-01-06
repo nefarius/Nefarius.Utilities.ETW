@@ -2,21 +2,21 @@
 
 internal class TraceMessageFormat
 {
-    public Guid MessageGuid { get; set; }
+    public Guid MessageGuid { get; init; }
 
-    public required string  FileName { get; set; }
+    public required string  FileName { get; init; }
 
-    public required string Opcode { get; set; }
+    public required string Opcode { get; init; }
 
-    public int Id { get; set; }
+    public int Id { get; init; }
 
-    public required string MessageFormat { get; set; }
+    public required string MessageFormat { get; init; }
 
-    public required string Level { get; set; }
+    public required string Level { get; init; }
 
-    public required string Flags { get; set; }
+    public required string Flags { get; init; }
 
-    public required string  Function { get; set; }
+    public required string  Function { get; init; }
 
     public IReadOnlyList<FunctionParameter> FunctionParameters { get; set; } = new List<FunctionParameter>();
 }
