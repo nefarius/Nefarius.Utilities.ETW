@@ -40,11 +40,11 @@ internal sealed partial class Deserializer<T>
     private readonly List<EventMetadata> _eventMetadataTableList = new();
 
     private readonly Dictionary<Guid, EventSourceManifest> _eventSourceManifestCache = new();
-
-    private EventMetadata[] _eventMetadataTable;
-    private IReadOnlyList<TraceMessageFormat> _tmf;
+    private readonly IReadOnlyList<TraceMessageFormat> _tmf;
 
     private readonly Parser _wppParser;
+
+    private EventMetadata[] _eventMetadataTable;
 
     private T _writer;
 
@@ -81,8 +81,28 @@ internal sealed partial class Deserializer<T>
         return (eventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_TRACE_MESSAGE) != 0;
     }
 
+    /// <summary>
+    ///     Experimental shenanigans.
+    /// </summary>
     private unsafe void ProcessWppEvent(EVENT_RECORD* eventRecord)
     {
+        eventRecord->UserContext = eventRecord->UserData;
+        EventRecordReader eventRecordReader = new(eventRecord);
+        RuntimeEventMetadata runtimeMetadata = new(eventRecord);
+
+        TraceMessageFormat? tmf = _tmf.SingleOrDefault(format =>
+            format.MessageGuid == runtimeMetadata.ProviderId && format.Id == runtimeMetadata.EventId);
+
+        if (tmf is null)
+        {
+            // TODO: error handling
+            return;
+        }
+
+        if (tmf.FunctionParameters.Any(p => p.Type == ItemType.ItemPWString))
+        {
+            var str = eventRecordReader.ReadUnicodeString();
+        }
     }
 
     /// <summary>
