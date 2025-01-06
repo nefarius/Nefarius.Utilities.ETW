@@ -5,7 +5,10 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 /// <summary>
 ///     Possible trace message parameter types.
 /// </summary>
-/// <remarks>Partial source: https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-inputtype-complextype#remarks</remarks>
+/// <remarks>
+///     Partial source:
+///     https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-inputtype-complextype#remarks
+/// </remarks>
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 internal enum ItemType
 {
@@ -30,7 +33,10 @@ internal enum ItemType
     ItemLongLongXX,
 
     /// <summary>
-    ///     An NTSTATUS value.
+    ///     An NTSTATUS error code. This type is valid for the UInt32 input type. The service retrieves and renders the message
+    ///     string associated with the NT status code if it exists; otherwise, the service renders a string in the form,
+    ///     "Unknown NTSTATUS Error code: 0x" with the NT status code appended as hexadecimal number.Prior to MC version
+    ///     1.12.7051 and Windows 7: Not available
     /// </summary>
     ItemNTSTATUS,
 
