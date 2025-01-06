@@ -28,7 +28,7 @@ internal enum ItemType
     ItemLongLong,
 
     /// <summary>
-    ///     A 64-Bit (signed) integer in hex representation.
+    ///     A hexadecimal number that is preceded by "0x". The formatted value is not padded with leading zeros.
     /// </summary>
     ItemLongLongXX,
 
