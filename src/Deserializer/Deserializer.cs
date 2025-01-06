@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.ComponentModel.Design;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -7,6 +8,10 @@ using System.Text.RegularExpressions;
 using Windows.Win32.Foundation;
 
 using Nefarius.Utilities.ETW.Deserializer.CustomParsers;
+using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
+
+using Smx.PDBSharp;
+using Smx.PDBSharp.Symbols;
 
 namespace Nefarius.Utilities.ETW.Deserializer;
 
@@ -64,6 +69,16 @@ internal sealed partial class Deserializer<T>
         return true;
     }
 
+    private unsafe bool IsStringEvent(EVENT_RECORD* eventRecord)
+    {
+        return (eventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_STRING_ONLY) != 0;
+    }
+
+    private unsafe bool IsWppEvent(EVENT_RECORD* eventRecord)
+    {
+        return (eventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_TRACE_MESSAGE) != 0;
+    }
+
     /// <summary>
     ///     Gets invoked for each record in the trace file(s).
     /// </summary>
@@ -72,6 +87,16 @@ internal sealed partial class Deserializer<T>
         eventRecord->UserContext = eventRecord->UserData;
         EventRecordReader eventRecordReader = new(eventRecord);
         RuntimeEventMetadata runtimeMetadata = new(eventRecord);
+
+        if (IsWppEvent(eventRecord))
+        {
+            var tmfPath = @"D:\Downloads\tmftest\0e10805c-4632-3a74-c514-84b39bf9e7ba.tmf";
+
+            using var fs = File.OpenText(tmfPath);
+            var p = new Parser();
+            p.Parse(fs);
+
+        }
 
         TraceEventKey key = new(
             eventRecord->EventHeader.ProviderId,
