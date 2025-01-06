@@ -22,4 +22,6 @@ internal struct FunctionParameter
     public required ItemType Type { get; set; }
 
     public required int Index { get; set; }
+
+    public IReadOnlyDictionary<int, string>? ListItems { get; set; }
 }

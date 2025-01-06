@@ -90,7 +90,8 @@ internal sealed partial class Deserializer<T>
 
         if (IsWppEvent(eventRecord))
         {
-            var tmfPath = @"D:\Downloads\tmftest\0e10805c-4632-3a74-c514-84b39bf9e7ba.tmf";
+            //var tmfPath = @"D:\Downloads\tmftest\0e10805c-4632-3a74-c514-84b39bf9e7ba.tmf";
+            var tmfPath = @"D:\Downloads\tmftest\1cd9540d-3b93-37c1-6f28-f268613fca07.tmf";
 
             using var fs = File.OpenText(tmfPath);
             var p = new Parser();

@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
@@ -15,13 +16,13 @@ internal sealed partial class Parser
     private partial Regex CommentRegex();
 
     [GeneratedRegex(
-        @"^#typev ([a-zA-Z0-9_]*) (\d*) ""(.*)"" \/\/ *LEVEL=([a-zA-Z0-9_]*) FLAGS=([a-zA-Z0-9_]*) FUNC=([a-zA-Z0-9_]*)")]
+        @"^#typev ([a-zA-Z0-9_\.]*) (\d*) ""(.*)"" \/\/ *LEVEL=([a-zA-Z0-9_]*) FLAGS=([a-zA-Z0-9_]*) FUNC=([a-zA-Z0-9_]*)")]
     private partial Regex TypeDefinitionRegex();
 
     [GeneratedRegex(@"^\}$")]
     private partial Regex ParamsEndRegex();
 
-    [GeneratedRegex(@"^([ -~]*), ([a-zA-Z0-9]*) \-\- (\d*) *$")]
+    [GeneratedRegex(@"^([ -~]*), ([a-zA-Z0-9]*) *(?:\(([^)]*)\))? \-\- (\d*) *$")]
     private partial Regex ParameterBodyRegex();
 
     public IReadOnlyList<TraceMessageFormat> Parse(StreamReader streamReader)
@@ -103,12 +104,22 @@ internal sealed partial class Parser
 
                 Match parameterMatch = ParameterBodyRegex().Match(paramsBody);
 
-                parameters.Add(new FunctionParameter
+                string expression = parameterMatch.Groups[1].Value;
+                ItemType type = (ItemType)Enum.Parse(typeof(ItemType), parameterMatch.Groups[2].Value);
+                int varIndex = int.Parse(parameterMatch.Groups[4].Value);
+
+                FunctionParameter parsed = new() { Expression = expression, Type = type, Index = varIndex };
+
+                // special case
+                if (type == ItemType.ItemListByte)
                 {
-                    Expression = parameterMatch.Groups[1].Value,
-                    Type = (ItemType)Enum.Parse(typeof(ItemType), parameterMatch.Groups[2].Value),
-                    Index = int.Parse(parameterMatch.Groups[3].Value)
-                });
+                    string[] arrayItems = parameterMatch.Groups[3].Value.Split(',');
+                    parsed.ListItems = new ReadOnlyDictionary<int, string>(
+                        arrayItems.Select((value, index) => new KeyValuePair<int, string>(index, value))
+                            .ToDictionary(pair => pair.Key, pair => pair.Value));
+                }
+
+                parameters.Add(parsed);
             }
 
             tmf.FunctionParameters = parameters.ToArray();
