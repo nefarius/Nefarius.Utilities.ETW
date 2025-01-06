@@ -8,6 +8,8 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 /// <remarks>
 ///     Partial source:
 ///     https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-inputtype-complextype#remarks
+///     and:
+///     https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-outputtype-complextype#remarks
 /// </remarks>
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 internal enum ItemType
