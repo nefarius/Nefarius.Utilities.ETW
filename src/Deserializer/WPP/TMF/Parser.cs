@@ -41,6 +41,7 @@ internal sealed partial class Parser
 
         while (streamReader.ReadLine() is { } line)
         {
+            // skip any comment lines
             if (CommentRegex().IsMatch(line))
             {
                 continue;
@@ -49,6 +50,7 @@ internal sealed partial class Parser
             Match guidStringMatch = GuidRegex().Match(line);
             string? typeDefLine = null;
 
+            // the first occurrence is expected to be the message GUID and module name
             if (guidStringMatch.Success)
             {
                 messageGuid = Guid.Parse(GuidRegex().Match(line).Groups[1].Value);
@@ -57,6 +59,7 @@ internal sealed partial class Parser
             }
             else
             {
+                // every subsequent run until EOF can be a type definition 
                 typeDefLine = line;
             }
 

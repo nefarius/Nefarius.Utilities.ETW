@@ -2,17 +2,54 @@
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
+/// <summary>
+///     Possible trace message parameter types.
+/// </summary>
+/// <remarks>Partial source: https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-inputtype-complextype#remarks</remarks>
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 internal enum ItemType
 {
+    /// <summary>
+    ///     A list of one or more zero-indexed array items.
+    /// </summary>
     ItemListByte,
+
+    /// <summary>
+    ///     A 32-Bit (signed) integer.
+    /// </summary>
     ItemLong,
+
+    /// <summary>
+    ///     A 64-Bit (signed) integer.
+    /// </summary>
     ItemLongLong,
+
+    /// <summary>
+    ///     A 64-Bit (signed) integer in hex representation.
+    /// </summary>
     ItemLongLongXX,
+
+    /// <summary>
+    ///     An NTSTATUS value.
+    /// </summary>
     ItemNTSTATUS,
+
+    /// <summary>
+    ///     A string of 16-bit characters. By default, assumed to have been encoded using UTF-16LE.
+    /// </summary>
     ItemPWString,
+
+    /// <summary>
+    ///     An unsigned 32-bit or 64-bit pointer value. The size depends on the architecture of the computer logging the event.
+    /// </summary>
     ItemPtr,
-    ItemString,
+
+    /// <summary>
+    ///     A string of 8-bit characters. By default or when used with the xs:string output type, the string is assumed to have
+    ///     been encoded using the event provider s ANSI code page. When used with the win:Xml, win:Json, or win:Utf8 output
+    ///     types, the string is assumed to have been encoded using UTF-8.
+    /// </summary>
+    ItemString
 }
 
 internal struct FunctionParameter
