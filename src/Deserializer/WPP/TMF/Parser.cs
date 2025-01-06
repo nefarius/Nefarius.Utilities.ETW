@@ -24,7 +24,7 @@ internal sealed partial class Parser
     [GeneratedRegex(@"^([ -~]*), ([a-zA-Z0-9]*) \-\- (\d*) *$")]
     private partial Regex ParameterBodyRegex();
 
-    public IEnumerable<TraceMessageFormat> Parse(StreamReader streamReader)
+    public IReadOnlyList<TraceMessageFormat> Parse(StreamReader streamReader)
     {
         List<TraceMessageFormat> messages = [];
 
