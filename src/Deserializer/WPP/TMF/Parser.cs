@@ -25,6 +25,11 @@ internal sealed partial class Parser
     [GeneratedRegex(@"^([ -~]*), ([a-zA-Z0-9]*) *(?:\(([^)]*)\))? \-\- (\d*) *$")]
     private partial Regex ParameterBodyRegex();
 
+    /// <summary>
+    ///     Parses a <c>.TMF</c> file and extracts all containing <see cref="TraceMessageFormat"/>s.
+    /// </summary>
+    /// <param name="streamReader">Source file stream.</param>
+    /// <returns>A collection of extracted <see cref="TraceMessageFormat"/> entries.</returns>
     public IReadOnlyList<TraceMessageFormat> Parse(StreamReader streamReader)
     {
         List<TraceMessageFormat> messages = [];
