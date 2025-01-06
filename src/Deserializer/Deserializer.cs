@@ -96,7 +96,7 @@ internal sealed partial class Deserializer<T>
         if (tmf is null)
         {
             // TODO: error handling
-            return;
+            throw new InvalidOperationException("This should never happen");
         }
 
         if (tmf.FunctionParameters.Any(p => p.Type == ItemType.ItemPWString))
