@@ -8,9 +8,12 @@ internal abstract class DecodingContextType(TDH_CONTEXT_TYPE contextType)
 
     protected ReadOnlyMemory<byte> Buffer { get; init; }
 
-    public TDH_CONTEXT AsContext()
+    public unsafe TDH_CONTEXT AsContext()
     {
-        return new TDH_CONTEXT { ParameterType = ContextType, ParameterValue = Buffer.Span[0] };
+        fixed (byte* valueBuffer = Buffer.Span)
+        {
+            return new TDH_CONTEXT { ParameterType = ContextType, ParameterValue = (ulong)valueBuffer };
+        }
     }
 }
 
@@ -20,7 +23,7 @@ internal abstract class DecodingContextType(TDH_CONTEXT_TYPE contextType)
 internal sealed class PdbFilesDecodingContextType()
     : DecodingContextType(TDH_CONTEXT_TYPE.TDH_CONTEXT_PDB_PATH)
 {
-    public PdbFilesDecodingContextType(IList<string> pathList) : this()
+    public PdbFilesDecodingContextType(params IList<string> pathList) : this()
     {
         Buffer = new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(string.Join(';', pathList)));
     }
@@ -32,7 +35,7 @@ internal sealed class PdbFilesDecodingContextType()
 internal sealed class TmfFilesDecodingContextType()
     : DecodingContextType(TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFSEARCHPATH)
 {
-    public TmfFilesDecodingContextType(IList<string> pathList) : this()
+    public TmfFilesDecodingContextType(params IList<string> pathList) : this()
     {
         Buffer = new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(string.Join(';', pathList)));
     }
