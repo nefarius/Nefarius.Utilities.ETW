@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using Windows.Win32.Foundation;
 
 using Nefarius.Utilities.ETW.Deserializer.CustomParsers;
+using Nefarius.Utilities.ETW.Deserializer.WPP;
 using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
 namespace Nefarius.Utilities.ETW.Deserializer;
@@ -108,6 +109,8 @@ internal sealed partial class Deserializer<T>
                 ctx->ParameterType = TDH_CONTEXT_TYPE.TDH_CONTEXT_PDB_PATH;
                 ctx->ParameterValue = (ulong)pdbPathNative;
 
+                
+                
                 uint bufferSize = 0;
                 uint ret = PInvoke.TdhGetEventInformation(eventRecord, 1, ctx, null, &bufferSize);
 
