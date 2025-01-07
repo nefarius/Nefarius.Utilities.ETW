@@ -25,7 +25,7 @@ internal sealed class PdbFilesDecodingContextType()
 {
     public PdbFilesDecodingContextType(params IList<string> pathList) : this()
     {
-        Buffer = new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(string.Join(';', pathList)));
+        Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(string.Join(';', pathList)));
     }
 }
 
@@ -37,7 +37,7 @@ internal sealed class TmfFilesDecodingContextType()
 {
     public TmfFilesDecodingContextType(params IList<string> pathList) : this()
     {
-        Buffer = new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(string.Join(';', pathList)));
+        Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(string.Join(';', pathList)));
     }
 }
 
@@ -48,6 +48,6 @@ internal sealed class TmfFileDecodingContextType() : DecodingContextType(TDH_CON
 {
     public TmfFileDecodingContextType(string path) : this()
     {
-        Buffer = new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(path));
+        Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(path));
     }
 }
