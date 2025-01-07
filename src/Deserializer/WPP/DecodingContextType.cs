@@ -1,0 +1,53 @@
+﻿using System.Text;
+
+namespace Nefarius.Utilities.ETW.Deserializer.WPP;
+
+internal abstract class DecodingContextType(TDH_CONTEXT_TYPE contextType)
+{
+    public TDH_CONTEXT_TYPE ContextType { get; } = contextType;
+
+    protected ReadOnlyMemory<byte> Buffer { get; set; }
+
+    public TDH_CONTEXT AsContext()
+    {
+        return new TDH_CONTEXT
+        {
+            ParameterType = TDH_CONTEXT_TYPE.TDH_CONTEXT_PDB_PATH, ParameterValue = Buffer.Span[0]
+        };
+    }
+}
+
+/// <summary>
+///     <see cref="TDH_CONTEXT_TYPE.TDH_CONTEXT_PDB_PATH" /> wrapper.
+/// </summary>
+internal class PdbFilesDecodingContextType()
+    : DecodingContextType(TDH_CONTEXT_TYPE.TDH_CONTEXT_PDB_PATH)
+{
+    public PdbFilesDecodingContextType(IList<string> pathList) : this()
+    {
+        Buffer = new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(string.Join(';', pathList)));
+    }
+}
+
+/// <summary>
+///     <see cref="TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFSEARCHPATH" /> wrapper.
+/// </summary>
+internal class TmfFilesDecodingContextType()
+    : DecodingContextType(TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFSEARCHPATH)
+{
+    public TmfFilesDecodingContextType(IList<string> pathList) : this()
+    {
+        Buffer = new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(string.Join(';', pathList)));
+    }
+}
+
+/// <summary>
+///     <see cref="TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFFILE" /> wrapper.
+/// </summary>
+internal class TmfFileDecodingContextType() : DecodingContextType(TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFFILE)
+{
+    public TmfFileDecodingContextType(string path) : this()
+    {
+        Buffer = new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(path));
+    }
+}
