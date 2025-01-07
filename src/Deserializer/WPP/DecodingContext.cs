@@ -3,14 +3,12 @@ using System.Diagnostics.CodeAnalysis;
 
 using Windows.Win32.Foundation;
 
-namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
+namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 
 internal sealed class DecodingContext : IDisposable
 {
     [SuppressMessage("ReSharper", "PrivateFieldCanBeConvertedToLocalVariable")]
     private readonly IList<DecodingContextType> _decodingTypes;
-
-    private readonly TDH_HANDLE _handle;
 
     public unsafe DecodingContext(params IList<DecodingContextType> decodingTypes)
     {
@@ -23,22 +21,28 @@ internal sealed class DecodingContext : IDisposable
         }
 
         TDH_HANDLE decodingHandle;
+#pragma warning disable CA1416
         WIN32_ERROR ret = (WIN32_ERROR)PInvoke.TdhOpenDecodingHandle(&decodingHandle);
+#pragma warning restore CA1416
 
         if (ret != WIN32_ERROR.ERROR_SUCCESS)
         {
             throw new Win32Exception((int)ret);
         }
 
-        _handle = decodingHandle;
-
+#pragma warning disable CA1416
         ret = (WIN32_ERROR)PInvoke.TdhSetDecodingParameter(decodingHandle, ctx);
+#pragma warning restore CA1416
 
         if (ret != WIN32_ERROR.ERROR_SUCCESS)
         {
             throw new Win32Exception((int)ret);
         }
+
+        Handle = decodingHandle;
     }
+
+    public TDH_HANDLE Handle { get; }
 
     public void Dispose()
     {
@@ -48,7 +52,9 @@ internal sealed class DecodingContext : IDisposable
 
     private void ReleaseUnmanagedResources()
     {
-        PInvoke.TdhCloseDecodingHandle(_handle);
+#pragma warning disable CA1416
+        PInvoke.TdhCloseDecodingHandle(Handle);
+#pragma warning restore CA1416
     }
 
     ~DecodingContext()

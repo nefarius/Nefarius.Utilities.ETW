@@ -102,6 +102,9 @@ internal sealed partial class Deserializer<T>
 
         PdbFilesDecodingContextType pdbSource = new(@"D:\Downloads\tmftest\nssvpd.pdb");
         using var decodingContext = new DecodingContext(pdbSource);
+        
+        var wppRecord = new WppEventRecord(eventRecord, decodingContext);
+        wppRecord.Decode();
 
         //if (tmf.FunctionParameters.Any(p => p.Type == ItemType.ItemPWString))
         //{
