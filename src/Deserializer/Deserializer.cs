@@ -101,7 +101,41 @@ internal sealed partial class Deserializer<T>
 
         if (tmf.FunctionParameters.Any(p => p.Type == ItemType.ItemPWString))
         {
-            var str = eventRecordReader.ReadUnicodeString();
+            string pdbPath = @"D:\Downloads\tmftest\nssvpd.pdb";
+            fixed (char* pdbPathNative = pdbPath)
+            {
+                TDH_CONTEXT* ctx = stackalloc TDH_CONTEXT[1];
+                ctx->ParameterType = TDH_CONTEXT_TYPE.TDH_CONTEXT_PDB_PATH;
+                ctx->ParameterValue = (ulong)pdbPathNative;
+
+                uint bufferSize = 0;
+                uint ret = PInvoke.TdhGetEventInformation(eventRecord, 1, ctx, null, &bufferSize);
+
+                byte* buffer = stackalloc byte[(int)bufferSize];
+                TRACE_EVENT_INFO* traceEventInfo = (TRACE_EVENT_INFO*)buffer;
+                ret = PInvoke.TdhGetEventInformation(eventRecord, 1, ctx, traceEventInfo, &bufferSize);
+
+                int propertyIndex = 0;
+                string propertyName = new((char*)((byte*)traceEventInfo +
+                                                  traceEventInfo->EventPropertyInfoArray[propertyIndex]
+                                                      .NameOffset));
+
+                PROPERTY_DATA_DESCRIPTOR* propertyDescriptor = stackalloc PROPERTY_DATA_DESCRIPTOR[1];
+
+                propertyDescriptor->PropertyName = (ulong)((byte*)traceEventInfo +
+                                                           traceEventInfo->EventPropertyInfoArray[propertyIndex]
+                                                               .NameOffset);
+                propertyDescriptor->ArrayIndex = uint.MaxValue;
+
+                uint propSize = 0;
+                ret = PInvoke.TdhGetPropertySize(eventRecord, 1, ctx, 1, propertyDescriptor, &propSize);
+
+                byte* propertyBuffer = stackalloc byte[(int)propSize];
+
+                ret = PInvoke.TdhGetProperty(eventRecord, 1, ctx, 1, propertyDescriptor, propSize, propertyBuffer);
+            }
+
+            string str = eventRecordReader.ReadUnicodeString();
         }
     }
 
