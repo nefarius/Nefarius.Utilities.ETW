@@ -35,11 +35,14 @@ PROCESS_TRACE_MODE_EVENT_RECORD
 PROCESS_TRACE_MODE_RAW_TIMESTAMP
 PROPERTY_DATA_DESCRIPTOR
 ProcessTrace
+TDH_CONTEXT
+TDH_CONTEXT_TYPE
 TRACE_EVENT_INFO
 TdhFormatProperty
 TdhGetEventInformation
 TdhGetEventMapInformation
 TdhGetProperty
+TdhGetPropertySize
 TdhGetWppMessage
 TdhGetWppProperty
 TdhLoadManifest
