@@ -72,7 +72,9 @@ internal readonly unsafe struct WppEventRecord
             fixed (char* propertyNameBuf = propertyName)
             {
                 uint size = 0;
+#pragma warning disable CA1416
                 uint ret = PInvoke.TdhGetWppProperty(decodingContext.Handle, eventRecord, propertyNameBuf, &size, null);
+#pragma warning restore CA1416
 
                 if (size > typeSize)
                 {
@@ -82,8 +84,10 @@ internal readonly unsafe struct WppEventRecord
                 IntPtr buffer = Marshal.AllocHGlobal((int)size);
                 try
                 {
+#pragma warning disable CA1416
                     ret = PInvoke.TdhGetWppProperty(decodingContext.Handle, eventRecord, propertyNameBuf, &size,
                         (byte*)buffer.ToPointer());
+#pragma warning restore CA1416
 
                     object? value = propertyType == typeof(string)
                         ? Marshal.PtrToStringUni(buffer)
