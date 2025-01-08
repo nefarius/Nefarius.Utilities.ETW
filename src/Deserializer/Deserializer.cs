@@ -43,7 +43,7 @@ internal sealed partial class Deserializer<T>
 
     private readonly Dictionary<Guid, EventSourceManifest> _eventSourceManifestCache = new();
 
-    private readonly WppTraceEventParser _wppTraceEventParser;
+    private readonly WppTraceEventParser? _wppTraceEventParser;
 
     private EventMetadata[] _eventMetadataTable;
 
@@ -52,13 +52,17 @@ internal sealed partial class Deserializer<T>
     private Deserializer(T writer)
     {
         _writer = writer;
-        _decodingContext = new DecodingContext(new PdbFilesDecodingContextType(@"D:\Downloads\tmftest\nssvpd.pdb"));
-        _wppTraceEventParser = new WppTraceEventParser(_decodingContext);
     }
 
-    public Deserializer(T writer, Func<Guid, Stream?>? customProviderManifest) : this(writer)
+    public Deserializer(T writer, Func<Guid, Stream?>? customProviderManifest,
+        DecodingContext? decodingContext = null) : this(writer)
     {
         _customProviderManifest = customProviderManifest;
+        _decodingContext = decodingContext;
+        if (_decodingContext is not null)
+        {
+            _wppTraceEventParser = new WppTraceEventParser(_decodingContext);
+        }
     }
 
     public void ResetWriter(T writer)
@@ -92,7 +96,7 @@ internal sealed partial class Deserializer<T>
 
         if (IsWppEvent(eventRecord))
         {
-            _wppTraceEventParser.Parse(eventRecordReader, _writer, _eventMetadataTable, runtimeMetadata);
+            _wppTraceEventParser?.Parse(eventRecordReader, _writer, _eventMetadataTable, runtimeMetadata);
             return;
         }
 

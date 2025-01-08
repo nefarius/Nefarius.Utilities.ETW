@@ -5,6 +5,7 @@ using System.Text.Json;
 using Windows.Win32.Foundation;
 
 using Nefarius.Utilities.ETW.Deserializer;
+using Nefarius.Utilities.ETW.Deserializer.WPP;
 
 namespace Nefarius.Utilities.ETW;
 
@@ -21,9 +22,10 @@ public static class EtwUtil
     /// <param name="inputFiles">One or more input files.</param>
     /// <param name="reportError">Potential parsing errors.</param>
     /// <param name="customProviderManifest">Optionally called to load custom manifests for providers.</param>
+    /// <param name="decodingContext">Optional <see cref="DecodingContext"/> to read WPP events.</param>
     /// <returns>True on success, false otherwise.</returns>
     public static bool ConvertToJson(Utf8JsonWriter jsonWriter, IEnumerable<string> inputFiles,
-        Action<string> reportError, Func<Guid, Stream?>? customProviderManifest = null)
+        Action<string> reportError, Func<Guid, Stream?>? customProviderManifest = null, DecodingContext? decodingContext = null)
     {
         List<string> list = inputFiles.ToList();
         Deserializer<EtwJsonWriter> deserializer = new(new EtwJsonWriter(jsonWriter), customProviderManifest);

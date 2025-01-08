@@ -104,6 +104,7 @@ internal sealed class WppTraceEventParser : ICustomParser
 
     public WppTraceEventParser(DecodingContext decodingContext)
     {
+        ArgumentNullException.ThrowIfNull(decodingContext);
         _decodingContext = decodingContext;
     }
 

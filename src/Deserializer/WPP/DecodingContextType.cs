@@ -6,14 +6,18 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 /// <summary>
 ///     Describes a decoding source for use with <see cref="DecodingContext" />.
 /// </summary>
-/// <param name="contextType"></param>
-internal abstract class DecodingContextType(TDH_CONTEXT_TYPE contextType)
+public abstract class DecodingContextType
 {
-    internal TDH_CONTEXT_TYPE ContextType { get; } = contextType;
+    internal DecodingContextType(TDH_CONTEXT_TYPE contextType)
+    {
+        ContextType = contextType;
+    }
+
+    private TDH_CONTEXT_TYPE ContextType { get; }
 
     protected ReadOnlyMemory<byte> Buffer { get; init; }
 
-    public unsafe TDH_CONTEXT AsContext()
+    internal unsafe TDH_CONTEXT AsContext()
     {
         fixed (byte* valueBuffer = Buffer.Span)
         {
@@ -25,7 +29,7 @@ internal abstract class DecodingContextType(TDH_CONTEXT_TYPE contextType)
 /// <summary>
 ///     A <see cref="TDH_CONTEXT_TYPE.TDH_CONTEXT_PDB_PATH" /> wrapper for use with <see cref="DecodingContext" />.
 /// </summary>
-internal sealed class PdbFilesDecodingContextType()
+public sealed class PdbFilesDecodingContextType()
     : DecodingContextType(TDH_CONTEXT_TYPE.TDH_CONTEXT_PDB_PATH)
 {
     /// <summary>
@@ -38,6 +42,7 @@ internal sealed class PdbFilesDecodingContextType()
     /// </param>
     public PdbFilesDecodingContextType(params IList<string> pathList) : this()
     {
+        ArgumentNullException.ThrowIfNull(pathList);
         Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(string.Join(';', pathList)));
     }
 }
@@ -47,7 +52,7 @@ internal sealed class PdbFilesDecodingContextType()
 ///     <see cref="DecodingContext" />.
 /// </summary>
 [SuppressMessage("ReSharper", "UnusedType.Global")]
-internal sealed class TmfFilesDecodingContextType()
+public sealed class TmfFilesDecodingContextType()
     : DecodingContextType(TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFSEARCHPATH)
 {
     /// <summary>
@@ -65,6 +70,7 @@ internal sealed class TmfFilesDecodingContextType()
     /// </param>
     public TmfFilesDecodingContextType(params IList<string> pathList) : this()
     {
+        ArgumentNullException.ThrowIfNull(pathList);
         Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(string.Join(';', pathList)));
     }
 }
@@ -73,7 +79,7 @@ internal sealed class TmfFilesDecodingContextType()
 ///     A <see cref="TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFFILE" />  wrapper for use with <see cref="DecodingContext" />.
 /// </summary>
 [SuppressMessage("ReSharper", "UnusedType.Global")]
-internal sealed class TmfFileDecodingContextType() : DecodingContextType(TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFFILE)
+public sealed class TmfFileDecodingContextType() : DecodingContextType(TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFFILE)
 {
     /// <summary>
     ///     Gets decoding info from a single <c>.TMF</c> file.
@@ -84,6 +90,7 @@ internal sealed class TmfFileDecodingContextType() : DecodingContextType(TDH_CON
     /// </param>
     public TmfFileDecodingContextType(string path) : this()
     {
+        ArgumentException.ThrowIfNullOrEmpty(path);
         Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(path));
     }
 }

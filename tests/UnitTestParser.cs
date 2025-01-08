@@ -1,6 +1,7 @@
 using System.Text.Json;
 
 using Nefarius.Utilities.ETW;
+using Nefarius.Utilities.ETW.Deserializer.WPP;
 
 namespace EtwTestProject;
 
@@ -16,18 +17,17 @@ public class Tests
     {
         string etwFilePath = @".\traces\VPadRuntime.etl";
 
-        var options = new JsonWriterOptions
-        {
-            Indented = true
-        };
-        
+        JsonWriterOptions options = new() { Indented = true };
+
         using MemoryStream ms = new();
         using Utf8JsonWriter jsonWriter = new(ms, options);
+        DecodingContext decodingContext = new(new PdbFilesDecodingContextType(@"D:\Downloads\tmftest\nssvpd.pdb"));
 
         if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], error =>
-            {
-                Assert.Fail();
-            }))
+                {
+                    Assert.Fail();
+                }, decodingContext: decodingContext
+            ))
         {
             Assert.Fail();
         }

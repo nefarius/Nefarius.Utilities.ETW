@@ -5,13 +5,14 @@ using Windows.Win32.Foundation;
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 
-internal sealed class DecodingContext : IDisposable
+public sealed class DecodingContext : IDisposable
 {
     [SuppressMessage("ReSharper", "PrivateFieldCanBeConvertedToLocalVariable")]
     private readonly IList<DecodingContextType> _decodingTypes;
 
     public unsafe DecodingContext(params IList<DecodingContextType> decodingTypes)
     {
+        ArgumentNullException.ThrowIfNull(decodingTypes);
         _decodingTypes = decodingTypes;
 
         TDH_CONTEXT* ctx = stackalloc TDH_CONTEXT[_decodingTypes.Count];
@@ -42,7 +43,7 @@ internal sealed class DecodingContext : IDisposable
         Handle = decodingHandle;
     }
 
-    public TDH_HANDLE Handle { get; }
+    internal TDH_HANDLE Handle { get; }
 
     public void Dispose()
     {
