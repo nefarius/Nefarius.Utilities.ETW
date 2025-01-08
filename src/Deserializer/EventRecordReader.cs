@@ -6,11 +6,11 @@ namespace Nefarius.Utilities.ETW.Deserializer;
 
 internal readonly struct EventRecordReader
 {
-    private readonly unsafe EVENT_RECORD* _eventRecord;
+    internal unsafe EVENT_RECORD* NativeEventRecord { get; }
 
     internal unsafe EventRecordReader(EVENT_RECORD* eventRecord)
     {
-        _eventRecord = eventRecord;
+        NativeEventRecord = eventRecord;
     }
 
     private unsafe void IncrementBy(ref void* ptr, int value)
@@ -25,17 +25,17 @@ internal readonly struct EventRecordReader
     public unsafe string ReadUnicodeString()
     {
         int length = 0;
-        byte* ptr = (byte*)_eventRecord->UserData;
-        long maxLength = _eventRecord->UserDataLength -
-                         ((byte*)_eventRecord->UserData - (byte*)_eventRecord->UserContext);
+        byte* ptr = (byte*)NativeEventRecord->UserData;
+        long maxLength = NativeEventRecord->UserDataLength -
+                         ((byte*)NativeEventRecord->UserData - (byte*)NativeEventRecord->UserContext);
 
         while (!(ptr[length] == 0 && ptr[length + 1] == 0) && length < maxLength)
         {
             ++length;
         }
 
-        string value = new((char*)_eventRecord->UserData, 0, (length + 1) / 2);
-        IncrementBy(ref _eventRecord->UserData, (value.Length + 1) * 2); // +2 (via the multiplication)
+        string value = new((char*)NativeEventRecord->UserData, 0, (length + 1) / 2);
+        IncrementBy(ref NativeEventRecord->UserData, (value.Length + 1) * 2); // +2 (via the multiplication)
         return value;
     }
 
@@ -82,9 +82,9 @@ internal readonly struct EventRecordReader
     public unsafe string ReadAnsiString()
     {
         int length = 0;
-        byte* ptr = (byte*)_eventRecord->UserData;
-        long maxLength = _eventRecord->UserDataLength -
-                         ((byte*)_eventRecord->UserData - (byte*)_eventRecord->UserContext);
+        byte* ptr = (byte*)NativeEventRecord->UserData;
+        long maxLength = NativeEventRecord->UserDataLength -
+                         ((byte*)NativeEventRecord->UserData - (byte*)NativeEventRecord->UserContext);
         while (ptr[length] != 0 && length < maxLength)
         {
             ++length;
@@ -96,7 +96,7 @@ internal readonly struct EventRecordReader
             arr[i] = (char)*ptr++;
         }
 
-        IncrementBy(ref _eventRecord->UserData, length + 1); // +1 for null terminator
+        IncrementBy(ref NativeEventRecord->UserData, length + 1); // +1 for null terminator
         return new string(arr);
     }
 
@@ -142,8 +142,8 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe sbyte ReadInt8()
     {
-        sbyte value = *(sbyte*)_eventRecord->UserData;
-        IncrementBy(ref _eventRecord->UserData, sizeof(sbyte));
+        sbyte value = *(sbyte*)NativeEventRecord->UserData;
+        IncrementBy(ref NativeEventRecord->UserData, sizeof(sbyte));
         return value;
     }
 
@@ -153,8 +153,8 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe byte ReadUInt8()
     {
-        byte value = *(byte*)_eventRecord->UserData;
-        IncrementBy(ref _eventRecord->UserData, sizeof(byte));
+        byte value = *(byte*)NativeEventRecord->UserData;
+        IncrementBy(ref NativeEventRecord->UserData, sizeof(byte));
         return value;
     }
 
@@ -164,8 +164,8 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe short ReadInt16()
     {
-        short value = *(short*)_eventRecord->UserData;
-        IncrementBy(ref _eventRecord->UserData, sizeof(short));
+        short value = *(short*)NativeEventRecord->UserData;
+        IncrementBy(ref NativeEventRecord->UserData, sizeof(short));
         return value;
     }
 
@@ -175,8 +175,8 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe ushort ReadUInt16()
     {
-        ushort value = *(ushort*)_eventRecord->UserData;
-        IncrementBy(ref _eventRecord->UserData, sizeof(ushort));
+        ushort value = *(ushort*)NativeEventRecord->UserData;
+        IncrementBy(ref NativeEventRecord->UserData, sizeof(ushort));
         return value;
     }
 
@@ -186,8 +186,8 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe int ReadInt32()
     {
-        int value = *(int*)_eventRecord->UserData;
-        IncrementBy(ref _eventRecord->UserData, sizeof(int));
+        int value = *(int*)NativeEventRecord->UserData;
+        IncrementBy(ref NativeEventRecord->UserData, sizeof(int));
         return value;
     }
 
@@ -197,8 +197,8 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe uint ReadUInt32()
     {
-        uint value = *(uint*)_eventRecord->UserData;
-        IncrementBy(ref _eventRecord->UserData, sizeof(uint));
+        uint value = *(uint*)NativeEventRecord->UserData;
+        IncrementBy(ref NativeEventRecord->UserData, sizeof(uint));
         return value;
     }
 
@@ -208,8 +208,8 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe long ReadInt64()
     {
-        long value = *(long*)_eventRecord->UserData;
-        IncrementBy(ref _eventRecord->UserData, sizeof(long));
+        long value = *(long*)NativeEventRecord->UserData;
+        IncrementBy(ref NativeEventRecord->UserData, sizeof(long));
         return value;
     }
 
@@ -219,8 +219,8 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe ulong ReadUInt64()
     {
-        ulong value = *(ulong*)_eventRecord->UserData;
-        IncrementBy(ref _eventRecord->UserData, sizeof(ulong));
+        ulong value = *(ulong*)NativeEventRecord->UserData;
+        IncrementBy(ref NativeEventRecord->UserData, sizeof(ulong));
         return value;
     }
 
@@ -230,8 +230,8 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe float ReadFloat()
     {
-        float value = *(float*)_eventRecord->UserData;
-        IncrementBy(ref _eventRecord->UserData, sizeof(float));
+        float value = *(float*)NativeEventRecord->UserData;
+        IncrementBy(ref NativeEventRecord->UserData, sizeof(float));
         return value;
     }
 
@@ -241,8 +241,8 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe double ReadDouble()
     {
-        double value = *(double*)_eventRecord->UserData;
-        IncrementBy(ref _eventRecord->UserData, sizeof(double));
+        double value = *(double*)NativeEventRecord->UserData;
+        IncrementBy(ref NativeEventRecord->UserData, sizeof(double));
         return value;
     }
 
@@ -252,8 +252,8 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe bool ReadBoolean()
     {
-        bool value = *(int*)_eventRecord->UserData != 0;
-        IncrementBy(ref _eventRecord->UserData, sizeof(int));
+        bool value = *(int*)NativeEventRecord->UserData != 0;
+        IncrementBy(ref NativeEventRecord->UserData, sizeof(int));
         return value;
     }
 
@@ -264,8 +264,8 @@ internal readonly struct EventRecordReader
     public unsafe byte[] ReadBinary(short size)
     {
         byte[] value = new byte[size];
-        Marshal.Copy((IntPtr)_eventRecord->UserData, value, 0, size);
-        IncrementBy(ref _eventRecord->UserData, size);
+        Marshal.Copy((IntPtr)NativeEventRecord->UserData, value, 0, size);
+        IncrementBy(ref NativeEventRecord->UserData, size);
         return value;
     }
 
@@ -276,8 +276,8 @@ internal readonly struct EventRecordReader
     public unsafe byte[] ReadBinary(ushort size)
     {
         byte[] value = new byte[size];
-        Marshal.Copy((IntPtr)_eventRecord->UserData, value, 0, size);
-        IncrementBy(ref _eventRecord->UserData, size);
+        Marshal.Copy((IntPtr)NativeEventRecord->UserData, value, 0, size);
+        IncrementBy(ref NativeEventRecord->UserData, size);
         return value;
     }
 
@@ -288,8 +288,8 @@ internal readonly struct EventRecordReader
     public unsafe byte[] ReadBinary(int size)
     {
         byte[] value = new byte[size];
-        Marshal.Copy((IntPtr)_eventRecord->UserData, value, 0, size);
-        IncrementBy(ref _eventRecord->UserData, size);
+        Marshal.Copy((IntPtr)NativeEventRecord->UserData, value, 0, size);
+        IncrementBy(ref NativeEventRecord->UserData, size);
         return value;
     }
 
@@ -300,8 +300,8 @@ internal readonly struct EventRecordReader
     public unsafe byte[] ReadBinary(uint size)
     {
         byte[] value = new byte[size];
-        Marshal.Copy((IntPtr)_eventRecord->UserData, value, 0, (int)size);
-        IncrementBy(ref _eventRecord->UserData, (int)size);
+        Marshal.Copy((IntPtr)NativeEventRecord->UserData, value, 0, (int)size);
+        IncrementBy(ref NativeEventRecord->UserData, (int)size);
         return value;
     }
 
@@ -311,8 +311,8 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe Guid ReadGuid()
     {
-        Guid value = *(Guid*)_eventRecord->UserData;
-        IncrementBy(ref _eventRecord->UserData, sizeof(Guid));
+        Guid value = *(Guid*)NativeEventRecord->UserData;
+        IncrementBy(ref NativeEventRecord->UserData, sizeof(Guid));
         return value;
     }
 
@@ -322,7 +322,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe ulong ReadPointer()
     {
-        if ((_eventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_32_BIT_HEADER) ==
+        if ((NativeEventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_32_BIT_HEADER) ==
             PInvoke.EVENT_HEADER_FLAG_32_BIT_HEADER)
         {
             return ReadUInt32();
@@ -363,8 +363,8 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe string ReadSid()
     {
-        SecurityIdentifier value = new((IntPtr)_eventRecord->UserData);
-        IncrementBy(ref _eventRecord->UserData, value.BinaryLength);
+        SecurityIdentifier value = new((IntPtr)NativeEventRecord->UserData);
+        IncrementBy(ref NativeEventRecord->UserData, value.BinaryLength);
         return value.Value;
     }
 
@@ -420,7 +420,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe string ReadNonNullTerminatedString()
     {
-        return ReadUnicodeStringHelper(_eventRecord->UserDataLength);
+        return ReadUnicodeStringHelper(NativeEventRecord->UserDataLength);
     }
 
     /// <summary>
@@ -429,7 +429,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe string ReadNonNullTerminatedAnsiString()
     {
-        return ReadAnsiStringHelper(_eventRecord->UserDataLength);
+        return ReadAnsiStringHelper(NativeEventRecord->UserDataLength);
     }
 
     /// <summary>
@@ -438,8 +438,8 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe char ReadUnicodeChar()
     {
-        char value = *(char*)_eventRecord->UserData;
-        IncrementBy(ref _eventRecord->UserData, sizeof(char));
+        char value = *(char*)NativeEventRecord->UserData;
+        IncrementBy(ref NativeEventRecord->UserData, sizeof(char));
         return value;
     }
 
@@ -449,8 +449,8 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe char ReadAnsiChar()
     {
-        char value = (char)*(byte*)_eventRecord->UserData;
-        IncrementBy(ref _eventRecord->UserData, 1);
+        char value = (char)*(byte*)NativeEventRecord->UserData;
+        IncrementBy(ref NativeEventRecord->UserData, 1);
         return value;
     }
 
@@ -470,33 +470,33 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe string ReadWbemSid()
     {
-        int pointerSize = (_eventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_32_BIT_HEADER) ==
+        int pointerSize = (NativeEventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_32_BIT_HEADER) ==
                           PInvoke.EVENT_HEADER_FLAG_32_BIT_HEADER
             ? 4
             : 8;
-        IncrementBy(ref _eventRecord->UserData, pointerSize * 2);
+        IncrementBy(ref NativeEventRecord->UserData, pointerSize * 2);
         return ReadSid();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private unsafe string ReadAnsiStringHelper(int length)
     {
-        byte* ptr = (byte*)_eventRecord->UserData;
+        byte* ptr = (byte*)NativeEventRecord->UserData;
         char[] arr = new char[length];
         for (int i = 0; i < length; ++i)
         {
             arr[i] = (char)*ptr++;
         }
 
-        IncrementBy(ref _eventRecord->UserData, length);
+        IncrementBy(ref NativeEventRecord->UserData, length);
         return new string(arr);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private unsafe string ReadUnicodeStringHelper(int length)
     {
-        string value = new((char*)_eventRecord->UserData, 0, length / 2);
-        IncrementBy(ref _eventRecord->UserData, value.Length * 2);
+        string value = new((char*)NativeEventRecord->UserData, 0, length / 2);
+        IncrementBy(ref NativeEventRecord->UserData, value.Length * 2);
         return value;
     }
 }
