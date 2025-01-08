@@ -28,7 +28,7 @@ public static class EtwUtil
         Action<string> reportError, Func<Guid, Stream?>? customProviderManifest = null, DecodingContext? decodingContext = null)
     {
         List<string> list = inputFiles.ToList();
-        Deserializer<EtwJsonWriter> deserializer = new(new EtwJsonWriter(jsonWriter), customProviderManifest);
+        Deserializer<EtwJsonWriter> deserializer = new(new EtwJsonWriter(jsonWriter), customProviderManifest, decodingContext);
 
         int count = list.Count;
         EVENT_TRACE_LOGFILEW[] fileSessions = new EVENT_TRACE_LOGFILEW[count];
