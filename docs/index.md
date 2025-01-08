@@ -232,19 +232,11 @@
 
 - [EtwUtil](./nefarius.utilities.etw.etwutil.md)
 
-## Namespace Nefarius.Utilities.ETW.Deserializer
-
-- [MapInformation](./nefarius.utilities.etw.deserializer.mapinformation.md)
-
-- [RuntimeEventMetadata](./nefarius.utilities.etw.deserializer.runtimeeventmetadata.md)
-
 ## Namespace Nefarius.Utilities.ETW.Deserializer.WPP
 
 - [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md)
 
 - [DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md)
-
-- [EventPropertyMeta](./nefarius.utilities.etw.deserializer.wpp.eventpropertymeta.md)
 
 - [PdbFilesDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.pdbfilesdecodingcontexttype.md)
 
