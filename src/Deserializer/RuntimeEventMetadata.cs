@@ -1,9 +1,6 @@
-﻿using Windows.Win32;
-using Windows.Win32.System.Diagnostics.Etw;
+﻿namespace Nefarius.Utilities.ETW.Deserializer;
 
-namespace Nefarius.Utilities.ETW.Deserializer;
-
-public readonly struct RuntimeEventMetadata
+internal readonly struct RuntimeEventMetadata
 {
     private readonly unsafe EVENT_RECORD* _eventRecord;
 
