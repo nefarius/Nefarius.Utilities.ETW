@@ -7,10 +7,9 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 ///     Describes a decoding source for use with <see cref="DecodingContext" />.
 /// </summary>
 /// <param name="contextType"></param>
-[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 internal abstract class DecodingContextType(TDH_CONTEXT_TYPE contextType)
 {
-    public TDH_CONTEXT_TYPE ContextType { get; } = contextType;
+    internal TDH_CONTEXT_TYPE ContextType { get; } = contextType;
 
     protected ReadOnlyMemory<byte> Buffer { get; init; }
 
