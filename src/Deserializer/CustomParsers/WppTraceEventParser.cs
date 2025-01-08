@@ -16,7 +16,7 @@ internal sealed class WppTraceEventParser : ICustomParser
     private static readonly PropertyMetadata KernelTimeMetadata;
     private static readonly PropertyMetadata SequenceNumMetadata;
     private static readonly PropertyMetadata ProcessIdMetadata;
-    private static readonly PropertyMetadata CpuiNumberMetadata;
+    private static readonly PropertyMetadata CpuNumberMetadata;
     private static readonly PropertyMetadata IndentMetadata;
     private static readonly PropertyMetadata FlagsNameMetadata;
     private static readonly PropertyMetadata LevelNameMetadata;
@@ -26,6 +26,8 @@ internal sealed class WppTraceEventParser : ICustomParser
     private static readonly PropertyMetadata FormattedStringMetadata;
     private static readonly PropertyMetadata RawSystemTimeMetadata;
     private static readonly PropertyMetadata ProviderGuidMetadata;
+
+    private readonly DecodingContext _decodingContext;
 
     static WppTraceEventParser()
     {
@@ -54,7 +56,7 @@ internal sealed class WppTraceEventParser : ICustomParser
             nameof(WppEventRecord.UserTime), false, false, 0, null);
         ProcessIdMetadata = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_UINT32, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT,
             nameof(WppEventRecord.ProcessId), false, false, 0, null);
-        CpuiNumberMetadata = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_UINT32, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT,
+        CpuNumberMetadata = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_UINT32, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT,
             nameof(WppEventRecord.CpuNumber), false, false, 0, null);
         IndentMetadata = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_UINT32, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT,
             nameof(WppEventRecord.Indent), false, false, 0, null);
@@ -91,18 +93,108 @@ internal sealed class WppTraceEventParser : ICustomParser
             {
                 VersionMetadata, TraceGuidMetadata, GuidNameMetadata, GuidTypeNameMetadata, ThreadIdMetadata,
                 SystemTimeMetadata, UserTimeMetadata, KernelTimeMetadata, SequenceNumMetadata, ProcessIdMetadata,
-                CpuiNumberMetadata, IndentMetadata, FlagsNameMetadata, LevelNameMetadata, FunctionNameMetadata,
+                CpuNumberMetadata, IndentMetadata, FlagsNameMetadata, LevelNameMetadata, FunctionNameMetadata,
                 ComponentNameMetadata, SubComponentNameMetadata, FormattedStringMetadata, RawSystemTimeMetadata,
                 ProviderGuidMetadata
             }
         );
     }
 
-    public void Parse<T>(EventRecordReader reader, T writer, EventMetadata[] metadataArray,
+    public WppTraceEventParser(DecodingContext context, DecodingContext decodingContext)
+    {
+        _decodingContext = decodingContext;
+    }
+
+    public unsafe void Parse<T>(EventRecordReader reader, T writer, EventMetadata[] metadataArray,
         RuntimeEventMetadata runtimeMetadata) where T : IEtwWriter
     {
+        WppEventRecord decodedRecord = new(reader.NativeEventRecord, _decodingContext);
+
         writer.WriteEventBegin(EventMetadata, runtimeMetadata);
 
+        writer.WritePropertyBegin(VersionMetadata);
+        writer.WriteUInt32(decodedRecord.Version);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(TraceGuidMetadata);
+        writer.WriteGuid(decodedRecord.TraceGuid);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(GuidNameMetadata);
+        writer.WriteUnicodeString(decodedRecord.GuidName);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(GuidTypeNameMetadata);
+        writer.WriteUnicodeString(decodedRecord.GuidTypeName);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(ThreadIdMetadata);
+        writer.WriteUInt32(decodedRecord.ThreadId);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(SystemTimeMetadata);
+        writer.WriteSystemTime(new DateTime(decodedRecord.SystemTime.wYear, decodedRecord.SystemTime.wMonth,
+            decodedRecord.SystemTime.wDay, decodedRecord.SystemTime.wHour, decodedRecord.SystemTime.wMinute,
+            decodedRecord.SystemTime.wSecond, DateTimeKind.Utc));
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(UserTimeMetadata);
+        writer.WriteUInt32(decodedRecord.UserTime);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(KernelTimeMetadata);
+        writer.WriteUInt32(decodedRecord.KernelTime);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(SequenceNumMetadata);
+        writer.WriteUInt32(decodedRecord.SequenceNum);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(ProcessIdMetadata);
+        writer.WriteUInt32(decodedRecord.ProcessId);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(CpuNumberMetadata);
+        writer.WriteUInt32(decodedRecord.CpuNumber);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(IndentMetadata);
+        writer.WriteUInt32(decodedRecord.Indent);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(FlagsNameMetadata);
+        writer.WriteUnicodeString(decodedRecord.FlagsName);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(LevelNameMetadata);
+        writer.WriteUnicodeString(decodedRecord.LevelName);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(FunctionNameMetadata);
+        writer.WriteUnicodeString(decodedRecord.FunctionName);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(ComponentNameMetadata);
+        writer.WriteUnicodeString(decodedRecord.ComponentName);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(SubComponentNameMetadata);
+        writer.WriteUnicodeString(decodedRecord.SubComponentName);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(FormattedStringMetadata);
+        writer.WriteUnicodeString(decodedRecord.FormattedString);
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(RawSystemTimeMetadata);
+        long fileTime = ((long)decodedRecord.RawSystemTime.dwHighDateTime << 32) +
+                        decodedRecord.RawSystemTime.dwLowDateTime;
+        writer.WriteFileTime(DateTime.FromFileTime(fileTime));
+        writer.WritePropertyEnd();
+
+        writer.WritePropertyBegin(ProviderGuidMetadata);
+        writer.WriteGuid(decodedRecord.ProviderGuid);
+        writer.WritePropertyEnd();
 
         writer.WriteEventEnd();
     }
