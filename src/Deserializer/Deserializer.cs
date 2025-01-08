@@ -88,7 +88,6 @@ internal sealed partial class Deserializer<T>
     private unsafe void ProcessWppEvent(EVENT_RECORD* eventRecord)
     {
         eventRecord->UserContext = eventRecord->UserData;
-        EventRecordReader eventRecordReader = new(eventRecord);
         RuntimeEventMetadata runtimeMetadata = new(eventRecord);
 
         TraceMessageFormat? tmf = _tmf.SingleOrDefault(format =>
@@ -101,64 +100,9 @@ internal sealed partial class Deserializer<T>
         }
 
         PdbFilesDecodingContextType pdbSource = new(@"D:\Downloads\tmftest\nssvpd.pdb");
-        using var decodingContext = new DecodingContext(pdbSource);
-        
-        var wppRecord = new WppEventRecord(eventRecord, decodingContext);
-        wppRecord.Decode();
+        using DecodingContext decodingContext = new(pdbSource);
 
-        //if (tmf.FunctionParameters.Any(p => p.Type == ItemType.ItemPWString))
-        //{
-        string pdbPath = @"D:\Downloads\tmftest\nssvpd.pdb";
-        fixed (char* pdbPathNative = pdbPath)
-        {
-            TDH_CONTEXT* ctx = stackalloc TDH_CONTEXT[1];
-            ctx->ParameterType = TDH_CONTEXT_TYPE.TDH_CONTEXT_PDB_PATH;
-            ctx->ParameterValue = (ulong)pdbPathNative;
-            TDH_HANDLE decodingHandle;
-
-            uint ret = PInvoke.TdhOpenDecodingHandle(&decodingHandle);
-
-            ret = PInvoke.TdhSetDecodingParameter(decodingHandle, ctx);
-
-            uint msgBufSize = 4069;
-            byte* messageBuffer = stackalloc byte[4069];
-            ret = PInvoke.TdhGetWppMessage(decodingHandle, eventRecord, &msgBufSize, messageBuffer);
-            string renderedMessage = new((char*)messageBuffer);
-
-            ret = PInvoke.TdhCloseDecodingHandle(decodingHandle);
-
-            /*
-
-            uint bufferSize = 0;
-            ret = PInvoke.TdhGetEventInformation(eventRecord, 0, null, null, &bufferSize);
-
-            byte* buffer = stackalloc byte[(int)bufferSize];
-            TRACE_EVENT_INFO* traceEventInfo = (TRACE_EVENT_INFO*)buffer;
-            ret = PInvoke.TdhGetEventInformation(eventRecord, 0, null, traceEventInfo, &bufferSize);
-
-            int propertyIndex = 0;
-            string propertyName = new((char*)((byte*)traceEventInfo +
-                                              traceEventInfo->EventPropertyInfoArray[propertyIndex]
-                                                  .NameOffset));
-
-            PROPERTY_DATA_DESCRIPTOR* propertyDescriptor = stackalloc PROPERTY_DATA_DESCRIPTOR[1];
-
-            propertyDescriptor->PropertyName = (ulong)((byte*)traceEventInfo +
-                                                       traceEventInfo->EventPropertyInfoArray[propertyIndex]
-                                                           .NameOffset);
-            propertyDescriptor->ArrayIndex = uint.MaxValue;
-
-            uint propSize = 0;
-            ret = PInvoke.TdhGetPropertySize(eventRecord, 0, null, 1, propertyDescriptor, &propSize);
-
-            byte* propertyBuffer = stackalloc byte[(int)propSize];
-
-            ret = PInvoke.TdhGetProperty(eventRecord, 0, null, 1, propertyDescriptor, propSize, propertyBuffer);
-            */
-        }
-
-        //string str = eventRecordReader.ReadUnicodeString();
-        //}
+        WppEventRecord wppRecord = new(eventRecord, decodingContext);
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 
@@ -6,32 +7,10 @@ using Windows.Win32.Foundation;
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 
-internal readonly unsafe struct WppEventRecord
+[SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Local")]
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
+internal unsafe class WppEventRecord
 {
-    private readonly EVENT_RECORD* _record;
-    private readonly DecodingContext _decodingContext;
-
-    public uint Version { get; init; }
-    public Guid TraceGuid { get; init; }
-    public string GuidName { get; init; }
-    public string GuidTypeName { get; init; }
-    public uint ThreadId { get; init; }
-    public SYSTEMTIME SystemTime { get; init; }
-    public uint UserTime { get; init; }
-    public uint KernelTime { get; init; }
-    public uint SequenceNum { get; init; }
-    public uint ProcessId { get; init; }
-    public uint CpuNumber { get; init; }
-    public uint Indent { get; init; }
-    public string FlagsName { get; init; }
-    public string LevelName { get; init; }
-    public string FunctionName { get; init; }
-    public string ComponentName { get; init; }
-    public string SubComponentName { get; init; }
-    public string FormattedString { get; init; }
-    public FILETIME RawSystemTime { get; init; }
-    public Guid ProviderGuid { get; init; }
-
     /// <summary>
     ///     TDH supports a set of known properties for WPP events.
     /// </summary>
@@ -60,14 +39,15 @@ internal readonly unsafe struct WppEventRecord
         { "ProviderGuid", typeof(Guid) }
     };
 
+#pragma warning disable CS8618, CS9264
     public WppEventRecord(EVENT_RECORD* eventRecord, DecodingContext decodingContext)
+#pragma warning restore CS8618, CS9264
     {
-        _record = eventRecord;
-        _decodingContext = decodingContext;
-
         foreach ((string propertyName, Type propertyType) in WellKnownWppProperties)
         {
-            int typeSize = Marshal.SizeOf(propertyType);
+            int typeSize = propertyType != typeof(string)
+                ? Marshal.SizeOf(propertyType)
+                : -1;
 
             fixed (char* propertyNameBuf = propertyName)
             {
@@ -76,7 +56,7 @@ internal readonly unsafe struct WppEventRecord
                 uint ret = PInvoke.TdhGetWppProperty(decodingContext.Handle, eventRecord, propertyNameBuf, &size, null);
 #pragma warning restore CA1416
 
-                if (size > typeSize)
+                if (typeSize != -1 && size > typeSize)
                 {
                     throw new InvalidOperationException("Property size mismatch!");
                 }
@@ -106,6 +86,27 @@ internal readonly unsafe struct WppEventRecord
         }
     }
 
+    public uint Version { get; private set; }
+    public Guid TraceGuid { get; private set; }
+    public string GuidName { get; private set; }
+    public string GuidTypeName { get; private set; }
+    public uint ThreadId { get; private set; }
+    public SYSTEMTIME SystemTime { get; private set; }
+    public uint UserTime { get; private set; }
+    public uint KernelTime { get; private set; }
+    public uint SequenceNum { get; private set; }
+    public uint ProcessId { get; private set; }
+    public uint CpuNumber { get; private set; }
+    public uint Indent { get; private set; }
+    public string FlagsName { get; private set; }
+    public string LevelName { get; private set; }
+    public string FunctionName { get; private set; }
+    public string ComponentName { get; private set; }
+    public string SubComponentName { get; private set; }
+    public string FormattedString { get; private set; }
+    public FILETIME RawSystemTime { get; private set; }
+    public Guid ProviderGuid { get; private set; }
+
     private static void SetPropertyByName(object obj, string propertyName, object value)
     {
         ArgumentNullException.ThrowIfNull(obj);
@@ -127,19 +128,6 @@ internal readonly unsafe struct WppEventRecord
             throw new InvalidOperationException($"Property '{propertyName}' is read-only.");
         }
 
-        object convertedValue = Convert.ChangeType(value, propertyInfo.PropertyType);
-        propertyInfo.SetValue(obj, convertedValue);
-    }
-
-    public void Decode()
-    {
-        uint size = 0;
-        uint ret = PInvoke.TdhGetWppMessage(_decodingContext.Handle, _record, &size, null);
-
-        byte* messageBuffer = stackalloc byte[(int)size];
-
-        ret = PInvoke.TdhGetWppMessage(_decodingContext.Handle, _record, &size, messageBuffer);
-
-        string message = new((char*)messageBuffer);
+        propertyInfo.SetValue(obj, value);
     }
 }
