@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
@@ -53,8 +54,14 @@ internal unsafe class WppEventRecord
             {
                 uint size = 0;
 #pragma warning disable CA1416
-                uint ret = PInvoke.TdhGetWppProperty(decodingContext.Handle, eventRecord, propertyNameBuf, &size, null);
+                WIN32_ERROR ret = (WIN32_ERROR)PInvoke.TdhGetWppProperty(decodingContext.Handle, eventRecord,
+                    propertyNameBuf, &size, null);
 #pragma warning restore CA1416
+
+                if (ret != WIN32_ERROR.ERROR_SUCCESS)
+                {
+                    throw new Win32Exception((int)ret);
+                }
 
                 if (typeSize != -1 && size > typeSize)
                 {
@@ -65,9 +72,15 @@ internal unsafe class WppEventRecord
                 try
                 {
 #pragma warning disable CA1416
-                    ret = PInvoke.TdhGetWppProperty(decodingContext.Handle, eventRecord, propertyNameBuf, &size,
+                    ret = (WIN32_ERROR)PInvoke.TdhGetWppProperty(decodingContext.Handle, eventRecord, propertyNameBuf,
+                        &size,
                         (byte*)buffer.ToPointer());
 #pragma warning restore CA1416
+
+                    if (ret != WIN32_ERROR.ERROR_SUCCESS)
+                    {
+                        throw new Win32Exception((int)ret);
+                    }
 
                     object? value = propertyType == typeof(string)
                         ? Marshal.PtrToStringUni(buffer)
