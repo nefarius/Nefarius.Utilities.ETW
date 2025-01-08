@@ -8,7 +8,6 @@ using Windows.Win32.Foundation;
 
 using Nefarius.Utilities.ETW.Deserializer.CustomParsers;
 using Nefarius.Utilities.ETW.Deserializer.WPP;
-using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
 namespace Nefarius.Utilities.ETW.Deserializer;
 
@@ -41,9 +40,8 @@ internal sealed partial class Deserializer<T>
     private readonly List<EventMetadata> _eventMetadataTableList = new();
 
     private readonly Dictionary<Guid, EventSourceManifest> _eventSourceManifestCache = new();
-    private readonly IReadOnlyList<TraceMessageFormat> _tmf;
 
-    private readonly Parser _wppParser;
+    private DecodingContext? _decodingContext;
 
     private EventMetadata[] _eventMetadataTable;
 
@@ -52,9 +50,7 @@ internal sealed partial class Deserializer<T>
     private Deserializer(T writer)
     {
         _writer = writer;
-
-        _wppParser = new Parser();
-        _tmf = _wppParser.ParseDirectory(@"D:\Downloads\tmftest");
+        _decodingContext = new DecodingContext(new PdbFilesDecodingContextType(@"D:\Downloads\tmftest\nssvpd.pdb"));
     }
 
     public Deserializer(T writer, Func<Guid, Stream?>? customProviderManifest) : this(writer)
