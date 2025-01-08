@@ -88,8 +88,8 @@ internal sealed class WppTraceEventParser : ICustomParser
 
         EventMetadata = new EventMetadata(
             PInvoke.EventTraceGuid,
-            32, // TODO: correct me
-            0, // TODO: correct me
+            1, // TODO: correct me
+            0,
             "WPP",
             new[]
             {
