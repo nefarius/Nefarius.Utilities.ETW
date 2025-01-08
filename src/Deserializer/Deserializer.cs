@@ -87,18 +87,6 @@ internal sealed partial class Deserializer<T>
     /// </summary>
     private unsafe void ProcessWppEvent(EVENT_RECORD* eventRecord)
     {
-        eventRecord->UserContext = eventRecord->UserData;
-        RuntimeEventMetadata runtimeMetadata = new(eventRecord);
-
-        TraceMessageFormat? tmf = _tmf.SingleOrDefault(format =>
-            format.MessageGuid == runtimeMetadata.ProviderId && format.Id == runtimeMetadata.EventId);
-
-        if (tmf is null)
-        {
-            // TODO: error handling
-            throw new InvalidOperationException("This should never happen");
-        }
-
         PdbFilesDecodingContextType pdbSource = new(@"D:\Downloads\tmftest\nssvpd.pdb");
         using DecodingContext decodingContext = new(pdbSource);
 
