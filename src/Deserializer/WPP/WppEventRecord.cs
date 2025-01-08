@@ -1,10 +1,11 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 
 using Windows.Win32.Foundation;
+
+using FastMember;
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 
@@ -44,6 +45,8 @@ internal unsafe class WppEventRecord
     public WppEventRecord(EVENT_RECORD* eventRecord, DecodingContext decodingContext)
 #pragma warning restore CS8618, CS9264
     {
+        ObjectAccessor? wrapped = ObjectAccessor.Create(this, true);
+        
         foreach ((string propertyName, Type propertyType) in WellKnownWppProperties)
         {
             int typeSize = propertyType != typeof(string)
@@ -88,7 +91,7 @@ internal unsafe class WppEventRecord
 
                     if (value is not null)
                     {
-                        SetPropertyByName(this, propertyName, value);
+                        wrapped[propertyName] = value;
                     }
                 }
                 finally
@@ -119,28 +122,4 @@ internal unsafe class WppEventRecord
     public string FormattedString { get; private set; }
     public FILETIME RawSystemTime { get; private set; }
     public Guid ProviderGuid { get; private set; }
-
-    private static void SetPropertyByName(object obj, string propertyName, object value)
-    {
-        ArgumentNullException.ThrowIfNull(obj);
-
-        if (string.IsNullOrEmpty(propertyName))
-        {
-            throw new ArgumentNullException(nameof(propertyName));
-        }
-
-        PropertyInfo? propertyInfo =
-            obj.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-        if (propertyInfo == null)
-        {
-            throw new ArgumentException($"Property '{propertyName}' not found on type '{obj.GetType().Name}'.");
-        }
-
-        if (!propertyInfo.CanWrite)
-        {
-            throw new InvalidOperationException($"Property '{propertyName}' is read-only.");
-        }
-
-        propertyInfo.SetValue(obj, value);
-    }
 }

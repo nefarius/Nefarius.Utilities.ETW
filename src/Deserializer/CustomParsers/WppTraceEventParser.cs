@@ -1,4 +1,6 @@
-﻿using Nefarius.Utilities.ETW.Deserializer.WPP;
+﻿using System.Runtime.InteropServices.ComTypes;
+
+using Nefarius.Utilities.ETW.Deserializer.WPP;
 
 namespace Nefarius.Utilities.ETW.Deserializer.CustomParsers;
 
@@ -100,7 +102,7 @@ internal sealed class WppTraceEventParser : ICustomParser
         );
     }
 
-    public WppTraceEventParser(DecodingContext context, DecodingContext decodingContext)
+    public WppTraceEventParser(DecodingContext decodingContext)
     {
         _decodingContext = decodingContext;
     }
@@ -133,9 +135,10 @@ internal sealed class WppTraceEventParser : ICustomParser
         writer.WritePropertyEnd();
 
         writer.WritePropertyBegin(SystemTimeMetadata);
-        writer.WriteSystemTime(new DateTime(decodedRecord.SystemTime.wYear, decodedRecord.SystemTime.wMonth,
-            decodedRecord.SystemTime.wDay, decodedRecord.SystemTime.wHour, decodedRecord.SystemTime.wMinute,
-            decodedRecord.SystemTime.wSecond, DateTimeKind.Utc));
+        PInvoke.SystemTimeToFileTime(decodedRecord.SystemTime, out FILETIME systemTimeAsFile);
+        // TODO: bugged, fix me!
+        writer.WriteFileTime(DateTime.FromFileTimeUtc(((long)systemTimeAsFile.dwHighDateTime << 32) |
+                                                      (uint)systemTimeAsFile.dwLowDateTime));
         writer.WritePropertyEnd();
 
         writer.WritePropertyBegin(UserTimeMetadata);
@@ -187,9 +190,9 @@ internal sealed class WppTraceEventParser : ICustomParser
         writer.WritePropertyEnd();
 
         writer.WritePropertyBegin(RawSystemTimeMetadata);
-        long fileTime = ((long)decodedRecord.RawSystemTime.dwHighDateTime << 32) +
-                        decodedRecord.RawSystemTime.dwLowDateTime;
-        writer.WriteFileTime(DateTime.FromFileTime(fileTime));
+        // TODO: bugged, fix me!
+        writer.WriteFileTime(DateTime.FromFileTimeUtc(((long)decodedRecord.RawSystemTime.dwHighDateTime << 32) |
+                                                      (uint)decodedRecord.RawSystemTime.dwLowDateTime));
         writer.WritePropertyEnd();
 
         writer.WritePropertyBegin(ProviderGuidMetadata);
