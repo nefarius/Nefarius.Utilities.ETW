@@ -27,7 +27,7 @@ internal readonly struct TraceEventKey : IEquatable<TraceEventKey>
             return false;
         }
 
-        return obj is TraceEventKey && Equals((TraceEventKey)obj);
+        return obj is TraceEventKey key && Equals(key);
     }
 
     public override int GetHashCode()
