@@ -112,9 +112,9 @@ internal sealed class WppTraceEventParser : ICustomParser
         RuntimeEventMetadata runtimeMetadata) where T : IEtwWriter
     {
         // we cannot use EventRecordReader for this since the properties are not user data
-        WppEventRecord decodedRecord = new(reader.NativeEventRecord, _decodingContext);
-        // TODO: quite slow, investigate and improve!
-        decodedRecord.Decode();
+        WppEventRecord decodedRecord = new(reader.NativeEventRecord);
+        // this does the heavy lifting of retrieving properties with the decoding context 
+        decodedRecord.Decode(_decodingContext);
 
         writer.WriteEventBegin(EventMetadata, runtimeMetadata);
 
