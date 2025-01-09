@@ -7,6 +7,8 @@ using Windows.Win32.Foundation;
 
 using FastMember;
 
+using Nefarius.Utilities.ETW.Exceptions;
+
 namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 
 /// <summary>
@@ -60,7 +62,7 @@ internal unsafe class WppEventRecord
 
         if (infoRet != WIN32_ERROR.ERROR_INSUFFICIENT_BUFFER)
         {
-            throw new Win32Exception((int)infoRet);
+            throw new TdhGetEventInformationException(infoRet);
         }
 
         byte* infoBuffer = stackalloc byte[(int)bufferSize];
@@ -69,7 +71,7 @@ internal unsafe class WppEventRecord
 
         if (infoRet != WIN32_ERROR.ERROR_SUCCESS)
         {
-            throw new Win32Exception((int)infoRet);
+            throw new TdhGetEventInformationException(infoRet);
         }
 
         for (int propertyIndex = 0; propertyIndex < traceEventInfo->PropertyCount; propertyIndex++)
@@ -87,7 +89,7 @@ internal unsafe class WppEventRecord
                 propertyDescriptor->ArrayIndex = uint.MaxValue;
 
                 uint propSize = 0;
-                uint sizeRet = PInvoke.TdhGetPropertySize(
+                WIN32_ERROR sizeRet = (WIN32_ERROR)PInvoke.TdhGetPropertySize(
                     _eventRecord,
                     0,
                     null,
@@ -95,6 +97,11 @@ internal unsafe class WppEventRecord
                     propertyDescriptor,
                     &propSize
                 );
+
+                if (sizeRet != WIN32_ERROR.ERROR_SUCCESS)
+                {
+                    throw new TdhGetPropertySizeException(sizeRet);
+                }
 
                 object? value = null;
 
@@ -117,7 +124,7 @@ internal unsafe class WppEventRecord
 
                         if (getWppPropRet != WIN32_ERROR.ERROR_SUCCESS)
                         {
-                            throw new Win32Exception((int)getWppPropRet);
+                            throw new TdhGetWppPropertyException(getWppPropRet);
                         }
 
                         value = Marshal.PtrToStringUni(wppPropBuffer); // ANSI strings not used in WPP
@@ -153,7 +160,7 @@ internal unsafe class WppEventRecord
 
                     if (getPrimPropRet != WIN32_ERROR.ERROR_SUCCESS)
                     {
-                        throw new Win32Exception((int)infoRet);
+                        throw new TdhGetPropertyException(infoRet);
                     }
 
                     switch (propertyType)
