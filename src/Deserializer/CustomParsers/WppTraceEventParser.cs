@@ -112,6 +112,8 @@ internal sealed class WppTraceEventParser : ICustomParser
         RuntimeEventMetadata runtimeMetadata) where T : IEtwWriter
     {
         WppEventRecord decodedRecord = new(reader.NativeEventRecord, _decodingContext);
+        // TODO: quite slow, investigate and improve!
+        decodedRecord.Decode();
 
         writer.WriteEventBegin(EventMetadata, runtimeMetadata);
 
