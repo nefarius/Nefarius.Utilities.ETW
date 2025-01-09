@@ -14,10 +14,12 @@ Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) 
 
 ### <a id="methods-ascontext"/>**AsContext()**
 
+Turns this instance into a [TDH_CONTEXT](./windows.win32.system.diagnostics.etw.tdh_context.md) for use with the TDH APIs.
+
 ```csharp
 internal TDH_CONTEXT AsContext()
 ```
 
 #### Returns
 
-[TDH_CONTEXT](./windows.win32.system.diagnostics.etw.tdh_context.md)
+An instance of [TDH_CONTEXT](./windows.win32.system.diagnostics.etw.tdh_context.md).
