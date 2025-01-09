@@ -118,6 +118,7 @@ internal unsafe class WppEventRecord
             if (propertyType == _TDH_IN_TYPE.TDH_INTYPE_UNICODESTRING)
             {
                 // TODO: propSize doesn't equal the rendered string, maybe there is a better way to do this
+                // this doesn't appear to work: https://github.com/microsoft/ETW/blob/a5ed49d12b9ef2af6545de0b25a76b334caad066/EtwEnumerator/samples/EtwEnumeratorDecode.cpp#L178-L184
                 propSize = 4096;
                 IntPtr wppPropBuffer = Marshal.AllocHGlobal((int)propSize);
                 try
