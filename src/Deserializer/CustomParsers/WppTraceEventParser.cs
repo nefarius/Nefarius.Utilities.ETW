@@ -111,6 +111,7 @@ internal sealed class WppTraceEventParser : ICustomParser
     public unsafe void Parse<T>(EventRecordReader reader, T writer, EventMetadata[] metadataArray,
         RuntimeEventMetadata runtimeMetadata) where T : IEtwWriter
     {
+        // we cannot use EventRecordReader for this since the properties are not user data
         WppEventRecord decodedRecord = new(reader.NativeEventRecord, _decodingContext);
         // TODO: quite slow, investigate and improve!
         decodedRecord.Decode();

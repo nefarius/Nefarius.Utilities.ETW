@@ -76,6 +76,10 @@ internal unsafe class WppEventRecord
     public FILETIME RawSystemTime { get; private set; }
     public Guid ProviderGuid { get; private set; }
 
+    /// <summary>
+    ///     Decodes we--known properties from a given <see cref="EVENT_RECORD"/>.
+    /// </summary>
+    /// <exception cref="Win32Exception">A TDH API call failed.</exception>
     public void Decode()
     {
         ObjectAccessor? wrapped = ObjectAccessor.Create(this, true);
