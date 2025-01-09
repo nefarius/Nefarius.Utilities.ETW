@@ -103,6 +103,7 @@ internal sealed partial class Deserializer<T>
                 : eventRecord->EventHeader.EventDescriptor.Id,
             eventRecord->EventHeader.EventDescriptor.Version);
 
+        // we know about this event type, offload processing to specialized parser
         if (_actionTable.TryGetValue(key,
                 out Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata> action))
         {
@@ -110,6 +111,7 @@ internal sealed partial class Deserializer<T>
         }
         else
         {
+            // dissect the event ourselves to deconstruct it
             SlowLookup(eventRecord, eventRecordReader, runtimeMetadata, ref key);
         }
     }
