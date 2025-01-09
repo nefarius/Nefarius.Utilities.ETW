@@ -12,6 +12,24 @@ contributors.*
 
 Huge refactoring in the works!
 
+## Changes of this fork
+
+- Converted console tool into a reusable class library
+- Replaced P/Invoke code with [source generators](https://github.com/microsoft/CsWin32)
+- Changed namespace to `Nefarius.Utilities.ETW` to avoid conflicts with the origin library
+- Added support for [WPP Software Tracing](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/wpp-software-tracing) decoding
+  - Supports `.PDB` files as a decoding source
+  - Supports `.TMF` files as a decoding source
+
+## Known limitations
+
+- Currently relies on Windows-only APIs so no support for other platforms
+- WPP decoding of events happens sequentially and is comparably slow
+
+## Documentation
+
+[Link to API docs](docs/index.md).
+
 <!--
 
 ## Library usage
