@@ -21,7 +21,7 @@ public class Tests
 
         using MemoryStream ms = new();
         using Utf8JsonWriter jsonWriter = new(ms, options);
-        DecodingContext decodingContext = new(new PdbFilesDecodingContextType(@"D:\Downloads\tmftest\nssvpd.pdb"));
+        using DecodingContext decodingContext = new(new PdbFilesDecodingContextType(@"D:\Downloads\tmftest\nssvpd.pdb"));
 
         if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], error =>
                 {
