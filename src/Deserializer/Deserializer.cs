@@ -37,6 +37,7 @@ internal sealed partial class Deserializer<T>
 
     private readonly Func<Guid, Stream?>? _customProviderManifest;
 
+    [SuppressMessage("ReSharper", "PrivateFieldCanBeConvertedToLocalVariable")]
     private readonly DecodingContext? _decodingContext;
 
     private readonly List<EventMetadata> _eventMetadataTableList = new();
@@ -45,7 +46,7 @@ internal sealed partial class Deserializer<T>
 
     private readonly WppTraceEventParser? _wppTraceEventParser;
 
-    private EventMetadata[] _eventMetadataTable;
+    private EventMetadata[]? _eventMetadataTable;
 
     private T _writer;
 

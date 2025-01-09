@@ -79,10 +79,6 @@ internal unsafe class WppEventRecord
 
         foreach ((string propertyName, Type propertyType) in WellKnownWppProperties)
         {
-            int typeSize = propertyType != typeof(string)
-                ? Marshal.SizeOf(propertyType)
-                : -1;
-
             fixed (char* propertyNameBuf = propertyName)
             {
                 uint size = 0;
@@ -99,11 +95,6 @@ internal unsafe class WppEventRecord
                 if (ret != WIN32_ERROR.ERROR_SUCCESS)
                 {
                     throw new Win32Exception((int)ret);
-                }
-
-                if (typeSize != -1 && size > typeSize)
-                {
-                    throw new InvalidOperationException("Property size mismatch!");
                 }
 
                 IntPtr buffer = Marshal.AllocHGlobal((int)size);
