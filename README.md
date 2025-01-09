@@ -34,3 +34,4 @@ contributors.*
 
 - [Microsoft/ETW2JSON](https://github.com/microsoft/ETW2JSON)
 - [Microsoft/ETW](https://github.com/microsoft/ETW)
+- [WPP Software Tracing](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/wpp-software-tracing)
