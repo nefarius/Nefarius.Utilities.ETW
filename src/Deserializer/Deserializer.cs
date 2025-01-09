@@ -76,12 +76,7 @@ internal sealed partial class Deserializer<T>
         return true;
     }
 
-    private unsafe bool IsStringEvent(EVENT_RECORD* eventRecord)
-    {
-        return (eventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_STRING_ONLY) != 0;
-    }
-
-    private unsafe bool IsWppEvent(EVENT_RECORD* eventRecord)
+    private static unsafe bool IsWppEvent(EVENT_RECORD* eventRecord)
     {
         return (eventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_TRACE_MESSAGE) != 0;
     }
