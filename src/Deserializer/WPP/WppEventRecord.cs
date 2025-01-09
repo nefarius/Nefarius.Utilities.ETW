@@ -58,7 +58,13 @@ internal unsafe class WppEventRecord
         ObjectAccessor? wrapped = ObjectAccessor.Create(this, true);
 
         uint bufferSize = 0;
-        WIN32_ERROR infoRet = (WIN32_ERROR)PInvoke.TdhGetEventInformation(_eventRecord, 0, null, null, &bufferSize);
+        WIN32_ERROR infoRet = (WIN32_ERROR)PInvoke.TdhGetEventInformation(
+            _eventRecord,
+            0,
+            null,
+            null,
+            &bufferSize
+        );
 
         if (infoRet != WIN32_ERROR.ERROR_INSUFFICIENT_BUFFER)
         {
@@ -67,7 +73,13 @@ internal unsafe class WppEventRecord
 
         byte* infoBuffer = stackalloc byte[(int)bufferSize];
         TRACE_EVENT_INFO* traceEventInfo = (TRACE_EVENT_INFO*)infoBuffer;
-        infoRet = (WIN32_ERROR)PInvoke.TdhGetEventInformation(_eventRecord, 0, null, traceEventInfo, &bufferSize);
+        infoRet = (WIN32_ERROR)PInvoke.TdhGetEventInformation(
+            _eventRecord,
+            0,
+            null,
+            traceEventInfo,
+            &bufferSize
+        );
 
         if (infoRet != WIN32_ERROR.ERROR_SUCCESS)
         {
