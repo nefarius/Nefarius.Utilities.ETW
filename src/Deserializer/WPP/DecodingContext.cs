@@ -5,11 +5,19 @@ using Windows.Win32.Foundation;
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 
+/// <summary>
+///     WPP decoding context used to extract TMF information from resources like <c>.PDB</c> or <c>.TMF</c> files.
+/// </summary>
 public sealed class DecodingContext : IDisposable
 {
     [SuppressMessage("ReSharper", "PrivateFieldCanBeConvertedToLocalVariable")]
     private readonly IList<DecodingContextType> _decodingTypes;
 
+    /// <summary>
+    ///     New decoding context instance.
+    /// </summary>
+    /// <param name="decodingTypes">One or more <see cref="DecodingContextType" />s to look up decoding information in.</param>
+    /// <exception cref="Win32Exception">One or more TDH API calls failed.</exception>
     public unsafe DecodingContext(params IList<DecodingContextType> decodingTypes)
     {
         ArgumentNullException.ThrowIfNull(decodingTypes);
@@ -45,6 +53,7 @@ public sealed class DecodingContext : IDisposable
 
     internal TDH_HANDLE Handle { get; }
 
+    /// <inheritdoc />
     public void Dispose()
     {
         ReleaseUnmanagedResources();
@@ -58,6 +67,7 @@ public sealed class DecodingContext : IDisposable
 #pragma warning restore CA1416
     }
 
+    /// <inheritdoc />
     ~DecodingContext()
     {
         ReleaseUnmanagedResources();
