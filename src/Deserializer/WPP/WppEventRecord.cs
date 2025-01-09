@@ -123,6 +123,7 @@ internal unsafe class WppEventRecord
                 IntPtr wppPropBuffer = Marshal.AllocHGlobal((int)propSize);
                 try
                 {
+                    retry:
                     // query property content
                     WIN32_ERROR getWppPropRet = (WIN32_ERROR)PInvoke.TdhGetWppProperty(
                         decodingContext.Handle,
@@ -131,6 +132,14 @@ internal unsafe class WppEventRecord
                         &propSize,
                         (byte*)wppPropBuffer.ToPointer()
                     );
+
+                    // crude but hey, works ;)
+                    if (getWppPropRet == WIN32_ERROR.ERROR_INSUFFICIENT_BUFFER)
+                    {
+                        propSize *= 2;
+                        Marshal.ReAllocHGlobal(wppPropBuffer, (IntPtr)propSize);
+                        goto retry;
+                    }
 
                     if (getWppPropRet != WIN32_ERROR.ERROR_SUCCESS)
                     {
