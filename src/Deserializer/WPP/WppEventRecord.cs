@@ -41,12 +41,42 @@ internal unsafe class WppEventRecord
         { "ProviderGuid", typeof(Guid) }
     };
 
+    private readonly DecodingContext _decodingContext;
+    private readonly EVENT_RECORD* _eventRecord;
+
 #pragma warning disable CS8618, CS9264
     public WppEventRecord(EVENT_RECORD* eventRecord, DecodingContext decodingContext)
 #pragma warning restore CS8618, CS9264
     {
+        _eventRecord = eventRecord;
+        _decodingContext = decodingContext;
+    }
+
+    public uint Version { get; private set; }
+    public Guid TraceGuid { get; private set; }
+    public string GuidName { get; private set; }
+    public string GuidTypeName { get; private set; }
+    public uint ThreadId { get; private set; }
+    public SYSTEMTIME SystemTime { get; private set; }
+    public uint UserTime { get; private set; }
+    public uint KernelTime { get; private set; }
+    public uint SequenceNum { get; private set; }
+    public uint ProcessId { get; private set; }
+    public uint CpuNumber { get; private set; }
+    public uint Indent { get; private set; }
+    public string FlagsName { get; private set; }
+    public string LevelName { get; private set; }
+    public string FunctionName { get; private set; }
+    public string ComponentName { get; private set; }
+    public string SubComponentName { get; private set; }
+    public string FormattedString { get; private set; }
+    public FILETIME RawSystemTime { get; private set; }
+    public Guid ProviderGuid { get; private set; }
+
+    public void Decode()
+    {
         ObjectAccessor? wrapped = ObjectAccessor.Create(this, true);
-        
+
         foreach ((string propertyName, Type propertyType) in WellKnownWppProperties)
         {
             int typeSize = propertyType != typeof(string)
@@ -57,8 +87,13 @@ internal unsafe class WppEventRecord
             {
                 uint size = 0;
 #pragma warning disable CA1416
-                WIN32_ERROR ret = (WIN32_ERROR)PInvoke.TdhGetWppProperty(decodingContext.Handle, eventRecord,
-                    propertyNameBuf, &size, null);
+                WIN32_ERROR ret = (WIN32_ERROR)PInvoke.TdhGetWppProperty(
+                    _decodingContext.Handle,
+                    _eventRecord,
+                    propertyNameBuf,
+                    &size,
+                    null
+                );
 #pragma warning restore CA1416
 
                 if (ret != WIN32_ERROR.ERROR_SUCCESS)
@@ -75,9 +110,13 @@ internal unsafe class WppEventRecord
                 try
                 {
 #pragma warning disable CA1416
-                    ret = (WIN32_ERROR)PInvoke.TdhGetWppProperty(decodingContext.Handle, eventRecord, propertyNameBuf,
+                    ret = (WIN32_ERROR)PInvoke.TdhGetWppProperty(
+                        _decodingContext.Handle,
+                        _eventRecord,
+                        propertyNameBuf,
                         &size,
-                        (byte*)buffer.ToPointer());
+                        (byte*)buffer.ToPointer()
+                    );
 #pragma warning restore CA1416
 
                     if (ret != WIN32_ERROR.ERROR_SUCCESS)
@@ -101,25 +140,4 @@ internal unsafe class WppEventRecord
             }
         }
     }
-
-    public uint Version { get; private set; }
-    public Guid TraceGuid { get; private set; }
-    public string GuidName { get; private set; }
-    public string GuidTypeName { get; private set; }
-    public uint ThreadId { get; private set; }
-    public SYSTEMTIME SystemTime { get; private set; }
-    public uint UserTime { get; private set; }
-    public uint KernelTime { get; private set; }
-    public uint SequenceNum { get; private set; }
-    public uint ProcessId { get; private set; }
-    public uint CpuNumber { get; private set; }
-    public uint Indent { get; private set; }
-    public string FlagsName { get; private set; }
-    public string LevelName { get; private set; }
-    public string FunctionName { get; private set; }
-    public string ComponentName { get; private set; }
-    public string SubComponentName { get; private set; }
-    public string FormattedString { get; private set; }
-    public FILETIME RawSystemTime { get; private set; }
-    public Guid ProviderGuid { get; private set; }
 }
