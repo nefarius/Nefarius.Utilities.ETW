@@ -2,8 +2,13 @@
 
 [![.NET](https://github.com/nefarius/Nefarius.Utilities.ETW/actions/workflows/build.yml/badge.svg)](https://github.com/nefarius/Nefarius.Utilities.ETW/actions/workflows/build.yml)
 ![Requirements](https://img.shields.io/badge/Requires-.NET%208%2F9-blue.svg)
+![Windows only](https://img.shields.io/badge/Windows-only-red)
 
-ETW2JSON is a tool that converts ETW Log Files (.ETL) to JSON using the Newtonsoft.Json library. It can be used as a stand-alone command line tool that will take as input locations of ETL files and an output path, or it can take your implementation of Newtonsoft.Json's ``JsonWriter`` class.
+[ETW Log Files (.ETL)](https://learn.microsoft.com/en-us/windows-hardware/test/weg/instrumenting-your-code-with-etw) to
+JSON parser/converter library.
+
+> *This is a fork of the fantastic [`ETW2JSON`](https://github.com/microsoft/ETW2JSON) project by Microsoft and
+contributors.*
 
 Huge refactoring in the works!
 
