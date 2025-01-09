@@ -12,8 +12,6 @@ JSON parser/converter library.
 > *This is a fork of the fantastic [`ETW2JSON`](https://github.com/microsoft/ETW2JSON) project by Microsoft and
 contributors.*
 
-Huge refactoring in the works!
-
 ## Changes of this fork
 
 - Converted console tool into a reusable class library
