@@ -2,7 +2,7 @@
 
 [![.NET](https://github.com/nefarius/Nefarius.Utilities.ETW/actions/workflows/build.yml/badge.svg)](https://github.com/nefarius/Nefarius.Utilities.ETW/actions/workflows/build.yml)
 ![Requirements](https://img.shields.io/badge/Requires-.NET%208%2F9-blue.svg)
-![Windows only](https://img.shields.io/badge/Windows-only-red)
+![Windows only](https://img.shields.io/badge/Windows-8.0+-red)
 [![NuGet Version](https://img.shields.io/nuget/v/Nefarius.Utilities.ETW)](https://www.nuget.org/packages/Nefarius.Utilities.ETW/)
 [![NuGet](https://img.shields.io/nuget/dt/Nefarius.Utilities.ETW)](https://www.nuget.org/packages/Nefarius.Utilities.ETW/)
 
