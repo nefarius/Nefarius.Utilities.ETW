@@ -243,3 +243,13 @@
 - [TmfFileDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.tmffiledecodingcontexttype.md)
 
 - [TmfFilesDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.tmffilesdecodingcontexttype.md)
+
+## Namespace Nefarius.Utilities.ETW.Exceptions
+
+- [TdhGetEventInformationException](./nefarius.utilities.etw.exceptions.tdhgeteventinformationexception.md)
+
+- [TdhGetPropertyException](./nefarius.utilities.etw.exceptions.tdhgetpropertyexception.md)
+
+- [TdhGetPropertySizeException](./nefarius.utilities.etw.exceptions.tdhgetpropertysizeexception.md)
+
+- [TdhGetWppPropertyException](./nefarius.utilities.etw.exceptions.tdhgetwpppropertyexception.md)
