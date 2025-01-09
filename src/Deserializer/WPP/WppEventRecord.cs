@@ -92,123 +92,115 @@ internal unsafe class WppEventRecord
             _TDH_IN_TYPE propertyType = (_TDH_IN_TYPE)propertyInfo.Anonymous1.customSchemaType.InType;
             string propertyName = new((char*)((byte*)traceEventInfo + propertyInfo.NameOffset));
 
-            PROPERTY_DATA_DESCRIPTOR* propertyDescriptor =
-                (PROPERTY_DATA_DESCRIPTOR*)Marshal.AllocHGlobal(Marshal.SizeOf<PROPERTY_DATA_DESCRIPTOR>());
-
-            try
+            PROPERTY_DATA_DESCRIPTOR propertyDescriptor = new()
             {
-                propertyDescriptor->PropertyName = (ulong)((byte*)traceEventInfo + propertyInfo.NameOffset);
-                propertyDescriptor->ArrayIndex = uint.MaxValue;
+                PropertyName = (ulong)((byte*)traceEventInfo + propertyInfo.NameOffset), ArrayIndex = uint.MaxValue
+            };
 
-                uint propSize = 0;
-                WIN32_ERROR sizeRet = (WIN32_ERROR)PInvoke.TdhGetPropertySize(
-                    _eventRecord,
-                    0,
-                    null,
-                    1,
-                    propertyDescriptor,
-                    &propSize
-                );
+            uint propSize = 0;
+            WIN32_ERROR sizeRet = (WIN32_ERROR)PInvoke.TdhGetPropertySize(
+                _eventRecord,
+                0,
+                null,
+                1,
+                &propertyDescriptor,
+                &propSize
+            );
 
-                if (sizeRet != WIN32_ERROR.ERROR_SUCCESS)
-                {
-                    throw new TdhGetPropertySizeException(sizeRet);
-                }
+            if (sizeRet != WIN32_ERROR.ERROR_SUCCESS)
+            {
+                throw new TdhGetPropertySizeException(sizeRet);
+            }
 
-                object? value = null;
+            object? value = null;
 
-                // we need to decode those with a WPP-specific API
-                if (propertyType == _TDH_IN_TYPE.TDH_INTYPE_UNICODESTRING)
-                {
-                    // TODO: propSize doesn't equal the rendered string, maybe there is a better way to do this
-                    propSize = 4096;
-                    IntPtr wppPropBuffer = Marshal.AllocHGlobal((int)propSize);
-                    try
-                    {
-                        // query property content
-                        WIN32_ERROR getWppPropRet = (WIN32_ERROR)PInvoke.TdhGetWppProperty(
-                            decodingContext.Handle,
-                            _eventRecord,
-                            (char*)propertyDescriptor->PropertyName,
-                            &propSize,
-                            (byte*)wppPropBuffer.ToPointer()
-                        );
-
-                        if (getWppPropRet != WIN32_ERROR.ERROR_SUCCESS)
-                        {
-                            throw new TdhGetWppPropertyException(getWppPropRet);
-                        }
-
-                        value = Marshal.PtrToStringUni(wppPropBuffer); // ANSI strings not used in WPP
-
-                        if (value is not null)
-                        {
-                            // set managed property by name
-                            wrapped[propertyName] = value;
-                        }
-
-                        continue;
-                    }
-                    finally
-                    {
-                        Marshal.FreeHGlobal(wppPropBuffer);
-                    }
-                }
-
-                // these properties can be fetched with the way faster API
-                byte* primitivePropertyBuffer = (byte*)Marshal.AllocHGlobal((int)propSize);
-
+            // we need to decode those with a WPP-specific API
+            if (propertyType == _TDH_IN_TYPE.TDH_INTYPE_UNICODESTRING)
+            {
+                // TODO: propSize doesn't equal the rendered string, maybe there is a better way to do this
+                propSize = 4096;
+                IntPtr wppPropBuffer = Marshal.AllocHGlobal((int)propSize);
                 try
                 {
-                    WIN32_ERROR getPrimPropRet = (WIN32_ERROR)PInvoke.TdhGetProperty(
+                    // query property content
+                    WIN32_ERROR getWppPropRet = (WIN32_ERROR)PInvoke.TdhGetWppProperty(
+                        decodingContext.Handle,
                         _eventRecord,
-                        0,
-                        null,
-                        1,
-                        propertyDescriptor,
-                        propSize,
-                        primitivePropertyBuffer
+                        (char*)propertyDescriptor.PropertyName,
+                        &propSize,
+                        (byte*)wppPropBuffer.ToPointer()
                     );
 
-                    if (getPrimPropRet != WIN32_ERROR.ERROR_SUCCESS)
+                    if (getWppPropRet != WIN32_ERROR.ERROR_SUCCESS)
                     {
-                        throw new TdhGetPropertyException(infoRet);
+                        throw new TdhGetWppPropertyException(getWppPropRet);
                     }
 
-                    switch (propertyType)
-                    {
-                        case _TDH_IN_TYPE.TDH_INTYPE_UINT32:
-                            value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(uint));
-                            break;
-                        case _TDH_IN_TYPE.TDH_INTYPE_GUID:
-                            value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(Guid));
-                            break;
-                        case _TDH_IN_TYPE.TDH_INTYPE_SYSTEMTIME:
-                            value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(SYSTEMTIME));
-                            break;
-                        case _TDH_IN_TYPE.TDH_INTYPE_FILETIME:
-                            value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(FILETIME));
-                            break;
-                        // unformatted or unknown properties would get mangled so this must not be used
-                        case _TDH_IN_TYPE.TDH_INTYPE_UNICODESTRING:
-                        default:
-                            throw new InvalidCastException();
-                    }
+                    value = Marshal.PtrToStringUni(wppPropBuffer); // ANSI strings not used in WPP
 
                     if (value is not null)
                     {
                         // set managed property by name
                         wrapped[propertyName] = value;
                     }
+
+                    continue;
                 }
                 finally
                 {
-                    Marshal.FreeHGlobal((IntPtr)primitivePropertyBuffer);
+                    Marshal.FreeHGlobal(wppPropBuffer);
+                }
+            }
+
+            // these properties can be fetched with the way faster API
+            byte* primitivePropertyBuffer = (byte*)Marshal.AllocHGlobal((int)propSize);
+
+            try
+            {
+                WIN32_ERROR getPrimPropRet = (WIN32_ERROR)PInvoke.TdhGetProperty(
+                    _eventRecord,
+                    0,
+                    null,
+                    1,
+                    &propertyDescriptor,
+                    propSize,
+                    primitivePropertyBuffer
+                );
+
+                if (getPrimPropRet != WIN32_ERROR.ERROR_SUCCESS)
+                {
+                    throw new TdhGetPropertyException(infoRet);
+                }
+
+                switch (propertyType)
+                {
+                    case _TDH_IN_TYPE.TDH_INTYPE_UINT32:
+                        value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(uint));
+                        break;
+                    case _TDH_IN_TYPE.TDH_INTYPE_GUID:
+                        value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(Guid));
+                        break;
+                    case _TDH_IN_TYPE.TDH_INTYPE_SYSTEMTIME:
+                        value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(SYSTEMTIME));
+                        break;
+                    case _TDH_IN_TYPE.TDH_INTYPE_FILETIME:
+                        value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(FILETIME));
+                        break;
+                    // unformatted or unknown properties would get mangled so this must not be used
+                    case _TDH_IN_TYPE.TDH_INTYPE_UNICODESTRING:
+                    default:
+                        throw new InvalidCastException();
+                }
+
+                if (value is not null)
+                {
+                    // set managed property by name
+                    wrapped[propertyName] = value;
                 }
             }
             finally
             {
-                Marshal.FreeHGlobal((IntPtr)propertyDescriptor);
+                Marshal.FreeHGlobal((IntPtr)primitivePropertyBuffer);
             }
         }
     }
