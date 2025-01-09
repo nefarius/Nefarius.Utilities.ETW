@@ -9,6 +9,9 @@ using FastMember;
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 
+/// <summary>
+///     Represents a single WPP event tracing event.
+/// </summary>
 [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Local")]
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
 internal unsafe class WppEventRecord
