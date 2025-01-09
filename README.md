@@ -30,7 +30,7 @@ contributors.*
 
 [Link to API docs](docs/index.md).
 
-# Sources & 3rd party credits
+## Sources & 3rd party credits
 
 - [Microsoft/ETW2JSON](https://github.com/microsoft/ETW2JSON)
 - [Microsoft/ETW](https://github.com/microsoft/ETW)
