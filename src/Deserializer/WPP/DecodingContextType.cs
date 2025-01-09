@@ -17,11 +17,21 @@ public abstract class DecodingContextType
 
     protected ReadOnlyMemory<byte> Buffer { get; init; }
 
+    /// <summary>
+    ///     Turns this instance into a <see cref="TDH_CONTEXT"/> for use with the TDH APIs.
+    /// </summary>
+    /// <returns>An instance of <see cref="TDH_CONTEXT"/>.</returns>
     internal unsafe TDH_CONTEXT AsContext()
     {
         fixed (byte* valueBuffer = Buffer.Span)
         {
-            return new TDH_CONTEXT { ParameterType = ContextType, ParameterValue = (ulong)valueBuffer };
+            return new TDH_CONTEXT
+            {
+                // the lookup type
+                ParameterType = ContextType,
+                // pointer to the value (typically a filesystem path)
+                ParameterValue = (ulong)valueBuffer
+            };
         }
     }
 }
