@@ -30,18 +30,14 @@ public sealed class DecodingContext : IDisposable
         }
 
         TDH_HANDLE decodingHandle;
-#pragma warning disable CA1416
         WIN32_ERROR ret = (WIN32_ERROR)PInvoke.TdhOpenDecodingHandle(&decodingHandle);
-#pragma warning restore CA1416
 
         if (ret != WIN32_ERROR.ERROR_SUCCESS)
         {
             throw new Win32Exception((int)ret);
         }
-
-#pragma warning disable CA1416
+        
         ret = (WIN32_ERROR)PInvoke.TdhSetDecodingParameter(decodingHandle, ctx);
-#pragma warning restore CA1416
 
         if (ret != WIN32_ERROR.ERROR_SUCCESS)
         {
@@ -62,9 +58,7 @@ public sealed class DecodingContext : IDisposable
 
     private void ReleaseUnmanagedResources()
     {
-#pragma warning disable CA1416
         PInvoke.TdhCloseDecodingHandle(Handle);
-#pragma warning restore CA1416
     }
 
     /// <inheritdoc />

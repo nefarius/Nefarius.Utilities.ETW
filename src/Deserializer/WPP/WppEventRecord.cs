@@ -85,7 +85,6 @@ internal unsafe class WppEventRecord
             fixed (char* propertyNameBuf = propertyName)
             {
                 uint size = 0;
-#pragma warning disable CA1416
                 WIN32_ERROR ret = (WIN32_ERROR)PInvoke.TdhGetWppProperty(
                     _decodingContext.Handle,
                     _eventRecord,
@@ -93,7 +92,6 @@ internal unsafe class WppEventRecord
                     &size,
                     null
                 );
-#pragma warning restore CA1416
 
                 if (ret != WIN32_ERROR.ERROR_SUCCESS)
                 {
@@ -103,7 +101,6 @@ internal unsafe class WppEventRecord
                 IntPtr buffer = Marshal.AllocHGlobal((int)size);
                 try
                 {
-#pragma warning disable CA1416
                     ret = (WIN32_ERROR)PInvoke.TdhGetWppProperty(
                         _decodingContext.Handle,
                         _eventRecord,
@@ -111,7 +108,6 @@ internal unsafe class WppEventRecord
                         &size,
                         (byte*)buffer.ToPointer()
                     );
-#pragma warning restore CA1416
 
                     if (ret != WIN32_ERROR.ERROR_SUCCESS)
                     {
