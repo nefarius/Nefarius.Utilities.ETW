@@ -13,7 +13,7 @@ public class Tests
     }
 
     [Test]
-    public void Test1()
+    public void WppTraceDecodingTest()
     {
         string etwFilePath = @".\traces\VPadRuntime.etl";
 
