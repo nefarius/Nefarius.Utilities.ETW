@@ -89,6 +89,7 @@ internal unsafe class WppEventRecord
             fixed (char* propertyNameBuf = propertyName)
             {
                 uint size = 0;
+                // query size in bytes
                 WIN32_ERROR ret = (WIN32_ERROR)PInvoke.TdhGetWppProperty(
                     _decodingContext.Handle,
                     _eventRecord,
@@ -105,6 +106,7 @@ internal unsafe class WppEventRecord
                 IntPtr buffer = Marshal.AllocHGlobal((int)size);
                 try
                 {
+                    // query property content
                     ret = (WIN32_ERROR)PInvoke.TdhGetWppProperty(
                         _decodingContext.Handle,
                         _eventRecord,
@@ -119,11 +121,12 @@ internal unsafe class WppEventRecord
                     }
 
                     object? value = propertyType == typeof(string)
-                        ? Marshal.PtrToStringUni(buffer)
-                        : Marshal.PtrToStructure(buffer, propertyType);
+                        ? Marshal.PtrToStringUni(buffer) // ANSI strings not used in WPP
+                        : Marshal.PtrToStructure(buffer, propertyType); // includes primitive types
 
                     if (value is not null)
                     {
+                        // set managed property by name
                         wrapped[propertyName] = value;
                     }
                 }
