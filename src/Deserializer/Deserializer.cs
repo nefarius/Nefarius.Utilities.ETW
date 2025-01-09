@@ -241,7 +241,6 @@ internal sealed partial class Deserializer<T>
             return EventTraceOperandBuilder.Build((TRACE_EVENT_INFO*)eventRecord->UserData, metadataTableIndex);
         }
 
-
         if ((operand = BuildOperandFromTdh(eventRecord, metadataTableIndex)) == null)
         {
             operand = BuildOperandFromXml(eventRecord, _eventSourceManifestCache, eventRecordReader,
