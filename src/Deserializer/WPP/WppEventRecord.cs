@@ -86,6 +86,7 @@ internal unsafe class WppEventRecord
             throw new TdhGetEventInformationException(infoRet);
         }
 
+        // we expect 20 WPP properties but this dynamic approach is safer
         for (int propertyIndex = 0; propertyIndex < traceEventInfo->PropertyCount; propertyIndex++)
         {
             EVENT_PROPERTY_INFO propertyInfo = traceEventInfo->EventPropertyInfoArray[propertyIndex];
@@ -98,6 +99,7 @@ internal unsafe class WppEventRecord
             };
 
             uint propSize = 0;
+            // fetch the size of properties that do not need decoding 
             WIN32_ERROR sizeRet = (WIN32_ERROR)PInvoke.TdhGetPropertySize(
                 _eventRecord,
                 0,
