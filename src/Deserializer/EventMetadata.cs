@@ -20,5 +20,10 @@
         public string Name { get; private set; }
 
         public PropertyMetadata[] Properties { get; private set; }
+
+        public override string ToString()
+        {
+            return $"{Name} ({ProviderGuid})";
+        }
     }
 }

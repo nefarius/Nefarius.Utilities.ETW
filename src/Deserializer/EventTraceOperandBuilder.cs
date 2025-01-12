@@ -336,4 +336,9 @@ internal sealed class UnknownOperandBuilder : IEventTraceOperand
 
     public IEnumerable<IEventTracePropertyOperand> EventPropertyOperands =>
         Enumerable.Empty<IEventTracePropertyOperand>();
+
+    public override string ToString()
+    {
+        return Metadata.ToString();
+    }
 }

@@ -14,5 +14,10 @@
         public EventMetadata Metadata { get; }
 
         public IEnumerable<IEventTracePropertyOperand> EventPropertyOperands { get; }
+
+        public override string ToString()
+        {
+            return Metadata.ToString();
+        }
     }
 }
