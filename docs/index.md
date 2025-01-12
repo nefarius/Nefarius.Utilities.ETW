@@ -110,10 +110,6 @@
 
 - [XmlTypeListTypeXmlType](./xmltypelisttypexmltype.md)
 
-## Namespace Microsoft.Xml.Serialization.GeneratedAssembly
-
-- [XmlSerializer1](./microsoft.xml.serialization.generatedassembly.xmlserializer1.md)
-
 ## Namespace Nefarius.Utilities.ETW
 
 - [EtwUtil](./nefarius.utilities.etw.etwutil.md)
