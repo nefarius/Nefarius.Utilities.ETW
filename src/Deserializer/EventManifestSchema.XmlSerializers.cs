@@ -4,7 +4,7 @@
 [assembly:System.Xml.Serialization.XmlSerializerVersionAttribute(ParentAssemblyId=@"720d317a-bb51-42be-b5d5-2936f41e9400,", Version=@"1.0.0.0")]
 namespace Microsoft.Xml.Serialization.GeneratedAssembly {
 
-    public class XmlSerializationWriter1 : System.Xml.Serialization.XmlSerializationWriter {
+    internal class XmlSerializationWriter1 : System.Xml.Serialization.XmlSerializationWriter {
 
         public void Write68_instrumentationManifest(object o) {
             WriteStartDocument();
@@ -2793,7 +2793,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public class XmlSerializationReader1 : System.Xml.Serialization.XmlSerializationReader {
+    internal class XmlSerializationReader1 : System.Xml.Serialization.XmlSerializationReader {
 
         public object Read68_instrumentationManifest() {
             object o = null;
@@ -8244,7 +8244,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class instrumentationManifestSerializer : XmlSerializer1 {
+    internal sealed class instrumentationManifestSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"instrumentationManifest", @"http://schemas.microsoft.com/win/2004/08/events");
@@ -8259,7 +8259,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class InstrumentationTypeSerializer : XmlSerializer1 {
+    internal sealed class InstrumentationTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"InstrumentationType", @"");
@@ -8274,7 +8274,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class EventsTypeSerializer : XmlSerializer1 {
+    internal sealed class EventsTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"events", @"http://schemas.microsoft.com/win/2004/08/events");
@@ -8289,7 +8289,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class EventsTypeMessageTableSerializer : XmlSerializer1 {
+    internal sealed class EventsTypeMessageTableSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"EventsTypeMessageTable", @"");
@@ -8304,7 +8304,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class EventsTypeMessageTableMessageSerializer : XmlSerializer1 {
+    internal sealed class EventsTypeMessageTableMessageSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"EventsTypeMessageTableMessage", @"");
@@ -8319,7 +8319,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class StringTableTypeSerializer : XmlSerializer1 {
+    internal sealed class StringTableTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"StringTableType", @"");
@@ -8334,7 +8334,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class StringTableTypeStringSerializer : XmlSerializer1 {
+    internal sealed class StringTableTypeStringSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"StringTableTypeString", @"");
@@ -8349,7 +8349,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class LocalizationTypeSerializer : XmlSerializer1 {
+    internal sealed class LocalizationTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"LocalizationType", @"");
@@ -8364,7 +8364,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class LocalizationTypeResourcesSerializer : XmlSerializer1 {
+    internal sealed class LocalizationTypeResourcesSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"LocalizationTypeResources", @"");
@@ -8379,7 +8379,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class FilterTypeSerializer : XmlSerializer1 {
+    internal sealed class FilterTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"FilterType", @"");
@@ -8394,7 +8394,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class FilterListTypeSerializer : XmlSerializer1 {
+    internal sealed class FilterListTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"FilterListType", @"");
@@ -8409,7 +8409,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class DefinitionTypeSerializer : XmlSerializer1 {
+    internal sealed class DefinitionTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"DefinitionType", @"");
@@ -8424,7 +8424,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class EventDefinitionTypeSerializer : XmlSerializer1 {
+    internal sealed class EventDefinitionTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"EventDefinitionType", @"");
@@ -8439,7 +8439,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class TemplateListTypeSerializer : XmlSerializer1 {
+    internal sealed class TemplateListTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"TemplateListType", @"");
@@ -8454,7 +8454,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class TemplateItemTypeSerializer : XmlSerializer1 {
+    internal sealed class TemplateItemTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"TemplateItemType", @"");
@@ -8469,7 +8469,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class DataDefinitionTypeSerializer : XmlSerializer1 {
+    internal sealed class DataDefinitionTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"DataDefinitionType", @"");
@@ -8484,7 +8484,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class StructDefinitionTypeSerializer : XmlSerializer1 {
+    internal sealed class StructDefinitionTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"StructDefinitionType", @"");
@@ -8499,7 +8499,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class TemplateItemTypeBinarySerializer : XmlSerializer1 {
+    internal sealed class TemplateItemTypeBinarySerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"TemplateItemTypeBinary", @"");
@@ -8514,7 +8514,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class XmlTypeSerializer : XmlSerializer1 {
+    internal sealed class XmlTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"XmlType", @"");
@@ -8529,7 +8529,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class MapTypeSerializer : XmlSerializer1 {
+    internal sealed class MapTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"MapType", @"");
@@ -8544,7 +8544,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class BitMapTypeSerializer : XmlSerializer1 {
+    internal sealed class BitMapTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"BitMapType", @"");
@@ -8559,7 +8559,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class BitMapValueTypeSerializer : XmlSerializer1 {
+    internal sealed class BitMapValueTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"BitMapValueType", @"");
@@ -8574,7 +8574,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class ValueMapTypeSerializer : XmlSerializer1 {
+    internal sealed class ValueMapTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"ValueMapType", @"");
@@ -8589,7 +8589,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class ValueMapValueTypeSerializer : XmlSerializer1 {
+    internal sealed class ValueMapValueTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"ValueMapValueType", @"");
@@ -8604,7 +8604,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class ProviderTypeSerializer : XmlSerializer1 {
+    internal sealed class ProviderTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"ProviderType", @"");
@@ -8619,7 +8619,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class ChannelListTypeSerializer : XmlSerializer1 {
+    internal sealed class ChannelListTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"ChannelListType", @"");
@@ -8634,7 +8634,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class ChannelTypeSerializer : XmlSerializer1 {
+    internal sealed class ChannelTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"ChannelType", @"");
@@ -8649,7 +8649,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class ChannelLoggingTypeSerializer : XmlSerializer1 {
+    internal sealed class ChannelLoggingTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"ChannelLoggingType", @"");
@@ -8664,7 +8664,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class ChannelPublishingTypeSerializer : XmlSerializer1 {
+    internal sealed class ChannelPublishingTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"ChannelPublishingType", @"");
@@ -8679,7 +8679,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class ChannelPublishingTypeClockTypeSerializer : XmlSerializer1 {
+    internal sealed class ChannelPublishingTypeClockTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"ChannelPublishingTypeClockType", @"");
@@ -8694,7 +8694,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class ChannelPublishingTypeSidTypeSerializer : XmlSerializer1 {
+    internal sealed class ChannelPublishingTypeSidTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"ChannelPublishingTypeSidType", @"");
@@ -8709,7 +8709,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class ChannelTypeTypeSerializer : XmlSerializer1 {
+    internal sealed class ChannelTypeTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"ChannelTypeType", @"");
@@ -8724,7 +8724,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class ChannelTypeIsolationSerializer : XmlSerializer1 {
+    internal sealed class ChannelTypeIsolationSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"ChannelTypeIsolation", @"");
@@ -8739,7 +8739,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class ImportChannelTypeSerializer : XmlSerializer1 {
+    internal sealed class ImportChannelTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"ImportChannelType", @"");
@@ -8754,7 +8754,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class KeywordListTypeSerializer : XmlSerializer1 {
+    internal sealed class KeywordListTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"KeywordListType", @"");
@@ -8769,7 +8769,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class KeywordTypeSerializer : XmlSerializer1 {
+    internal sealed class KeywordTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"KeywordType", @"");
@@ -8784,7 +8784,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class LevelListTypeSerializer : XmlSerializer1 {
+    internal sealed class LevelListTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"LevelListType", @"");
@@ -8799,7 +8799,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class LevelTypeSerializer : XmlSerializer1 {
+    internal sealed class LevelTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"LevelType", @"");
@@ -8814,7 +8814,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class NamedQueryTypeSerializer : XmlSerializer1 {
+    internal sealed class NamedQueryTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"NamedQueryType", @"");
@@ -8829,7 +8829,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class PatternMapTypeSerializer : XmlSerializer1 {
+    internal sealed class PatternMapTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"PatternMapType", @"");
@@ -8844,7 +8844,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class PatternMapValueTypeSerializer : XmlSerializer1 {
+    internal sealed class PatternMapValueTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"PatternMapValueType", @"");
@@ -8859,7 +8859,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class OpcodeListTypeSerializer : XmlSerializer1 {
+    internal sealed class OpcodeListTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"OpcodeListType", @"");
@@ -8874,7 +8874,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class OpcodeTypeSerializer : XmlSerializer1 {
+    internal sealed class OpcodeTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"OpcodeType", @"");
@@ -8889,7 +8889,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class TaskListTypeSerializer : XmlSerializer1 {
+    internal sealed class TaskListTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"TaskListType", @"");
@@ -8904,7 +8904,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class TaskTypeSerializer : XmlSerializer1 {
+    internal sealed class TaskTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"TaskType", @"");
@@ -8919,7 +8919,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class ProviderTypeSourceSerializer : XmlSerializer1 {
+    internal sealed class ProviderTypeSourceSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"ProviderTypeSource", @"");
@@ -8934,7 +8934,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class InputTypeListTypeSerializer : XmlSerializer1 {
+    internal sealed class InputTypeListTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"InputTypeListType", @"");
@@ -8949,7 +8949,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class InputTypeSerializer : XmlSerializer1 {
+    internal sealed class InputTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"InputType", @"");
@@ -8964,7 +8964,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class OutputTypeSerializer : XmlSerializer1 {
+    internal sealed class OutputTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"OutputType", @"");
@@ -8979,7 +8979,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class XmlTypeListTypeSerializer : XmlSerializer1 {
+    internal sealed class XmlTypeListTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"XmlTypeListType", @"");
@@ -8994,7 +8994,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class XmlTypeListTypeXmlTypeSerializer : XmlSerializer1 {
+    internal sealed class XmlTypeListTypeXmlTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"XmlTypeListTypeXmlType", @"");
@@ -9009,7 +9009,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class MetadataTypeSerializer : XmlSerializer1 {
+    internal sealed class MetadataTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"MetadataType", @"");
@@ -9024,7 +9024,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class MetadataTypeMessageSerializer : XmlSerializer1 {
+    internal sealed class MetadataTypeMessageSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"MetadataTypeMessage", @"");
@@ -9039,7 +9039,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public sealed class InstrumentationManifestTypeSerializer : XmlSerializer1 {
+    internal sealed class InstrumentationManifestTypeSerializer : XmlSerializer1 {
 
         public override System.Boolean CanDeserialize(System.Xml.XmlReader xmlReader) {
             return xmlReader.IsStartElement(@"InstrumentationManifestType", @"");
@@ -9054,7 +9054,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public class XmlSerializerContract : global::System.Xml.Serialization.XmlSerializerImplementation {
+    internal class XmlSerializerContract : global::System.Xml.Serialization.XmlSerializerImplementation {
         public override global::System.Xml.Serialization.XmlSerializationReader Reader { get { return new XmlSerializationReader1(); } }
         public override global::System.Xml.Serialization.XmlSerializationWriter Writer { get { return new XmlSerializationWriter1(); } }
         System.Collections.Hashtable readMethods = null;
