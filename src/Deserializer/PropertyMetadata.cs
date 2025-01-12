@@ -27,4 +27,9 @@ internal sealed class PropertyMetadata
     public MapInformation? Map { get; private set; }
 
     public string Name { get; private set; }
+
+    public override string ToString()
+    {
+        return $"{Name} ({InType} \u27a1\ufe0f {OutType})";
+    }
 }
