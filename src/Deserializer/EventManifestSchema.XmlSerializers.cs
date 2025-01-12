@@ -8235,7 +8235,7 @@ namespace Microsoft.Xml.Serialization.GeneratedAssembly {
         }
     }
 
-    public abstract class XmlSerializer1 : System.Xml.Serialization.XmlSerializer {
+    internal abstract class XmlSerializer1 : System.Xml.Serialization.XmlSerializer {
         protected override System.Xml.Serialization.XmlSerializationReader CreateReader() {
             return new XmlSerializationReader1();
         }
