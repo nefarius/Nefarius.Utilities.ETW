@@ -341,7 +341,7 @@ internal sealed partial class Deserializer<T>
         [
             eventRecordReaderParam, eventWriterParam, eventMetadataTableParam, runtimeMetadataParam
         ];
-        string name = NameRegex().Replace(InvalidCharacters.Replace(operand.Metadata.Name, "_"), "_");
+        string name = CleanNameRegex().Replace(InvalidCharacters.Replace(operand.Metadata.Name, "_"), "_");
         Expression body = EventTraceOperandExpressionBuilder.Build(operand, eventRecordReaderParam,
             eventWriterParam, eventMetadataTableParam, runtimeMetadataParam);
         LambdaExpression expression =
@@ -370,6 +370,7 @@ internal sealed partial class Deserializer<T>
 
     [GeneratedRegex("[:\\/*?\"<>|\"-]")]
     private static partial Regex InvalidCharactersRegex();
+    
     [GeneratedRegex(@"\s+")]
-    private static partial Regex NameRegex();
+    private static partial Regex CleanNameRegex();
 }
