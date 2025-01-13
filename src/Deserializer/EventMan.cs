@@ -22,7 +22,7 @@ using System.Xml.Serialization;
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
 [System.Xml.Serialization.XmlRootAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events", IsNullable = false)]
-public partial class instrumentationManifest : InstrumentationManifestType
+internal partial class instrumentationManifest : InstrumentationManifestType
 {
 
     private object[] itemsField;
@@ -51,7 +51,7 @@ public partial class instrumentationManifest : InstrumentationManifestType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class InstrumentationType
+internal partial class InstrumentationType
 {
 
     private object[] itemsField;
@@ -95,7 +95,7 @@ public partial class InstrumentationType
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
 [System.Xml.Serialization.XmlRootAttribute("events", Namespace = "http://schemas.microsoft.com/win/2004/08/events", IsNullable = false)]
-public partial class EventsType
+internal partial class EventsType
 {
 
     private object[] itemsField;
@@ -139,7 +139,7 @@ public partial class EventsType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class EventsTypeMessageTable
+internal partial class EventsTypeMessageTable
 {
 
     private EventsTypeMessageTableMessage[] messageField;
@@ -165,7 +165,7 @@ public partial class EventsTypeMessageTable
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class EventsTypeMessageTableMessage
+internal partial class EventsTypeMessageTableMessage
 {
 
     private string valueField;
@@ -239,7 +239,7 @@ public partial class EventsTypeMessageTableMessage
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class StringTableType
+internal partial class StringTableType
 {
 
     private StringTableTypeString[] itemsField;
@@ -281,7 +281,7 @@ public partial class StringTableType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class StringTableTypeString
+internal partial class StringTableTypeString
 {
 
     private string idField;
@@ -355,7 +355,7 @@ public partial class StringTableTypeString
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class LocalizationType
+internal partial class LocalizationType
 {
 
     private object[] itemsField;
@@ -420,7 +420,7 @@ public partial class LocalizationType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class LocalizationTypeResources
+internal partial class LocalizationTypeResources
 {
 
     private StringTableType[] itemsField;
@@ -478,7 +478,7 @@ public partial class LocalizationTypeResources
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class FilterType
+internal partial class FilterType
 {
 
     private string valueField;
@@ -600,7 +600,7 @@ public partial class FilterType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class FilterListType
+internal partial class FilterListType
 {
 
     private FilterType[] filterField;
@@ -642,7 +642,7 @@ public partial class FilterListType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class DefinitionType
+internal partial class DefinitionType
 {
 
     private EventDefinitionType[] itemsField;
@@ -668,7 +668,7 @@ public partial class DefinitionType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class EventDefinitionType
+internal partial class EventDefinitionType
 {
 
     private string valueField;
@@ -894,7 +894,7 @@ public partial class EventDefinitionType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class TemplateListType
+internal partial class TemplateListType
 {
 
     private TemplateItemType[] templateField;
@@ -920,7 +920,7 @@ public partial class TemplateListType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class TemplateItemType
+internal partial class TemplateItemType
 {
 
     private object[] itemsField;
@@ -1027,7 +1027,7 @@ public partial class TemplateItemType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class DataDefinitionType
+internal partial class DataDefinitionType
 {
 
     private string nameField;
@@ -1165,7 +1165,7 @@ public partial class DataDefinitionType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class StructDefinitionType
+internal partial class StructDefinitionType
 {
 
     private DataDefinitionType[] dataField;
@@ -1255,7 +1255,7 @@ public partial class StructDefinitionType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class TemplateItemTypeBinary
+internal partial class TemplateItemTypeBinary
 {
 
     private string nameField;
@@ -1281,7 +1281,7 @@ public partial class TemplateItemTypeBinary
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class XmlType
+internal partial class XmlType
 {
 
     private System.Xml.XmlElement[] anyField;
@@ -1307,7 +1307,7 @@ public partial class XmlType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class MapType
+internal partial class MapType
 {
 
     private object[] itemsField;
@@ -1334,7 +1334,7 @@ public partial class MapType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class BitMapType
+internal partial class BitMapType
 {
 
     private BitMapValueType[] mapField;
@@ -1392,7 +1392,7 @@ public partial class BitMapType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class BitMapValueType
+internal partial class BitMapValueType
 {
 
     private string valueField;
@@ -1466,7 +1466,7 @@ public partial class BitMapValueType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class ValueMapType
+internal partial class ValueMapType
 {
 
     private ValueMapValueType[] mapField;
@@ -1524,7 +1524,7 @@ public partial class ValueMapType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class ValueMapValueType
+internal partial class ValueMapValueType
 {
 
     private string valueField;
@@ -1598,7 +1598,7 @@ public partial class ValueMapValueType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class ProviderType
+internal partial class ProviderType
 {
 
     private object[] itemsField;
@@ -1834,7 +1834,7 @@ public partial class ProviderType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class ChannelListType
+internal partial class ChannelListType
 {
 
     private object[] itemsField;
@@ -1878,7 +1878,7 @@ public partial class ChannelListType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class ChannelType
+internal partial class ChannelType
 {
 
     private ChannelLoggingType loggingField;
@@ -2117,7 +2117,7 @@ public partial class ChannelType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class ChannelLoggingType
+internal partial class ChannelLoggingType
 {
 
     private bool autoBackupField;
@@ -2228,7 +2228,7 @@ public partial class ChannelLoggingType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class ChannelPublishingType
+internal partial class ChannelPublishingType
 {
 
     private string levelField;
@@ -2511,7 +2511,7 @@ public enum ChannelTypeIsolation
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class ImportChannelType
+internal partial class ImportChannelType
 {
 
     private string chidField;
@@ -2585,7 +2585,7 @@ public partial class ImportChannelType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class KeywordListType
+internal partial class KeywordListType
 {
 
     private KeywordType[] keywordField;
@@ -2611,7 +2611,7 @@ public partial class KeywordListType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class KeywordType
+internal partial class KeywordType
 {
 
     private System.Xml.XmlQualifiedName nameField;
@@ -2717,7 +2717,7 @@ public partial class KeywordType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class LevelListType
+internal partial class LevelListType
 {
 
     private LevelType[] levelField;
@@ -2743,7 +2743,7 @@ public partial class LevelListType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class LevelType
+internal partial class LevelType
 {
 
     private System.Xml.XmlQualifiedName nameField;
@@ -2849,7 +2849,7 @@ public partial class LevelType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class NamedQueryType
+internal partial class NamedQueryType
 {
 
     private PatternMapType[] patternMapsField;
@@ -2907,7 +2907,7 @@ public partial class NamedQueryType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class PatternMapType
+internal partial class PatternMapType
 {
 
     private PatternMapValueType[] mapField;
@@ -2981,7 +2981,7 @@ public partial class PatternMapType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class PatternMapValueType
+internal partial class PatternMapValueType
 {
 
     private string nameField;
@@ -3039,7 +3039,7 @@ public partial class PatternMapValueType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class OpcodeListType
+internal partial class OpcodeListType
 {
 
     private OpcodeType[] opcodeField;
@@ -3065,7 +3065,7 @@ public partial class OpcodeListType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class OpcodeType
+internal partial class OpcodeType
 {
 
     private System.Xml.XmlQualifiedName nameField;
@@ -3187,7 +3187,7 @@ public partial class OpcodeType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class TaskListType
+internal partial class TaskListType
 {
 
     private TaskType[] taskField;
@@ -3213,7 +3213,7 @@ public partial class TaskListType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class TaskType
+internal partial class TaskType
 {
 
     private OpcodeType[] opcodesField;
@@ -3365,7 +3365,7 @@ public enum ProviderTypeSource
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class InputTypeListType
+internal partial class InputTypeListType
 {
 
     private InputType[] inTypeField;
@@ -3391,7 +3391,7 @@ public partial class InputTypeListType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class InputType
+internal partial class InputType
 {
 
     private string descriptionField;
@@ -3496,7 +3496,7 @@ public partial class InputType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class OutputType
+internal partial class OutputType
 {
 
     private bool defaultField;
@@ -3570,7 +3570,7 @@ public partial class OutputType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class XmlTypeListType
+internal partial class XmlTypeListType
 {
 
     private XmlTypeListTypeXmlType[] xmlTypeField;
@@ -3596,7 +3596,7 @@ public partial class XmlTypeListType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class XmlTypeListTypeXmlType : XmlType
+internal partial class XmlTypeListTypeXmlType : XmlType
 {
 
     private System.Xml.XmlQualifiedName nameField;
@@ -3654,7 +3654,7 @@ public partial class XmlTypeListTypeXmlType : XmlType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class MetadataType
+internal partial class MetadataType
 {
 
     private ChannelListType channelsField;
@@ -3840,7 +3840,7 @@ public partial class MetadataType
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class MetadataTypeMessage
+internal partial class MetadataTypeMessage
 {
 
     private string valueField;
@@ -3914,6 +3914,6 @@ public partial class MetadataTypeMessage
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public partial class InstrumentationManifestType
+internal partial class InstrumentationManifestType
 {
 }
