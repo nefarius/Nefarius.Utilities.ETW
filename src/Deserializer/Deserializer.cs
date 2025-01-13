@@ -361,7 +361,7 @@ internal sealed partial class Deserializer<T>
         }
         else
         {
-            // insert new parser for this type so next event of this kind gets dissected faster
+            // insert a new parser for this type so the next event of this kind gets dissected faster
             _actionTable.Add(key, action);
             // invoke the parser we just built on this event
             action(eventRecordReader, _writer, _eventMetadataTable, runtimeMetadata);
