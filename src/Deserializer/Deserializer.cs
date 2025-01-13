@@ -320,6 +320,13 @@ internal sealed partial class Deserializer<T>
             return;
         }
 
+        if (operand.Metadata.Name.Equals("MSNT_SystemTrace/EventTrace/DbgIdRSDS",
+                StringComparison.InvariantCultureIgnoreCase))
+        {
+            // TODO: implement me!
+            // put a callback in here so that the invoker can look up PDB and/or TMF sources 
+        }
+
         _eventMetadataTableList.Add(operand.Metadata);
         _eventMetadataTable = _eventMetadataTableList.ToArray(); // TODO: Need to improve this
 
