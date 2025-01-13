@@ -43,8 +43,6 @@ internal sealed partial class Deserializer<T>
 
     private readonly Func<PdbMetaData, DecodingContext>? _pdbContextProviderLookup;
 
-    private DecodingContext? _decodingContext;
-
     private EventMetadata[]? _eventMetadataTable;
 
     private WppTraceEventParser? _wppTraceEventParser;
@@ -60,10 +58,10 @@ internal sealed partial class Deserializer<T>
         DecodingContext? decodingContext = null) : this(writer)
     {
         _customProviderManifest = customProviderManifest;
-        _decodingContext = decodingContext;
-        if (_decodingContext is not null)
+        
+        if (decodingContext is not null)
         {
-            _wppTraceEventParser = new WppTraceEventParser(_decodingContext);
+            _wppTraceEventParser = new WppTraceEventParser(decodingContext);
         }
     }
 
@@ -325,9 +323,13 @@ internal sealed partial class Deserializer<T>
         if (operand.Metadata.Name.Equals("MSNT_SystemTrace/EventTrace/DbgIdRSDS",
                 StringComparison.InvariantCultureIgnoreCase))
         {
+            // TODO: this breaks the parser! Figure out a proper reset!
             Guid pdbGuid = eventRecordReader.ReadGuid();
             uint pdbAge = eventRecordReader.ReadUInt32();
             string pdbName = eventRecordReader.ReadAnsiString();
+            
+            // FIXME: reset or parser will read out of bounds
+            eventRecord->UserContext = eventRecord->UserData;
 
             DecodingContext? decodingContext =
                 _pdbContextProviderLookup?.Invoke(new PdbMetaData
@@ -337,8 +339,7 @@ internal sealed partial class Deserializer<T>
 
             if (decodingContext is not null)
             {
-                _decodingContext = decodingContext;
-                _wppTraceEventParser = new WppTraceEventParser(_decodingContext);
+                _wppTraceEventParser = new WppTraceEventParser(decodingContext);
             }
         }
 
