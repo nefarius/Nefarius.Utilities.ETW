@@ -37,18 +37,17 @@ internal sealed partial class Deserializer<T>
 
     private readonly Func<Guid, Stream?>? _customProviderManifest;
 
-    [SuppressMessage("ReSharper", "PrivateFieldCanBeConvertedToLocalVariable")]
-    private readonly DecodingContext? _decodingContext;
-
     private readonly List<EventMetadata> _eventMetadataTableList = new();
 
     private readonly Dictionary<Guid, EventSourceManifest> _eventSourceManifestCache = new();
 
-    private readonly WppTraceEventParser? _wppTraceEventParser;
-    
     private readonly Func<PdbMetaData, DecodingContext>? _pdbContextProviderLookup;
 
+    private DecodingContext? _decodingContext;
+
     private EventMetadata[]? _eventMetadataTable;
+
+    private WppTraceEventParser? _wppTraceEventParser;
 
     private T _writer;
 
@@ -322,11 +321,25 @@ internal sealed partial class Deserializer<T>
             return;
         }
 
+        // lets the caller react to finding the relevant .PDB(s) before WPP events get parsed, if any
         if (operand.Metadata.Name.Equals("MSNT_SystemTrace/EventTrace/DbgIdRSDS",
                 StringComparison.InvariantCultureIgnoreCase))
         {
-            // TODO: implement me!
-            // put a callback in here so that the invoker can look up PDB and/or TMF sources 
+            Guid pdbGuid = eventRecordReader.ReadGuid();
+            uint pdbAge = eventRecordReader.ReadUInt32();
+            string pdbName = eventRecordReader.ReadAnsiString();
+
+            DecodingContext? decodingContext =
+                _pdbContextProviderLookup?.Invoke(new PdbMetaData
+                {
+                    Guid = pdbGuid, Age = (int)pdbAge, PdbName = pdbName
+                });
+
+            if (decodingContext is not null)
+            {
+                _decodingContext = decodingContext;
+                _wppTraceEventParser = new WppTraceEventParser(_decodingContext);
+            }
         }
 
         _eventMetadataTableList.Add(operand.Metadata);
@@ -370,7 +383,7 @@ internal sealed partial class Deserializer<T>
 
     [GeneratedRegex("[:\\/*?\"<>|\"-]")]
     private static partial Regex InvalidCharactersRegex();
-    
+
     [GeneratedRegex(@"\s+")]
     private static partial Regex CleanNameRegex();
 }
