@@ -12,6 +12,8 @@
 
 - [PdbFilesDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.pdbfilesdecodingcontexttype.md)
 
+- [PdbMetaData](./nefarius.utilities.etw.deserializer.wpp.pdbmetadata.md)
+
 - [TmfFileDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.tmffiledecodingcontexttype.md)
 
 - [TmfFilesDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.tmffilesdecodingcontexttype.md)
