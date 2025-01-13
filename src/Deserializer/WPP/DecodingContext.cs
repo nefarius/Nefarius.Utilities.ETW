@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 
 using Windows.Win32.Foundation;
@@ -11,7 +12,7 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 public sealed class DecodingContext : IDisposable
 {
     [SuppressMessage("ReSharper", "PrivateFieldCanBeConvertedToLocalVariable")]
-    private readonly IList<DecodingContextType> _decodingTypes;
+    private readonly ReadOnlyCollection<DecodingContextType> _decodingTypes;
 
     /// <summary>
     ///     New decoding context instance.
@@ -21,7 +22,7 @@ public sealed class DecodingContext : IDisposable
     public unsafe DecodingContext(params IList<DecodingContextType> decodingTypes)
     {
         ArgumentNullException.ThrowIfNull(decodingTypes);
-        _decodingTypes = decodingTypes;
+        _decodingTypes = decodingTypes.AsReadOnly();
 
         TDH_CONTEXT* ctx = stackalloc TDH_CONTEXT[_decodingTypes.Count];
         for (int i = 0; i < _decodingTypes.Count; i++)
