@@ -2444,7 +2444,7 @@ internal partial class ChannelPublishingType
 [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "2.0.50727.42")]
 [System.SerializableAttribute()]
 [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public enum ChannelPublishingTypeClockType
+internal enum ChannelPublishingTypeClockType
 {
 
     /// <remarks/>
@@ -2458,7 +2458,7 @@ public enum ChannelPublishingTypeClockType
 [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "2.0.50727.42")]
 [System.SerializableAttribute()]
 [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public enum ChannelPublishingTypeSidType
+internal enum ChannelPublishingTypeSidType
 {
 
     /// <remarks/>
@@ -2472,7 +2472,7 @@ public enum ChannelPublishingTypeSidType
 [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "2.0.50727.42")]
 [System.SerializableAttribute()]
 [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public enum ChannelTypeType
+internal enum ChannelTypeType
 {
 
     /// <remarks/>
@@ -2492,7 +2492,7 @@ public enum ChannelTypeType
 [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "2.0.50727.42")]
 [System.SerializableAttribute()]
 [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public enum ChannelTypeIsolation
+internal enum ChannelTypeIsolation
 {
 
     /// <remarks/>
@@ -3349,7 +3349,7 @@ internal partial class TaskType
 [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "2.0.50727.42")]
 [System.SerializableAttribute()]
 [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://schemas.microsoft.com/win/2004/08/events")]
-public enum ProviderTypeSource
+internal enum ProviderTypeSource
 {
 
     /// <remarks/>
