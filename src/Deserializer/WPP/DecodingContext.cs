@@ -9,6 +9,7 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 /// <summary>
 ///     WPP decoding context used to extract TMF information from resources like <c>.PDB</c> or <c>.TMF</c> files.
 /// </summary>
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
 public sealed class DecodingContext : IDisposable
 {
     [SuppressMessage("ReSharper", "PrivateFieldCanBeConvertedToLocalVariable")]
@@ -37,7 +38,7 @@ public sealed class DecodingContext : IDisposable
         {
             throw new Win32Exception((int)ret);
         }
-        
+
         ret = (WIN32_ERROR)PInvoke.TdhSetDecodingParameter(decodingHandle, ctx);
 
         if (ret != WIN32_ERROR.ERROR_SUCCESS)
@@ -55,6 +56,20 @@ public sealed class DecodingContext : IDisposable
     {
         ReleaseUnmanagedResources();
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    ///     Creates a new <see cref="DecodingContext" /> instance with additionally provided <see cref="DecodingContextType" />
+    ///     s.
+    /// </summary>
+    /// <param name="additionalDecodingTypes">
+    ///     One or more <see cref="DecodingContextType" />s to be added to this instances'
+    ///     types.
+    /// </param>
+    /// <returns>The extended <see cref="DecodingContext" /> instance.</returns>
+    public DecodingContext ExtendWith(params IList<DecodingContextType> additionalDecodingTypes)
+    {
+        return new DecodingContext((IList<DecodingContextType>)_decodingTypes.Concat(additionalDecodingTypes));
     }
 
     private void ReleaseUnmanagedResources()
