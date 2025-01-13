@@ -323,13 +323,12 @@ internal sealed partial class Deserializer<T>
         if (operand.Metadata.Name.Equals("MSNT_SystemTrace/EventTrace/DbgIdRSDS",
                 StringComparison.InvariantCultureIgnoreCase))
         {
-            // TODO: this breaks the parser! Figure out a proper reset!
             Guid pdbGuid = eventRecordReader.ReadGuid();
             uint pdbAge = eventRecordReader.ReadUInt32();
             string pdbName = eventRecordReader.ReadAnsiString();
             
-            // FIXME: reset or parser will read out of bounds
-            eventRecord->UserContext = eventRecord->UserData;
+            // reset or parser will read out of bounds
+            eventRecordReader.Reset();
 
             DecodingContext? decodingContext =
                 _pdbContextProviderLookup?.Invoke(new PdbMetaData

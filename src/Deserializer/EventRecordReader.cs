@@ -8,14 +8,26 @@ internal readonly struct EventRecordReader
 {
     internal unsafe EVENT_RECORD* NativeEventRecord { get; }
 
+    private readonly IntPtr _originalUserData;
+
     internal unsafe EventRecordReader(EVENT_RECORD* eventRecord)
     {
         NativeEventRecord = eventRecord;
+
+        _originalUserData = (IntPtr)eventRecord->UserData;
     }
 
     private unsafe void IncrementBy(ref void* ptr, int value)
     {
         ptr = (byte*)ptr + value;
+    }
+
+    /// <summary>
+    ///     Resets the read pointer to the beginning of the event.
+    /// </summary>
+    public unsafe void Reset()
+    {
+        NativeEventRecord->UserData = (void*)_originalUserData;
     }
 
     /// <summary>
