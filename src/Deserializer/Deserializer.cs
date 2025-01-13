@@ -45,6 +45,8 @@ internal sealed partial class Deserializer<T>
     private readonly Dictionary<Guid, EventSourceManifest> _eventSourceManifestCache = new();
 
     private readonly WppTraceEventParser? _wppTraceEventParser;
+    
+    private readonly Func<PdbMetaData, DecodingContext>? _pdbContextProviderLookup;
 
     private EventMetadata[]? _eventMetadataTable;
 
