@@ -39,6 +39,25 @@ One or more TDH API calls failed.
 public void Dispose()
 ```
 
+### <a id="methods-extendwith"/>**ExtendWith(IList&lt;DecodingContextType&gt;)**
+
+Creates a new [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md) instance with additionally provided [DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md)
+ s.
+
+```csharp
+public DecodingContext ExtendWith(IList<DecodingContextType> additionalDecodingTypes)
+```
+
+#### Parameters
+
+`additionalDecodingTypes` [IList&lt;DecodingContextType&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ilist-1)<br>
+One or more [DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md)s to be added to this instances'
+ types.
+
+#### Returns
+
+The extended [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md) instance.
+
 ### <a id="methods-finalize"/>**Finalize()**
 
 ```csharp
