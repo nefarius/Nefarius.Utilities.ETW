@@ -193,7 +193,7 @@ internal static unsafe class EventTraceOperandBuilder
                 EVENT_PROPERTY_INFO* eventPropertyInfo = &eventPropertyInfoArr[i];
                 string propertyName = new((char*)&buffer[eventPropertyInfo->NameOffset]);
 
-                int structchildren = eventPropertyInfo->Anonymous1.structType.NumOfStructMembers;
+                int structChildren = eventPropertyInfo->Anonymous1.structType.NumOfStructMembers;
                 bool isStruct = (eventPropertyInfo->Flags & PROPERTY_FLAGS.PropertyStruct) ==
                                 PROPERTY_FLAGS.PropertyStruct;
                 bool isVariableArray = (eventPropertyInfo->Flags & PROPERTY_FLAGS.PropertyParamCount) ==
@@ -263,7 +263,7 @@ internal static unsafe class EventTraceOperandBuilder
                 EventTracePropertyOperand operand = new(
                     new PropertyMetadata((_TDH_IN_TYPE)eventPropertyInfo->Anonymous1.nonStructType.InType,
                         (_TDH_OUT_TYPE)eventPropertyInfo->Anonymous1.nonStructType.OutType, propertyName, mapOfValues != null,
-                        isStruct, isStruct ? structchildren : 0, new MapInformation(mapName.ToString(), mapOfValues)),
+                        isStruct, isStruct ? structChildren : 0, new MapInformation(mapName.ToString(), mapOfValues)),
                     i,
                     isVariableArray,
                     isFixedArray,
