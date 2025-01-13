@@ -1,17 +1,5 @@
 # Assembly Nefarius.Utilities.ETW
 
-## Namespace
-
-- [ChannelPublishingTypeClockType](./channelpublishingtypeclocktype.md)
-
-- [ChannelPublishingTypeSidType](./channelpublishingtypesidtype.md)
-
-- [ChannelTypeIsolation](./channeltypeisolation.md)
-
-- [ChannelTypeType](./channeltypetype.md)
-
-- [ProviderTypeSource](./providertypesource.md)
-
 ## Namespace Nefarius.Utilities.ETW
 
 - [EtwUtil](./nefarius.utilities.etw.etwutil.md)
