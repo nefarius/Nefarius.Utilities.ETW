@@ -58,7 +58,7 @@ internal sealed partial class Deserializer<T>
         DecodingContext? decodingContext = null) : this(writer)
     {
         _customProviderManifest = customProviderManifest;
-        
+
         if (decodingContext is not null)
         {
             _wppTraceEventParser = new WppTraceEventParser(decodingContext);
@@ -326,15 +326,13 @@ internal sealed partial class Deserializer<T>
             Guid pdbGuid = eventRecordReader.ReadGuid();
             uint pdbAge = eventRecordReader.ReadUInt32();
             string pdbName = eventRecordReader.ReadAnsiString();
-            
+
             // reset or parser will read out of bounds
             eventRecordReader.Reset();
 
-            DecodingContext? decodingContext =
-                _pdbContextProviderLookup?.Invoke(new PdbMetaData
-                {
-                    Guid = pdbGuid, Age = (int)pdbAge, PdbName = pdbName
-                });
+            PdbMetaData meta = new() { Guid = pdbGuid, Age = (int)pdbAge, PdbName = pdbName };
+
+            DecodingContext? decodingContext = _pdbContextProviderLookup?.Invoke(meta);
 
             if (decodingContext is not null)
             {
