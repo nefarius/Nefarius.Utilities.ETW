@@ -31,7 +31,7 @@ public readonly struct PdbMetaData
 
             string filename = Path.GetFileName(PdbName).ToLowerInvariant();
 
-            return $"{filename}/{Guid.ToString("N").ToUpperInvariant()}{Age}/{filename}";
+            return $"{filename}/{Guid.ToString("N").ToUpperInvariant()}{Age:X}/{filename}";
         }
     }
 }
