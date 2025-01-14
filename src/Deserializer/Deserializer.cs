@@ -336,6 +336,7 @@ internal sealed partial class Deserializer<T>
 
             if (decodingContext is not null)
             {
+                // update with user-provided context
                 _wppTraceEventParser = new WppTraceEventParser(decodingContext);
             }
         }
