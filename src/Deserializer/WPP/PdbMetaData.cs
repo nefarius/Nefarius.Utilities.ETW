@@ -21,7 +21,7 @@ public readonly struct PdbMetaData
     public required int Age { get; init; }
 
     /// <summary>
-    ///     Index prefix (path name) of the symbol to lookup on a symbol server.
+    ///     Index prefix (relative path name) of the symbol to lookup on a symbol server.
     /// </summary>
     public string IndexPrefix
     {
