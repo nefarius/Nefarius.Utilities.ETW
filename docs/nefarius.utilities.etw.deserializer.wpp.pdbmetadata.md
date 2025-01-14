@@ -38,7 +38,7 @@ public Guid Guid { get; set; }
 
 ### <a id="properties-indexprefix"/>**IndexPrefix**
 
-Index prefix (path name) of the symbol to lookup on a symbol server.
+Index prefix (relative path name) of the symbol to lookup on a symbol server.
 
 ```csharp
 public string IndexPrefix { get; }
