@@ -35,3 +35,4 @@ contributors.*
 - [Microsoft/ETW2JSON](https://github.com/microsoft/ETW2JSON)
 - [Microsoft/ETW](https://github.com/microsoft/ETW)
 - [WPP Software Tracing](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/wpp-software-tracing)
+- [microsoftarchive/bcl/Tools/ETW/traceEvent/SymbolEventParser.cs](https://github.com/microsoftarchive/bcl/blob/d646329371acaf696529a85e2aeb7c54639f9e70/Tools/ETW/traceEvent/SymbolEventParser.cs)
