@@ -2,7 +2,7 @@
 
 Namespace: Nefarius.Utilities.ETW.Deserializer.WPP
 
-Describes a Program DataBase meta-object extracted from the provided trace.
+Describes a Program DataBase metaobject extracted from the provided trace.
 
 ```csharp
 public struct PdbMetaData
@@ -14,6 +14,8 @@ Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) 
 
 ### <a id="properties-age"/>**Age**
 
+The age a.k.a. the revision of the build of the symbol file.
+
 ```csharp
 public int Age { get; set; }
 ```
@@ -23,6 +25,8 @@ public int Age { get; set; }
 [Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)<br>
 
 ### <a id="properties-guid"/>**Guid**
+
+The GUID uniquely identifying the symbol file.
 
 ```csharp
 public Guid Guid { get; set; }
@@ -34,6 +38,8 @@ public Guid Guid { get; set; }
 
 ### <a id="properties-indexprefix"/>**IndexPrefix**
 
+Index prefix (path name) of the symbol to lookup on a symbol server.
+
 ```csharp
 public string IndexPrefix { get; }
 ```
@@ -43,6 +49,8 @@ public string IndexPrefix { get; }
 [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
 
 ### <a id="properties-pdbname"/>**PdbName**
+
+The full path of the PDB extracted from the session information.
 
 ```csharp
 public string PdbName { get; set; }
