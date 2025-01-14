@@ -21,7 +21,7 @@ public readonly struct PdbMetaData
     public required int Age { get; init; }
 
     /// <summary>
-    ///     Index prefix (path name) of the symbol to lookup on a symbol server. 
+    ///     Index prefix (path name) of the symbol to lookup on a symbol server.
     /// </summary>
     public string IndexPrefix
     {
@@ -31,7 +31,8 @@ public readonly struct PdbMetaData
 
             string filename = Path.GetFileName(PdbName).ToLowerInvariant();
 
-            return $"{filename}/{Guid.ToString("N").ToUpperInvariant()}{Age:X}/{filename}";
+            return
+                $"{filename}/{Guid.ToString("N").ToUpperInvariant()}{Age.ToString("X").ToUpperInvariant()}/{filename}";
         }
     }
 }
