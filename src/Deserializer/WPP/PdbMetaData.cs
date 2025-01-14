@@ -10,4 +10,16 @@ public readonly struct PdbMetaData
     public required Guid Guid { get; init; }
 
     public required int Age { get; init; }
+
+    public string IndexPrefix
+    {
+        get
+        {
+            ArgumentException.ThrowIfNullOrEmpty(PdbName);
+
+            string filename = Path.GetFileName(PdbName).ToLowerInvariant();
+
+            return $"{filename}/{Guid.ToString("N").ToUpperInvariant()}{Age}/{filename}";
+        }
+    }
 }
