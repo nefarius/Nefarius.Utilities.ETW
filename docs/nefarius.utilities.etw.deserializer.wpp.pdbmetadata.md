@@ -32,6 +32,16 @@ public Guid Guid { get; set; }
 
 [Guid](https://docs.microsoft.com/en-us/dotnet/api/system.guid)<br>
 
+### <a id="properties-indexprefix"/>**IndexPrefix**
+
+```csharp
+public string IndexPrefix { get; }
+```
+
+#### Property Value
+
+[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+
 ### <a id="properties-pdbname"/>**PdbName**
 
 ```csharp
