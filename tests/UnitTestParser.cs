@@ -26,7 +26,7 @@ public class Tests
         if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
             {
                 // ReSharper disable once AccessToDisposedClosure
-                converterOptions.DecodingContext = decodingContext; 
+                converterOptions.WppDecodingContext = decodingContext; 
             }))
         {
             Assert.Fail();

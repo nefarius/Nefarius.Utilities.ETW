@@ -32,7 +32,7 @@ public static class EtwUtil
         Deserializer<EtwJsonWriter> deserializer = new(
             new EtwJsonWriter(jsonWriter),
             opts.CustomProviderManifest,
-            opts.DecodingContext,
+            opts.WppDecodingContext,
             opts.ContextProviderLookup
         );
 

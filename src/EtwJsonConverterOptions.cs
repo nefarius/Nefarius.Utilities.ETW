@@ -3,7 +3,7 @@
 namespace Nefarius.Utilities.ETW;
 
 /// <summary>
-///     Adjusstments for <see cref="EtwUtil" />.
+///     Adjustments for <see cref="EtwUtil" />.
 /// </summary>
 public sealed class EtwJsonConverterOptions
 {
@@ -20,9 +20,9 @@ public sealed class EtwJsonConverterOptions
     public Func<Guid, Stream?>? CustomProviderManifest { get; set; }
 
     /// <summary>
-    ///     <see cref="DecodingContext" /> to read WPP events.
+    ///     <see cref="WppDecodingContext" /> to read WPP events.
     /// </summary>
-    public DecodingContext? DecodingContext { get; set; }
+    public DecodingContext? WppDecodingContext { get; set; }
     
     /// <summary>
     ///     Custom <see cref="DecodingContext"/> provider lookup.
