@@ -12,6 +12,18 @@ Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) 
 
 ## Properties
 
+### <a id="properties-contextproviderlookup"/>**ContextProviderLookup**
+
+Custom [EtwJsonConverterOptions.DecodingContext](./nefarius.utilities.etw.etwjsonconverteroptions.md#decodingcontext) provider lookup.
+
+```csharp
+public Func<PdbMetaData, DecodingContext> ContextProviderLookup { get; set; }
+```
+
+#### Property Value
+
+[Func&lt;PdbMetaData, DecodingContext&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.func-2)<br>
+
 ### <a id="properties-customprovidermanifest"/>**CustomProviderManifest**
 
 Custom manifest provider lookup.
