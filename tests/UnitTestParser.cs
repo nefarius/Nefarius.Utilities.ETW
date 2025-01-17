@@ -23,11 +23,11 @@ public class Tests
         using Utf8JsonWriter jsonWriter = new(ms, options);
         using DecodingContext decodingContext = new(new PdbFilesDecodingContextType(@"D:\Downloads\tmftest\nssvpd.pdb"));
 
-        if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], error =>
-                {
-                    Assert.Fail();
-                }, decodingContext: decodingContext
-            ))
+        if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
+            {
+                // ReSharper disable once AccessToDisposedClosure
+                converterOptions.DecodingContext = decodingContext; 
+            }))
         {
             Assert.Fail();
         }

@@ -5,7 +5,6 @@ using System.Text.Json;
 using Windows.Win32.Foundation;
 
 using Nefarius.Utilities.ETW.Deserializer;
-using Nefarius.Utilities.ETW.Deserializer.WPP;
 
 namespace Nefarius.Utilities.ETW;
 
@@ -20,15 +19,18 @@ public static class EtwUtil
     /// </summary>
     /// <param name="jsonWriter">The target JSON writer to write to.</param>
     /// <param name="inputFiles">One or more input files.</param>
-    /// <param name="reportError">Potential parsing errors.</param>
-    /// <param name="customProviderManifest">Optionally called to load custom manifests for providers.</param>
-    /// <param name="decodingContext">Optional <see cref="DecodingContext"/> to read WPP events.</param>
+    /// <param name="options">Options to further tweak the parsing operation.</param>
     /// <returns>True on success, false otherwise.</returns>
     public static bool ConvertToJson(Utf8JsonWriter jsonWriter, IEnumerable<string> inputFiles,
-        Action<string> reportError, Func<Guid, Stream?>? customProviderManifest = null, DecodingContext? decodingContext = null)
+        Action<EtwJsonConverterOptions>? options = null)
     {
+        EtwJsonConverterOptions opts = new();
+
+        options?.Invoke(opts);
+
         List<string> list = inputFiles.ToList();
-        Deserializer<EtwJsonWriter> deserializer = new(new EtwJsonWriter(jsonWriter), customProviderManifest, decodingContext);
+        Deserializer<EtwJsonWriter> deserializer =
+            new(new EtwJsonWriter(jsonWriter), opts.CustomProviderManifest, opts.DecodingContext);
 
         int count = list.Count;
         EVENT_TRACE_LOGFILEW[] fileSessions = new EVENT_TRACE_LOGFILEW[count];
@@ -59,18 +61,20 @@ public static class EtwUtil
                     switch ((WIN32_ERROR)Marshal.GetLastWin32Error())
                     {
                         case WIN32_ERROR.ERROR_INVALID_PARAMETER:
-                            reportError("ERROR: For file: " + list[i] +
-                                        " Windows returned 0x57 -- The Logfile parameter is NULL.");
+                            opts.ReportError?.Invoke("ERROR: For file: " + list[i] +
+                                                     " Windows returned 0x57 -- The Logfile parameter is NULL.");
                             return false;
                         case WIN32_ERROR.ERROR_BAD_PATHNAME:
-                            reportError("ERROR: For file: " + list[i] +
-                                        " Windows returned 0xA1 -- The specified path is invalid.");
+                            opts.ReportError?.Invoke("ERROR: For file: " + list[i] +
+                                                     " Windows returned 0xA1 -- The specified path is invalid.");
                             return false;
                         case WIN32_ERROR.ERROR_ACCESS_DENIED:
-                            reportError("ERROR: For file: " + list[i] + " Windows returned 0x5 -- Access is denied.");
+                            opts.ReportError?.Invoke("ERROR: For file: " + list[i] +
+                                                     " Windows returned 0x5 -- Access is denied.");
                             return false;
                         default:
-                            reportError("ERROR: For file: " + list[i] + " Windows returned an unknown error.");
+                            opts.ReportError?.Invoke("ERROR: For file: " + list[i] +
+                                                     " Windows returned an unknown error.");
                             return false;
                     }
                 }
