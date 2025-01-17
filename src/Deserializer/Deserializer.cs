@@ -55,9 +55,11 @@ internal sealed partial class Deserializer<T>
     }
 
     public Deserializer(T writer, Func<Guid, Stream?>? customProviderManifest,
-        DecodingContext? decodingContext = null) : this(writer)
+        DecodingContext? decodingContext = null,
+        Func<PdbMetaData, DecodingContext>? pdbContextProviderLookup = null) : this(writer)
     {
         _customProviderManifest = customProviderManifest;
+        _pdbContextProviderLookup = pdbContextProviderLookup;
 
         if (decodingContext is not null)
         {

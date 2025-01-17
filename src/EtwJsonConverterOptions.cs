@@ -23,4 +23,9 @@ public sealed class EtwJsonConverterOptions
     ///     <see cref="DecodingContext" /> to read WPP events.
     /// </summary>
     public DecodingContext? DecodingContext { get; set; }
+    
+    /// <summary>
+    ///     Custom <see cref="DecodingContext"/> provider lookup.
+    /// </summary>
+    public Func<PdbMetaData, DecodingContext>? ContextProviderLookup { get; set; }
 }

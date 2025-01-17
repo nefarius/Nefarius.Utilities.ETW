@@ -29,8 +29,12 @@ public static class EtwUtil
         options?.Invoke(opts);
 
         List<string> list = inputFiles.ToList();
-        Deserializer<EtwJsonWriter> deserializer =
-            new(new EtwJsonWriter(jsonWriter), opts.CustomProviderManifest, opts.DecodingContext);
+        Deserializer<EtwJsonWriter> deserializer = new(
+            new EtwJsonWriter(jsonWriter),
+            opts.CustomProviderManifest,
+            opts.DecodingContext,
+            opts.ContextProviderLookup
+        );
 
         int count = list.Count;
         EVENT_TRACE_LOGFILEW[] fileSessions = new EVENT_TRACE_LOGFILEW[count];
