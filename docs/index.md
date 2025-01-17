@@ -2,6 +2,8 @@
 
 ## Namespace Nefarius.Utilities.ETW
 
+- [EtwJsonConverterOptions](./nefarius.utilities.etw.etwjsonconverteroptions.md)
+
 - [EtwUtil](./nefarius.utilities.etw.etwutil.md)
 
 ## Namespace Nefarius.Utilities.ETW.Deserializer.WPP
