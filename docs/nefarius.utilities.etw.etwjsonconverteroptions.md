@@ -50,7 +50,7 @@ public Action<String> ReportError { get; set; }
 
 ### <a id="properties-wppdecodingcontext"/>**WppDecodingContext**
 
-[EtwJsonConverterOptions.WppDecodingContext](./nefarius.utilities.etw.etwjsonconverteroptions.md#wppdecodingcontext) to read WPP events.
+[DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md) to read WPP events.
 
 ```csharp
 public DecodingContext WppDecodingContext { get; set; }
