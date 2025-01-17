@@ -2,7 +2,7 @@
 
 Namespace: Nefarius.Utilities.ETW
 
-Adjusstments for [EtwUtil](./nefarius.utilities.etw.etwutil.md).
+Adjustments for [EtwUtil](./nefarius.utilities.etw.etwutil.md).
 
 ```csharp
 public sealed class EtwJsonConverterOptions
@@ -14,7 +14,7 @@ Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) 
 
 ### <a id="properties-contextproviderlookup"/>**ContextProviderLookup**
 
-Custom [EtwJsonConverterOptions.DecodingContext](./nefarius.utilities.etw.etwjsonconverteroptions.md#decodingcontext) provider lookup.
+Custom [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md) provider lookup.
 
 ```csharp
 public Func<PdbMetaData, DecodingContext> ContextProviderLookup { get; set; }
@@ -36,18 +36,6 @@ public Func<Guid, Stream> CustomProviderManifest { get; set; }
 
 [Func&lt;Guid, Stream&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.func-2)<br>
 
-### <a id="properties-decodingcontext"/>**DecodingContext**
-
-[EtwJsonConverterOptions.DecodingContext](./nefarius.utilities.etw.etwjsonconverteroptions.md#decodingcontext) to read WPP events.
-
-```csharp
-public DecodingContext DecodingContext { get; set; }
-```
-
-#### Property Value
-
-[DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md)<br>
-
 ### <a id="properties-reporterror"/>**ReportError**
 
 Reports potential parsing errors.
@@ -59,3 +47,15 @@ public Action<String> ReportError { get; set; }
 #### Property Value
 
 [Action&lt;String&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-1)<br>
+
+### <a id="properties-wppdecodingcontext"/>**WppDecodingContext**
+
+[EtwJsonConverterOptions.WppDecodingContext](./nefarius.utilities.etw.etwjsonconverteroptions.md#wppdecodingcontext) to read WPP events.
+
+```csharp
+public DecodingContext WppDecodingContext { get; set; }
+```
+
+#### Property Value
+
+[DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md)<br>
