@@ -20,7 +20,7 @@ public sealed class EtwJsonConverterOptions
     public Func<Guid, Stream?>? CustomProviderManifest { get; set; }
 
     /// <summary>
-    ///     <see cref="WppDecodingContext" /> to read WPP events.
+    ///     <see cref="DecodingContext" /> to read WPP events.
     /// </summary>
     public DecodingContext? WppDecodingContext { get; set; }
     
