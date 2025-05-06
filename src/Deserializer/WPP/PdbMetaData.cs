@@ -1,8 +1,11 @@
-﻿namespace Nefarius.Utilities.ETW.Deserializer.WPP;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 
 /// <summary>
 ///     Describes a Program DataBase metaobject extracted from the provided trace.
 /// </summary>
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
 public readonly struct PdbMetaData
 {
     /// <summary>
@@ -23,6 +26,10 @@ public readonly struct PdbMetaData
     /// <summary>
     ///     Index prefix (relative path name) of the symbol to lookup on a symbol server.
     /// </summary>
+    /// <remarks>
+    ///     For example
+    ///     <a href="https://symbols.nefarius.at/download/symbols/hidhide.pdb/779e56ef8d244145a64a3aee304b9de91/hidhide.pdb">hidhide.pdb/779e56ef8d244145a64a3aee304b9de91/hidhide.pdb</a>
+    /// </remarks>
     public string IndexPrefix
     {
         get
