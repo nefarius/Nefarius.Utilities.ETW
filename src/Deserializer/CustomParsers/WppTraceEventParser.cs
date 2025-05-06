@@ -46,7 +46,7 @@ internal sealed class WppTraceEventParser : ICustomParser
             nameof(WppEventRecord.ThreadId), false, false, 0, null);
         SystemTimeMetadata = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_SYSTEMTIME,
             _TDH_OUT_TYPE.TDH_OUTTYPE_DATETIME,
-            nameof(WppEventRecord.SystemTime), false, false, 0, null);
+            nameof(WppEventRecord.SystemTime), false, true, 0, null);
         UserTimeMetadata = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_UINT32, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT,
             nameof(WppEventRecord.UserTime), false, false, 0, null);
         KernelTimeMetadata = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_UINT32, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT,
@@ -82,7 +82,7 @@ internal sealed class WppTraceEventParser : ICustomParser
             nameof(WppEventRecord.FormattedString), false, false, 0, null);
         RawSystemTimeMetadata = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_FILETIME,
             _TDH_OUT_TYPE.TDH_OUTTYPE_DATETIME,
-            nameof(WppEventRecord.RawSystemTime), false, false, 0, null);
+            nameof(WppEventRecord.RawSystemTime), false, true, 0, null);
         ProviderGuidMetadata = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_GUID, _TDH_OUT_TYPE.TDH_OUTTYPE_GUID,
             nameof(WppEventRecord.ProviderGuid), false, false, 0, null);
 
