@@ -49,7 +49,7 @@ internal unsafe class WppEventRecord
     public Guid ProviderGuid { get; private set; }
 
     /// <summary>
-    ///     Decodes we--known properties from a given <see cref="EVENT_RECORD" />.
+    ///     Decodes well-known properties from a given <see cref="EVENT_RECORD" />.
     /// </summary>
     /// <param name="decodingContext">The <see cref="DecodingContext" /> to use.</param>
     /// <exception cref="Win32Exception">A TDH API call failed.</exception>
