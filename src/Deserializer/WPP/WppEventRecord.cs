@@ -55,7 +55,7 @@ internal unsafe class WppEventRecord
     /// <exception cref="Win32Exception">A TDH API call failed.</exception>
     public void Decode(DecodingContext decodingContext)
     {
-        ObjectAccessor? wrapped = ObjectAccessor.Create(this, true);
+        ObjectAccessor? self = ObjectAccessor.Create(this, true);
 
         uint bufferSize = 0;
         WIN32_ERROR infoRet = (WIN32_ERROR)PInvoke.TdhGetEventInformation(
@@ -153,7 +153,7 @@ internal unsafe class WppEventRecord
                     if (value is not null)
                     {
                         // set managed property by name
-                        wrapped[propertyName] = value;
+                        self[propertyName] = value;
                     }
 
                     continue;
@@ -207,7 +207,7 @@ internal unsafe class WppEventRecord
                 if (value is not null)
                 {
                     // set managed property by name
-                    wrapped[propertyName] = value;
+                    self[propertyName] = value;
                 }
             }
             finally
