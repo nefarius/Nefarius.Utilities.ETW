@@ -48,6 +48,11 @@ public string IndexPrefix { get; }
 
 [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
 
+**Remarks:**
+
+For example
+ hidhide.pdb/779e56ef8d244145a64a3aee304b9de91/hidhide.pdb
+
 ### <a id="properties-pdbname"/>**PdbName**
 
 The full path of the PDB extracted from the session information.
