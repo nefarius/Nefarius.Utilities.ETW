@@ -18,9 +18,9 @@ public abstract class DecodingContextType
     protected ReadOnlyMemory<byte> Buffer { get; init; }
 
     /// <summary>
-    ///     Turns this instance into a <see cref="TDH_CONTEXT"/> for use with the TDH APIs.
+    ///     Turns this instance into a <see cref="TDH_CONTEXT" /> for use with the TDH APIs.
     /// </summary>
-    /// <returns>An instance of <see cref="TDH_CONTEXT"/>.</returns>
+    /// <returns>An instance of <see cref="TDH_CONTEXT" />.</returns>
     internal unsafe TDH_CONTEXT AsContext()
     {
         fixed (byte* valueBuffer = Buffer.Span)
@@ -53,7 +53,8 @@ public sealed class PdbFilesDecodingContextType()
     public PdbFilesDecodingContextType(params IList<string> pathList) : this()
     {
         ArgumentNullException.ThrowIfNull(pathList);
-        Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(string.Join(';', pathList)));
+        Buffer = new ReadOnlyMemory<byte>(
+            Encoding.Unicode.GetBytes(string.Join(';', pathList.Select(Path.GetFullPath))));
     }
 }
 
@@ -81,7 +82,8 @@ public sealed class TmfFilesDecodingContextType()
     public TmfFilesDecodingContextType(params IList<string> pathList) : this()
     {
         ArgumentNullException.ThrowIfNull(pathList);
-        Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(string.Join(';', pathList)));
+        Buffer = new ReadOnlyMemory<byte>(
+            Encoding.Unicode.GetBytes(string.Join(';', pathList.Select(Path.GetFullPath))));
     }
 }
 
@@ -101,6 +103,6 @@ public sealed class TmfFileDecodingContextType() : DecodingContextType(TDH_CONTE
     public TmfFileDecodingContextType(string path) : this()
     {
         ArgumentException.ThrowIfNullOrEmpty(path);
-        Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(path));
+        Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(Path.GetFullPath(path)));
     }
 }
