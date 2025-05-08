@@ -36,6 +36,23 @@ public Func<Guid, Stream> CustomProviderManifest { get; set; }
 
 [Func&lt;Guid, Stream&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.func-2)<br>
 
+### <a id="properties-preserverawtimestamps"/>**PreserveRawTimestamps**
+
+If set, `PROCESS_TRACE_MODE_RAW_TIMESTAMP` will be applied when processing the trace record.
+
+```csharp
+public bool PreserveRawTimestamps { get; set; }
+```
+
+#### Property Value
+
+[Boolean](https://docs.microsoft.com/en-us/dotnet/api/system.boolean)<br>
+
+**Remarks:**
+
+See
+ DUMMYUNIONNAME.ProcessTraceMode
+
 ### <a id="properties-reporterror"/>**ReportError**
 
 Reports potential parsing errors.
