@@ -6,8 +6,6 @@ namespace Nefarius.Utilities.ETW.Deserializer.CustomParsers;
 
 internal sealed class WppTraceEventParser : ICustomParser
 {
-    private static readonly EventMetadata EventMetadata;
-
     private static readonly PropertyMetadata VersionMetadata;
     private static readonly PropertyMetadata TraceGuidMetadata;
     private static readonly PropertyMetadata GuidNameMetadata;
@@ -85,21 +83,6 @@ internal sealed class WppTraceEventParser : ICustomParser
             nameof(WppEventRecord.RawSystemTime), false, true, 0, null);
         ProviderGuidMetadata = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_GUID, _TDH_OUT_TYPE.TDH_OUTTYPE_GUID,
             nameof(WppEventRecord.ProviderGuid), false, false, 0, null);
-
-        EventMetadata = new EventMetadata(
-            PInvoke.EventTraceGuid,
-            1, // TODO: correct me
-            0,
-            "WPP",
-            new[]
-            {
-                VersionMetadata, TraceGuidMetadata, GuidNameMetadata, GuidTypeNameMetadata, ThreadIdMetadata,
-                SystemTimeMetadata, UserTimeMetadata, KernelTimeMetadata, SequenceNumMetadata, ProcessIdMetadata,
-                CpuNumberMetadata, IndentMetadata, FlagsNameMetadata, LevelNameMetadata, FunctionNameMetadata,
-                ComponentNameMetadata, SubComponentNameMetadata, FormattedStringMetadata, RawSystemTimeMetadata,
-                ProviderGuidMetadata
-            }
-        );
     }
 
     public WppTraceEventParser(DecodingContext decodingContext)
@@ -111,12 +94,28 @@ internal sealed class WppTraceEventParser : ICustomParser
     public unsafe void Parse<T>(EventRecordReader reader, T writer, EventMetadata[] metadataArray,
         RuntimeEventMetadata runtimeMetadata) where T : IEtwWriter
     {
+        ushort id = reader.NativeEventRecord->EventHeader.EventDescriptor.Id;
+        
+        var eventMetadata = new EventMetadata(
+            PInvoke.EventTraceGuid,
+            id,
+            0,
+            "WPP",
+            [
+                VersionMetadata, TraceGuidMetadata, GuidNameMetadata, GuidTypeNameMetadata, ThreadIdMetadata,
+                SystemTimeMetadata, UserTimeMetadata, KernelTimeMetadata, SequenceNumMetadata, ProcessIdMetadata,
+                CpuNumberMetadata, IndentMetadata, FlagsNameMetadata, LevelNameMetadata, FunctionNameMetadata,
+                ComponentNameMetadata, SubComponentNameMetadata, FormattedStringMetadata, RawSystemTimeMetadata,
+                ProviderGuidMetadata
+            ]
+        );
+        
         // we cannot use EventRecordReader for this since the properties are not user data
         WppEventRecord decodedRecord = new(reader.NativeEventRecord);
         // this does the heavy lifting of retrieving properties with the decoding context 
         decodedRecord.Decode(_decodingContext);
 
-        writer.WriteEventBegin(EventMetadata, runtimeMetadata);
+        writer.WriteEventBegin(eventMetadata, runtimeMetadata);
 
         writer.WritePropertyBegin(VersionMetadata);
         writer.WriteUInt32(decodedRecord.Version);
