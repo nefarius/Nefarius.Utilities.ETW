@@ -10,6 +10,18 @@ public abstract class DecodingContextType
 
 Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md)
 
+## Properties
+
+### <a id="properties-value"/>**Value**
+
+```csharp
+public string Value { get; }
+```
+
+#### Property Value
+
+[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+
 ## Methods
 
 ### <a id="methods-ascontext"/>**AsContext()**
