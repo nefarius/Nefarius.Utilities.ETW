@@ -58,7 +58,8 @@ public sealed class PdbFilesDecodingContextType()
         Buffer = new ReadOnlyMemory<byte>(
             Encoding.Unicode.GetBytes(string.Join(';', pathList.Select(Path.GetFullPath)))
                 .Concat("\0\0"u8.ToArray())
-                .ToArray());
+                .ToArray()
+        );
     }
 }
 
@@ -87,7 +88,10 @@ public sealed class TmfFilesDecodingContextType()
     {
         ArgumentNullException.ThrowIfNull(pathList);
         Buffer = new ReadOnlyMemory<byte>(
-            Encoding.Unicode.GetBytes(string.Join(';', pathList.Select(Path.GetFullPath))));
+            Encoding.Unicode.GetBytes(string.Join(';', pathList.Select(Path.GetFullPath)))
+                .Concat("\0\0"u8.ToArray())
+                .ToArray()
+        );
     }
 }
 
@@ -107,6 +111,9 @@ public sealed class TmfFileDecodingContextType() : DecodingContextType(TDH_CONTE
     public TmfFileDecodingContextType(string path) : this()
     {
         ArgumentException.ThrowIfNullOrEmpty(path);
-        Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(Path.GetFullPath(path)));
+        Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(Path.GetFullPath(path))
+            .Concat("\0\0"u8.ToArray())
+            .ToArray()
+        );
     }
 }
