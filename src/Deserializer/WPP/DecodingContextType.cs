@@ -17,6 +17,8 @@ public abstract class DecodingContextType
 
     protected ReadOnlyMemory<byte> Buffer { get; init; }
 
+    public string Value => Encoding.Unicode.GetString(Buffer.Span);
+
     /// <summary>
     ///     Turns this instance into a <see cref="TDH_CONTEXT" /> for use with the TDH APIs.
     /// </summary>
