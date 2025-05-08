@@ -54,7 +54,9 @@ public sealed class PdbFilesDecodingContextType()
     {
         ArgumentNullException.ThrowIfNull(pathList);
         Buffer = new ReadOnlyMemory<byte>(
-            Encoding.Unicode.GetBytes(string.Join(';', pathList.Select(Path.GetFullPath))));
+            Encoding.Unicode.GetBytes(string.Join(';', pathList.Select(Path.GetFullPath)))
+                .Concat("\0\0"u8.ToArray())
+                .ToArray());
     }
 }
 
