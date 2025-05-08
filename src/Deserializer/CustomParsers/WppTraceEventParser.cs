@@ -142,7 +142,6 @@ internal sealed class WppTraceEventParser : ICustomParser
         PInvoke.SystemTimeToFileTime(decodedRecord.SystemTime, out FILETIME systemTimeAsFile);
         long liSystemTime = ((long)systemTimeAsFile.dwHighDateTime << 32) |
                             (uint)systemTimeAsFile.dwLowDateTime;
-        // TODO: bugged, fix me!
         writer.WriteFileTime(DateTime.FromFileTimeUtc(liSystemTime));
         writer.WritePropertyEnd();
 
@@ -197,7 +196,6 @@ internal sealed class WppTraceEventParser : ICustomParser
         writer.WritePropertyBegin(RawSystemTimeMetadata);
         long liRawSystemTime = ((long)decodedRecord.RawSystemTime.dwHighDateTime << 32) |
                                (uint)decodedRecord.RawSystemTime.dwLowDateTime;
-        // TODO: bugged, fix me!
         writer.WriteFileTime(DateTime.FromFileTimeUtc(liRawSystemTime));
         writer.WritePropertyEnd();
 

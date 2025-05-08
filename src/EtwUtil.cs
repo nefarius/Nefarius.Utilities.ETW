@@ -49,7 +49,7 @@ public static class EtwUtil
                     LogFileName = list[i],
                     EventRecordCallback = deserializer.Deserialize,
                     BufferCallback = deserializer.BufferCallback,
-                    LogFileMode = PInvoke.PROCESS_TRACE_MODE_EVENT_RECORD | PInvoke.PROCESS_TRACE_MODE_RAW_TIMESTAMP
+                    LogFileMode = PInvoke.PROCESS_TRACE_MODE_EVENT_RECORD
                 };
 
                 handles[i] = Etw.OpenTrace(ref fileSessions[i]);
