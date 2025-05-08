@@ -86,7 +86,7 @@ internal unsafe class WppEventRecord
             throw new TdhGetEventInformationException(infoRet);
         }
 
-        // we expect 20 WPP properties but this dynamic approach is safer
+        // we expect 20 WPP properties, but this dynamic approach is safer
         for (int propertyIndex = 0; propertyIndex < traceEventInfo->PropertyCount; propertyIndex++)
         {
             EVENT_PROPERTY_INFO propertyInfo = traceEventInfo->EventPropertyInfoArray[propertyIndex];
@@ -95,7 +95,13 @@ internal unsafe class WppEventRecord
 
             PROPERTY_DATA_DESCRIPTOR propertyDescriptor = new()
             {
-                PropertyName = (ulong)((byte*)traceEventInfo + propertyInfo.NameOffset), ArrayIndex = uint.MaxValue
+                // Pointer to a null-terminated Unicode string that contains the case-sensitive property name.
+                // You can use the NameOffset member of the EVENT_PROPERTY_INFO structure to get the property name.
+                PropertyName = (ulong)((byte*)traceEventInfo + propertyInfo.NameOffset),
+                // Zero-based index for accessing elements of a property array.
+                // If the property data is not an array or if you want to address the entire array,
+                // specify ULONG_MAX (0xFFFFFFFF).
+                ArrayIndex = uint.MaxValue
             };
 
             uint propSize = 0;
