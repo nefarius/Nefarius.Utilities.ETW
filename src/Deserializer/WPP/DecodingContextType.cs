@@ -30,7 +30,9 @@ public abstract class DecodingContextType
                 // the lookup type
                 ParameterType = ContextType,
                 // pointer to the value (typically a filesystem path)
-                ParameterValue = (ulong)valueBuffer
+                ParameterValue = (ulong)valueBuffer,
+                /* Reserved. Set to 0. */
+                ParameterSize = 0
             };
         }
     }
