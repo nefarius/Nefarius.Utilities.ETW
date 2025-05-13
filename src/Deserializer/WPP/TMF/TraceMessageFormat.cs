@@ -1,6 +1,6 @@
 ﻿namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
-internal sealed class TraceMessageFormat : IEquatable<TraceMessageFormat>
+public sealed class TraceMessageFormat : IEquatable<TraceMessageFormat>
 {
     public Guid MessageGuid { get; init; }
 

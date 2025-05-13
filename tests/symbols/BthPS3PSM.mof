@@ -1,0 +1,80 @@
+#pragma autorecover
+#pragma classflags("forceupdate")
+#pragma namespace("\\\\.\\root\\WMI")
+//
+// WPP Generated File
+// PDB:  BthPS3PSM.pdb
+// PDB:  Last Updated :2025-04-28:18:52:28:001 (UTC) [Tracepdb]
+//
+
+//ModuleName = BthPS3PSMBthPS3PSMTraceGuid	 (Init called in Function DriverEntry)
+[Dynamic,
+ Description("BthPS3PSM_BthPS3PSMTraceGuid"),
+ guid("{586aa8b1-53a6-404f-9b3e-14483e514a2c}"),
+ locale("MS\\0x409")]
+class BthPS3PSMBthPS3PSMTraceGuid : EventTrace
+{
+    [Description ("Enable Flags") : amended,
+        ValueDescriptions{
+             "MYDRIVER_ALL_INFO Flag",
+             "TRACE_DRIVER Flag",
+             "TRACE_DEVICE Flag",
+             "TRACE_QUEUE Flag",
+             "TRACE_FILTER Flag",
+             "TRACE_DIAG Flag",
+             "TRACE_SIDEBAND Flag"},
+        DefineValues{
+             "MYDRIVER_ALL_INFO",
+             "TRACE_DRIVER",
+             "TRACE_DEVICE",
+             "TRACE_QUEUE",
+             "TRACE_FILTER",
+             "TRACE_DIAG",
+             "TRACE_SIDEBAND"},
+        Values{
+             "MYDRIVER_ALL_INFO",
+             "TRACE_DRIVER",
+             "TRACE_DEVICE",
+             "TRACE_QUEUE",
+             "TRACE_FILTER",
+             "TRACE_DIAG",
+             "TRACE_SIDEBAND"},
+        ValueMap{
+             "0x00000001",
+             "0x00000002",
+             "0x00000004",
+             "0x00000008",
+             "0x00000010",
+             "0x00000020",
+             "0x00000040"}: amended
+    ]
+    uint32 Flags;
+    [Description ("Levels") : amended,
+        ValueDescriptions{
+            "Abnormal exit or termination",
+            "Severe errors that need logging",
+            "Warnings such as allocation failure",
+            "Includes non-error cases",
+            "Detailed traces from intermediate steps" } : amended,
+         DefineValues{
+            "TRACE_LEVEL_FATAL",
+            "TRACE_LEVEL_ERROR",
+            "TRACE_LEVEL_WARNING"
+            "TRACE_LEVEL_INFORMATION",
+            "TRACE_LEVEL_VERBOSE" },
+        Values{
+            "Fatal",
+            "Error",
+            "Warning",
+            "Information",
+            "Verbose" },
+        ValueMap{
+            "0x1",
+            "0x2",
+            "0x3",
+            "0x4",
+            "0x5" },
+        ValueType("index")
+    ]
+    uint32 Level;
+};

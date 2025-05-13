@@ -1,0 +1,55 @@
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+dda777ae-0466-3ec8-eb78-4e4ba6ad64fa BthPS3 // SRC=Bluetooth.c MJ= MN=
+#typev Bluetooth_c394 23 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_EvtQueuedWorkItemHandler
+{
+}
+#typev Bluetooth_c370 22 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_EvtQueuedWorkItemHandler
+{
+}
+#typev Bluetooth_c289 19 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_GetDeviceName
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth_c212 18 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_GetDeviceName
+{
+}
+#typev Bluetooth_c355 21 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_GetHciVersion
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth_c302 20 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_GetHciVersion
+{
+}
+#typev Bluetooth_c175 17 "%0 [%!FUNC!] ERROR:QueryInterface failed for Interface profile driver interface, version %10!d!, Status code %11!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_QueryInterfaces
+{
+BTHDDI_PROFILE_DRIVER_INTERFACE_VERSION_FOR_QI, ItemLong -- 10
+status, ItemNTSTATUS -- 11
+}
+#typev Bluetooth_c147 16 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_RetrieveLocalInfo
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth_c131 15 "%0 [%!FUNC!] ERROR:Host radio HCI major version %10!d! too low, can't continue" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_RetrieveLocalInfo
+{
+hciVersion, ItemLong -- 10
+}
+#typev Bluetooth_c121 14 "%0 [%!FUNC!]Host radio HCI major version %10!d!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_BTH FUNC=BthPS3_RetrieveLocalInfo
+{
+hciVersion, ItemLong -- 10
+}
+#typev Bluetooth_c110 13 "%0 [%!FUNC!]Retrieving HCI major version failed, status %10!s!" //   LEVEL=TRACE_LEVEL_WARNING FLAGS=TRACE_BTH FUNC=BthPS3_RetrieveLocalInfo
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth_c88 12 "%0 [%!FUNC!] ERROR:Retrieving local bth address failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_RetrieveLocalInfo
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth_c72 11 "%0 [%!FUNC!] ERROR:Failed to allocate brb BRB_HCI_GET_LOCAL_BD_ADDR with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_RetrieveLocalInfo
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth_c58 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_RetrieveLocalInfo
+{
+}

@@ -1,0 +1,56 @@
+// PDB:  BthPS3PSM.pdb
+// PDB:  Last Updated :2025-04-28:18:52:28:001 (UTC) [Tracepdb]
+9fd9018f-c07b-3383-a12a-2352710d4d14 BthPS3PSM // SRC=Filter.c MJ= MN=
+#typev Filter_c214 23 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_FILTER FUNC=UrbFunctionBulkInTransferCompleted
+{
+}
+#typev Filter_c203 22 "%0 [%!FUNC!]-- NOT Patching HID Interrupt PSM" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_FILTER FUNC=UrbFunctionBulkInTransferCompleted
+{
+}
+#typev Filter_c195 21 "%0 [%!FUNC!]++ Patching HID Interrupt PSM to 0x%10!04X!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_FILTER FUNC=UrbFunctionBulkInTransferCompleted
+{
+pConReq->PSM, ItemLong -- 10
+}
+#typev Filter_c185 20 "%0 [%!FUNC!]>> Connection request for HID Interrupt PSM 0x%10!04X! arrived" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_FILTER FUNC=UrbFunctionBulkInTransferCompleted
+{
+pConReq->PSM, ItemLong -- 10
+}
+#typev Filter_c176 19 "%0 [%!FUNC!]-- NOT Patching HID Control PSM" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_FILTER FUNC=UrbFunctionBulkInTransferCompleted
+{
+}
+#typev Filter_c169 18 "%0 [%!FUNC!]++ Patching HID Control PSM to 0x%10!04X!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_FILTER FUNC=UrbFunctionBulkInTransferCompleted
+{
+pConReq->PSM, ItemLong -- 10
+}
+#typev Filter_c159 17 "%0 [%!FUNC!]>> Connection request for HID Control PSM 0x%10!04X! arrived" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_FILTER FUNC=UrbFunctionBulkInTransferCompleted
+{
+pConReq->PSM, ItemLong -- 10
+}
+#typev Filter_c129 16 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_FILTER FUNC=UrbFunctionBulkInTransferCompleted
+{
+}
+#typev Filter_c111 15 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_FILTER FUNC=UrbSelectConfigurationCompleted
+{
+}
+#typev Filter_c102 14 "%0 [%!FUNC!] ERROR:Failed to find BULK IN pipe" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_QUEUE FUNC=UrbSelectConfigurationCompleted
+{
+}
+#typev Filter_c88 13 "%0 [%!FUNC!]Found Bulk IN pipe handle 0x%10!p! for endpoint 0x%11!02X!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_FILTER FUNC=UrbSelectConfigurationCompleted
+{
+pipeInfo->PipeHandle, ItemPtr -- 10
+pipeInfo->EndpointAddress, ItemLong -- 11
+}
+#typev Filter_c78 12 "%0 [%!FUNC!]Enumerating pipe %10!d! with type 0x%11!X! and address 0x%12!02X! (handle 0x%13!p!)" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_FILTER FUNC=UrbSelectConfigurationCompleted
+{
+i, ItemLong -- 10
+pipeInfo->PipeType, ItemLong -- 11
+pipeInfo->EndpointAddress, ItemLong -- 12
+pipeInfo->PipeHandle, ItemPtr -- 13
+}
+#typev Filter_c68 11 "%0 [%!FUNC!]Enumerating %10!d! pipes" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_FILTER FUNC=UrbSelectConfigurationCompleted
+{
+interfaceInfo->NumberOfPipes, ItemLong -- 10
+}
+#typev Filter_c59 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_FILTER FUNC=UrbSelectConfigurationCompleted
+{
+}

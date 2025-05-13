@@ -1,0 +1,129 @@
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+6cd6108b-373b-3ece-5b98-7ec6a3d4abc7 DmfKFramework // SRC=Dmf_LiveKernelDump.c MJ= MN=
+#typev Dmf_LiveKernelDump_c1137 39 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_LiveKernelDump_ChildModulesAdd
+{
+}
+#typev Dmf_LiveKernelDump_c1055 38 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_LiveKernelDump_ChildModulesAdd
+{
+}
+#typev Dmf_LiveKernelDump_c189 11 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=LiveKernelDump_DataBufferSourceAdd
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_LiveKernelDump_c165 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=LiveKernelDump_DataBufferSourceAdd
+{
+}
+#typev Dmf_LiveKernelDump_c735 25 "%0 [%!FUNC!]LkmdTelInsertTriageDataBlock fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=LiveKernelDump_InsertClientTriageDataToLiveDump
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_LiveKernelDump_c740 26 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=LiveKernelDump_InsertClientTriageDataToLiveDump
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_LiveKernelDump_c723 24 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=LiveKernelDump_InsertClientTriageDataToLiveDump
+{
+}
+#typev Dmf_LiveKernelDump_c480 19 "%0 [%!FUNC!]NumberOfDataBuffers=%10!d! TelemetryDataSize so far=%11!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=LiveKernelDump_InsertDataBufferInCrashDump
+{
+dmfContextLiveKernelDump->NumberOfDataBuffers, ItemLong -- 10
+dmfContextLiveKernelDump->TelemetryDataSize, ItemLong -- 11
+}
+#typev Dmf_LiveKernelDump_c405 18 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=LiveKernelDump_InsertDataBufferInLiveDump
+{
+}
+#typev Dmf_LiveKernelDump_c401 17 "%0 [%!FUNC!]numberOfDataBuffers=%10!d!, telemetryDataSize so far=%11!d!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=LiveKernelDump_InsertDataBufferInLiveDump
+{
+numberOfDataBuffers, ItemLong -- 10
+telemetryDataSize, ItemLong -- 11
+}
+#typev Dmf_LiveKernelDump_c380 16 "%0 [%!FUNC!]DMF_BufferQueue_Fetch fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=LiveKernelDump_InsertDataBufferInLiveDump
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_LiveKernelDump_c367 15 "%0 [%!FUNC!]Invalid parameters: dataBuffer->Valid=%10!d!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=LiveKernelDump_InsertDataBufferInLiveDump
+{
+dataBuffer->Valid, ItemLong -- 10
+}
+#typev Dmf_LiveKernelDump_c348 14 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=LiveKernelDump_InsertDataBufferInLiveDump
+{
+}
+#typev Dmf_LiveKernelDump_c560 21 "%0 [%!FUNC!]DMF_BufferQueue_Dequeue fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=LiveKernelDump_InsertDmfTriageDataToLiveDump
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_LiveKernelDump_c569 22 "%0 [%!FUNC!]LkmdTelInsertTriageDataBlock fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=LiveKernelDump_InsertDmfTriageDataToLiveDump
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_LiveKernelDump_c579 23 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=LiveKernelDump_InsertDmfTriageDataToLiveDump
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_LiveKernelDump_c530 20 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=LiveKernelDump_InsertDmfTriageDataToLiveDump
+{
+}
+#typev Dmf_LiveKernelDump_c995 37 "%0 [%!FUNC!] <-- Exit <%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=LiveKernelDump_IoctlHandler
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_LiveKernelDump_c964 36 "%0 [%!FUNC!]Request=0x%10!p! OutputBufferLength=%11!d! InputBufferLength=%12!d! IoControlCode=0x%13!X!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=LiveKernelDump_IoctlHandler
+{
+Request, ItemPtr -- 10
+(int)OutputBufferSize, ItemLong -- 11
+(int)InputBufferSize, ItemLong -- 12
+IoctlCode, ItemLong -- 13
+}
+#typev Dmf_LiveKernelDump_c953 35 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=LiveKernelDump_IoctlHandler
+{
+}
+#typev Dmf_LiveKernelDump_c894 34 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=LiveKernelDump_LiveKernelMemoryDumpCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_LiveKernelDump_c885 33 "%0 [%!FUNC!]LkmdTelSubmitReport completed status = %10!s!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=LiveKernelDump_LiveKernelMemoryDumpCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_LiveKernelDump_c877 32 "%0 [%!FUNC!]LkmdTelSetSecondaryData fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=LiveKernelDump_LiveKernelMemoryDumpCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_LiveKernelDump_c859 31 "%0 [%!FUNC!]LiveKernelDump_InsertClientTriageDataToLiveDump fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=LiveKernelDump_LiveKernelMemoryDumpCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_LiveKernelDump_c847 30 "%0 [%!FUNC!]LiveKernelDump_InsertDmfDataToLiveDump fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=LiveKernelDump_LiveKernelMemoryDumpCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_LiveKernelDump_c836 29 "%0 [%!FUNC!]LkmdTelCreateReport fails." //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=LiveKernelDump_LiveKernelMemoryDumpCreate
+{
+}
+#typev Dmf_LiveKernelDump_c809 28 "%0 [%!FUNC!]LiveKernelDump_LiveKernelMemoryDumpCreate fails due to invalid parameters." //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=LiveKernelDump_LiveKernelMemoryDumpCreate
+{
+}
+#typev Dmf_LiveKernelDump_c797 27 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=LiveKernelDump_LiveKernelMemoryDumpCreate
+{
+}
+#typev Dmf_LiveKernelDump_c1258 41 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_LiveKernelDump_Create
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_LiveKernelDump_c1252 40 "%0 [%!FUNC!]DMF_ModuleCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_LiveKernelDump_Create
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_LiveKernelDump_c1314 43 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_LiveKernelDump_DataBufferSourceAdd
+{
+}
+#typev Dmf_LiveKernelDump_c1305 42 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_LiveKernelDump_DataBufferSourceAdd
+{
+}
+#typev Dmf_LiveKernelDump_c1500 49 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_LiveKernelDump_StoreDmfCollectionAsBugcheckParameter
+{
+}
+#typev Dmf_LiveKernelDump_c1490 48 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_LiveKernelDump_StoreDmfCollectionAsBugcheckParameter
+{
+}

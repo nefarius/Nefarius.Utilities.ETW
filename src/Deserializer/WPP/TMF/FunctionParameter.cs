@@ -12,7 +12,8 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 ///     https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-outputtype-complextype#remarks
 /// </remarks>
 [SuppressMessage("ReSharper", "InconsistentNaming")]
-internal enum ItemType
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
+public enum ItemType
 {
     /// <summary>
     ///     A list of one or more zero-indexed array items.
@@ -58,10 +59,14 @@ internal enum ItemType
     ///     types, the string is assumed to have been encoded using UTF-8.
     /// </summary>
     ItemString,
+
+    /// <summary>
+    ///     A GUID value that is formatted in the registry string form, {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}.
+    /// </summary>
     ItemGuid
 }
 
-internal struct FunctionParameter
+public struct FunctionParameter
 {
     public required string Expression { get; set; }
 

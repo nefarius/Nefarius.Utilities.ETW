@@ -1,0 +1,78 @@
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+f6fe7bc7-26e4-3c6c-db47-980dfae39806 BthPS3 // SRC=L2CAP.Disconnect.c MJ= MN=
+#typev L2CAP.Disconnect_c383 30 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_ChannelDisconnectCompleted
+{
+}
+#typev L2CAP.Disconnect_c368 29 "%0 [%!FUNC!] --> Entry <status=%10!s!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_ChannelDisconnectCompleted
+{
+Params->IoStatus.Status, ItemNTSTATUS -- 10
+}
+#typev L2CAP.Disconnect_c262 25 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_ConnectionIndicationCallback
+{
+}
+#typev L2CAP.Disconnect_c178 18 "%0 [%!FUNC!]IndicationAddReference" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_ConnectionIndicationCallback
+{
+}
+#typev L2CAP.Disconnect_c181 19 "%0 [%!FUNC!]IndicationReleaseReference" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_ConnectionIndicationCallback
+{
+}
+#typev L2CAP.Disconnect_c226 22 "%0 [%!FUNC!] ERROR:DMF_QueuedWorkItem_Enqueue failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=L2CAP_PS3_ConnectionIndicationCallback
+{
+status, ItemNTSTATUS -- 10
+}
+#typev L2CAP.Disconnect_c209 21 "%0 [%!FUNC!]IRQL %10!s! too high, preparing async call" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=L2CAP_PS3_ConnectionIndicationCallback
+{
+KeGetCurrentIrql(), ItemListByte(Low,APC,DPC) -- 10
+}
+#typev L2CAP.Disconnect_c193 20 "%0 [%!FUNC!]IndicationRemoteDisconnect [0x%10!p!]" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_ConnectionIndicationCallback
+{
+Parameters->ConnectionHandle, ItemPtr -- 10
+}
+#typev L2CAP.Disconnect_c239 23 "%0 [%!FUNC!]IndicationRemoteConfigRequest" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_ConnectionIndicationCallback
+{
+}
+#typev L2CAP.Disconnect_c249 24 "%0 [%!FUNC!]IndicationRemoteConfigResponse" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_ConnectionIndicationCallback
+{
+}
+#typev L2CAP.Disconnect_c172 17 "%0 [%!FUNC!] --> Entry <Indication=0x%10!X!, Context=0x%11!p!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_ConnectionIndicationCallback
+{
+Indication, ItemLong -- 10
+Context, ItemPtr -- 11
+}
+#typev L2CAP.Disconnect_c153 16 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteDisconnect
+{
+status, ItemNTSTATUS -- 10
+}
+#typev L2CAP.Disconnect_c135 15 "%0 [%!FUNC!] ERROR:HID Interrupt - KeWaitForSingleObject failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteDisconnect
+{
+status, ItemNTSTATUS -- 10
+}
+#typev L2CAP.Disconnect_c115 14 "%0 [%!FUNC!] ERROR:HID Control - KeWaitForSingleObject failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteDisconnect
+{
+status, ItemNTSTATUS -- 10
+}
+#typev L2CAP.Disconnect_c101 13 "%0 [%!FUNC!]Both channels are gone, awaiting clean-up" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteDisconnect
+{
+}
+#typev L2CAP.Disconnect_c83 12 "%0 [%!FUNC!]HID Interrupt Channel 0x%10!p! disconnected" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteDisconnect
+{
+DisconnectParams->ConnectionHandle, ItemPtr -- 10
+}
+#typev L2CAP.Disconnect_c65 11 "%0 [%!FUNC!]HID Control Channel 0x%10!p! disconnected" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteDisconnect
+{
+DisconnectParams->ConnectionHandle, ItemPtr -- 10
+}
+#typev L2CAP.Disconnect_c55 10 "%0 [%!FUNC!] --> Entry <pdoContext=0x%10!p!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteDisconnect
+{
+DisconnectParams->ConnectionHandle, ItemPtr -- 10
+}
+#typev L2CAP.Disconnect_c347 28 "%0 [%!FUNC!] <-- Exit <returns=TRUE>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_RemoteDisconnect
+{
+}
+#typev L2CAP.Disconnect_c310 27 "%0 [%!FUNC!] <-- Exit <returns=FALSE>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_RemoteDisconnect
+{
+}
+#typev L2CAP.Disconnect_c278 26 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_RemoteDisconnect
+{
+}

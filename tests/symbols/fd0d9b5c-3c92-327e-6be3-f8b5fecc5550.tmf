@@ -1,0 +1,7 @@
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+fd0d9b5c-3c92-327e-6be3-f8b5fecc5550 BthPS3 // SRC=PSM.c MJ= MN=
+#typev PSM_c207 10 "%0 [%!FUNC!]PSM Filter enable request finished with status %10!s!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_PSM FUNC=BthPS3PSM_FilterRequestCompletionRoutine
+{
+WdfRequestGetStatus(Request), ItemNTSTATUS -- 10
+}

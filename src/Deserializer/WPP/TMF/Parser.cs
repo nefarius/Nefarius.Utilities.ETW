@@ -3,12 +3,12 @@ using System.Text.RegularExpressions;
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
-internal sealed partial class Parser
+public sealed partial class Parser
 {
     [GeneratedRegex(
         @"(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1}) ([a-zA-Z0-9_\.]*)")]
     private partial Regex HeaderRegex();
-    
+
     [GeneratedRegex(@"\/\/ SRC=([\w\-. ]+) MJ=")]
     private partial Regex FileNameRegex();
 
@@ -26,7 +26,7 @@ internal sealed partial class Parser
     private partial Regex ParameterBodyRegex();
 
     /// <summary>
-    ///     Processes a given directory of <c>.TMF</c> files and parses them. 
+    ///     Processes a given directory of <c>.TMF</c> files and parses them.
     /// </summary>
     /// <param name="path">The directory to search in.</param>
     /// <returns>A collection of extracted <see cref="TraceMessageFormat" /> entries.</returns>
