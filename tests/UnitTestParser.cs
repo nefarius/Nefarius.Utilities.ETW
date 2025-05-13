@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+using Kaitai;
+
 using Nefarius.Utilities.ETW;
 using Nefarius.Utilities.ETW.Deserializer.WPP;
 
@@ -15,6 +17,17 @@ public class Tests
     [Test]
     public void WppTraceDecodingTest()
     {
+        string testPdb = Path.GetFullPath(@".\symbols\BthPS3.pdb");
+
+        MsPdb pdb = new(new KaitaiStream(File.OpenRead(testPdb)));
+
+        MsPdb.UModuleInfo mi = pdb.DbiStream.ModulesList.Items.First();
+        IEnumerable<MsPdb.DbiSymbol> annotations =
+            mi.ModuleData.SymbolsList.Items.Where(s => s.Data.Body is MsPdb.SymAnnotation);
+        IEnumerable<MsPdb.DbiSymbol> tmfAnnotations =
+            annotations.Where(a =>
+                ((MsPdb.SymAnnotation)a.Data.Body).Strings.FirstOrDefault()?.Contains("TMF:") ?? false);
+
         string etwFilePath = @".\traces\BthPS3.etl";
 
         JsonWriterOptions options = new() { Indented = true };
