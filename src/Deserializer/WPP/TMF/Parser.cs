@@ -34,7 +34,7 @@ public sealed partial class Parser
     {
         List<TraceMessageFormat> messages = [];
 
-        foreach (string filePath in Directory.EnumerateFiles(path, "*.tmf"))
+        foreach (string filePath in Directory.EnumerateFiles(Path.GetDirectoryName(path)!, "*.tmf"))
         {
             using StreamReader fs = File.OpenText(filePath);
 
