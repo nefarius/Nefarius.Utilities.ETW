@@ -25,7 +25,7 @@ public class Tests
         Assert.That(result, Has.Count.EqualTo(1253));
     }
 
-    public static IEnumerable<(MsPdb.SymProc32 Proc, List<MsPdb.SymAnnotation> Annotations)> EnumerateGroups(
+    private static IEnumerable<(MsPdb.SymProc32 Proc, List<MsPdb.SymAnnotation> Annotations)> EnumerateGroups(
         List<MsPdb.DbiSymbol> symbols)
     {
         for (int i = 0; i < symbols.Count;)
@@ -64,6 +64,25 @@ public class Tests
         }
     }
 
+    private static IEnumerable<TraceMessageFormat> ExtractTraceMessageFormats(
+        IEnumerable<(MsPdb.SymProc32 Proc, List<MsPdb.SymAnnotation> Annotations)> groups)
+    {
+        Parser parser = new();
+
+        foreach ((MsPdb.SymProc32 proc, List<MsPdb.SymAnnotation> annotations) in groups)
+        {
+            foreach (string block in annotations.Select(annotation =>
+                         string.Join(Environment.NewLine, annotation.Strings.Skip(1))))
+            {
+                using StringReader sr = new(block);
+                IReadOnlyList<TraceMessageFormat> results = parser.ParseFile(sr, proc.Name.Value);
+                if (results.Any())
+                {
+                    yield return results[0];
+                }
+            }
+        }
+    }
 
     [Test]
     public void PdbFileParserTest()
@@ -72,32 +91,13 @@ public class Tests
 
         MsPdb pdb = new(new KaitaiStream(File.OpenRead(testPdb)));
 
-        List<(MsPdb.SymProc32 Proc, List<MsPdb.SymAnnotation> Annotations)> groups = EnumerateGroups(pdb
+        IEnumerable<(MsPdb.SymProc32 Proc, List<MsPdb.SymAnnotation> Annotations)> groups = EnumerateGroups(pdb
                 .DbiStream.ModulesList.Items
                 .SelectMany(m => m.ModuleData.SymbolsList.Items).ToList())
-            .Where((tuple, i) => tuple.Annotations.Count != 0).ToList();
+            .Where((tuple, _) => tuple.Annotations.Count != 0 &&
+                                 tuple.Annotations.Any(annotation => annotation.Strings.Contains("TMF:")));
 
-        IEnumerable<MsPdb.DbiSymbol> tmfAnnotations = pdb.DbiStream.ModulesList.Items
-            .SelectMany(m => m.ModuleData.SymbolsList.Items)
-            .Where(s => s.Data.Body is MsPdb.SymAnnotation sa &&
-                        sa.Strings.FirstOrDefault()?.Contains("TMF:") == true);
-
-        IEnumerable<MsPdb.DbiSymbol> functions = pdb.DbiStream.ModulesList.Items
-            .SelectMany(m => m.ModuleData.SymbolsList.Items)
-            .Where(s => s.Data.Body is MsPdb.SymProc32 sa);
-
-        MsPdb.DbiSymbol exampleAnnotation = tmfAnnotations.First(s => s.Data.Body is MsPdb.SymAnnotation sa &&
-                                                                      sa.Strings[2].Contains("Bluetooth_c58"));
-
-        IEnumerable<string> formatBlocks = tmfAnnotations
-            .Select(a => string.Join(Environment.NewLine,
-                ((MsPdb.SymAnnotation)a.Data.Body).Strings.Where(s => !s.Contains("TMF:"))));
-
-        string block = formatBlocks.First();
-        StringReader sr = new(block);
-        Parser parser = new();
-
-        IReadOnlyList<TraceMessageFormat> result = parser.ParseFile(sr);
+        List<TraceMessageFormat> refined = ExtractTraceMessageFormats(groups).ToList();
     }
 
     [Test]

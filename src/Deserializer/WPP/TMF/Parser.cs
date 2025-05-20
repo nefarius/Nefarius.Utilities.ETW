@@ -48,8 +48,9 @@ public sealed partial class Parser
     ///     Parses a <c>.TMF</c> file and extracts all containing <see cref="TraceMessageFormat" />s.
     /// </summary>
     /// <param name="reader">Source file stream.</param>
+    /// <param name="functionName">Optional function name to provide if missing from the <paramref name="reader" /> content.</param>
     /// <returns>A collection of extracted <see cref="TraceMessageFormat" /> entries.</returns>
-    public IReadOnlyList<TraceMessageFormat> ParseFile(TextReader reader)
+    public IReadOnlyList<TraceMessageFormat> ParseFile(TextReader reader, string? functionName = null)
     {
         List<TraceMessageFormat> messages = [];
 
@@ -98,8 +99,10 @@ public sealed partial class Parser
             string messageFormat = typeDefinition.Groups[3].Value;
             string level = typeDefinition.Groups[4].Value;
             string flags = typeDefinition.Groups[5].Value;
-            string function = typeDefinition.Groups[6].Value;
+            string function = string.IsNullOrEmpty(functionName) ? typeDefinition.Groups[6].Value : functionName;
 
+            ArgumentException.ThrowIfNullOrEmpty(function);
+            
             TraceMessageFormat tmf = new()
             {
                 MessageGuid = messageGuid,
@@ -110,8 +113,7 @@ public sealed partial class Parser
                 MessageFormat = messageFormat,
                 Level = level,
                 Flags = flags,
-                // TODO: can be null if coming from PDB annotation, improve!
-                Function = string.IsNullOrEmpty(function) ? null : function
+                Function = function
             };
 
             string? paramsBegin = reader.ReadLine();

@@ -18,7 +18,7 @@ public sealed class TraceMessageFormat : IEquatable<TraceMessageFormat>
 
     public required string Flags { get; init; }
 
-    public string? Function { get; init; }
+    public required string Function { get; init; }
 
     public IReadOnlyList<FunctionParameter> FunctionParameters { get; set; } = new List<FunctionParameter>();
 
