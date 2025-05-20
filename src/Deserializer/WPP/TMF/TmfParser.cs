@@ -194,8 +194,8 @@ public sealed partial class TmfParser
                          string.Join(Environment.NewLine, annotation.Strings.Skip(1))))
             {
                 using StringReader sr = new(block);
-                IReadOnlyList<TraceMessageFormat> results = ParseFile(sr, proc.Name.Value);
-                if (results.Any())
+                ReadOnlyCollection<TraceMessageFormat> results = ParseFile(sr, proc.Name.Value);
+                if (results.Count != 0)
                 {
                     yield return results[0];
                 }
