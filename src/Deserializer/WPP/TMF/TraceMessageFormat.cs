@@ -37,7 +37,8 @@ public sealed class TraceMessageFormat : IEquatable<TraceMessageFormat>
         return MessageGuid.Equals(other.MessageGuid) &&
                string.Equals(Provider, other.Provider, StringComparison.OrdinalIgnoreCase) &&
                string.Equals(FileName, other.FileName, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(Opcode, other.Opcode, StringComparison.OrdinalIgnoreCase) && Id == other.Id;
+               string.Equals(Opcode, other.Opcode, StringComparison.OrdinalIgnoreCase) &&
+               Id == other.Id;
     }
 
     public override bool Equals(object? obj)
