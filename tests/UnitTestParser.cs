@@ -25,6 +25,46 @@ public class Tests
         Assert.That(result, Has.Count.EqualTo(1253));
     }
 
+    public static IEnumerable<(MsPdb.SymProc32 Proc, List<MsPdb.SymAnnotation> Annotations)> EnumerateGroups(
+        List<MsPdb.DbiSymbol> symbols)
+    {
+        for (int i = 0; i < symbols.Count;)
+        {
+            if (symbols[i].Data.Body is MsPdb.SymProc32 proc)
+            {
+                List<MsPdb.SymAnnotation> annotations = new();
+                i++; // Advance to check for annotations
+
+                while (i < symbols.Count)
+                {
+                    if (symbols[i].Data.Body is MsPdb.SymAnnotation annotation)
+                    {
+                        annotations.Add(annotation);
+                        i++;
+                    }
+                    else if (symbols[i].Data.Body is MsPdb.SymProc32)
+                    {
+                        // Next SymProc32 encountered – break to process it on the next loop iteration
+                        break;
+                    }
+                    else
+                    {
+                        // Skip unrelated symbol types
+                        i++;
+                    }
+                }
+
+                yield return (proc, annotations);
+            }
+            else
+            {
+                // Skip unrelated symbol types
+                i++;
+            }
+        }
+    }
+
+
     [Test]
     public void PdbFileParserTest()
     {
@@ -32,10 +72,22 @@ public class Tests
 
         MsPdb pdb = new(new KaitaiStream(File.OpenRead(testPdb)));
 
+        List<(MsPdb.SymProc32 Proc, List<MsPdb.SymAnnotation> Annotations)> groups = EnumerateGroups(pdb
+                .DbiStream.ModulesList.Items
+                .SelectMany(m => m.ModuleData.SymbolsList.Items).ToList())
+            .Where((tuple, i) => tuple.Annotations.Count != 0).ToList();
+
         IEnumerable<MsPdb.DbiSymbol> tmfAnnotations = pdb.DbiStream.ModulesList.Items
             .SelectMany(m => m.ModuleData.SymbolsList.Items)
             .Where(s => s.Data.Body is MsPdb.SymAnnotation sa &&
                         sa.Strings.FirstOrDefault()?.Contains("TMF:") == true);
+
+        IEnumerable<MsPdb.DbiSymbol> functions = pdb.DbiStream.ModulesList.Items
+            .SelectMany(m => m.ModuleData.SymbolsList.Items)
+            .Where(s => s.Data.Body is MsPdb.SymProc32 sa);
+
+        MsPdb.DbiSymbol exampleAnnotation = tmfAnnotations.First(s => s.Data.Body is MsPdb.SymAnnotation sa &&
+                                                                      sa.Strings[2].Contains("Bluetooth_c58"));
 
         IEnumerable<string> formatBlocks = tmfAnnotations
             .Select(a => string.Join(Environment.NewLine,
