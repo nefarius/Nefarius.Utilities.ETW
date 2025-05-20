@@ -71,7 +71,7 @@ public sealed partial class Parser
             // the first occurrence is expected to be the message GUID and module name
             if (headerMatch.Success)
             {
-                messageGuid = Guid.Parse(HeaderRegex().Match(line).Groups[1].Value);
+                messageGuid = Guid.Parse(headerMatch.Groups[1].Value);
                 providerName = headerMatch.Groups[7].Value;
                 fileName = FileNameRegex().Match(line).Groups[1].Value;
                 typeDefLine = reader.ReadLine();
