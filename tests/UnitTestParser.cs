@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Text.Json;
 
 using Kaitai;
@@ -10,6 +11,8 @@ namespace EtwTestProject;
 
 public class Tests
 {
+    private const int ExpectedTypesCount = 1253;
+
     private static readonly TraceMessageFormat ExpectedSampleType = new()
     {
         FileName = "Bluetooth.Context.c",
@@ -22,8 +25,6 @@ public class Tests
         Opcode = "Bluetooth_Context_c149",
         Provider = "BthPS3"
     };
-    
-    private const int ExpectedTypesCount = 1253;
 
     [SetUp]
     public void Setup()
@@ -36,9 +37,7 @@ public class Tests
     [Test]
     public void TmfFileParserTest()
     {
-        TmfParser tmfParser = new();
-
-        IReadOnlyList<TraceMessageFormat> result = tmfParser.ParseDirectory(Path.GetFullPath(@".\symbols"));
+        IReadOnlyList<TraceMessageFormat> result = ExtractFromFormatFiles();
 
         TraceMessageFormat sample = result.Single(format => format.Opcode.Equals("Bluetooth_Context_c149"));
 
@@ -49,11 +48,33 @@ public class Tests
         }
     }
 
+    private static IReadOnlyList<TraceMessageFormat> ExtractFromFormatFiles()
+    {
+        TmfParser tmfParser = new();
+
+        IReadOnlyList<TraceMessageFormat> result = tmfParser.ParseDirectory(Path.GetFullPath(@".\symbols"));
+
+        return result;
+    }
+
     /// <summary>
     ///     Parses TMF information directly from PDBs.
     /// </summary>
     [Test]
     public void PdbFileParserTest()
+    {
+        ReadOnlyCollection<TraceMessageFormat> result = ExtractFromSymbolFiles();
+
+        TraceMessageFormat sample = result.Single(format => format.Opcode.Equals("Bluetooth_Context_c149"));
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(sample, Is.EqualTo(ExpectedSampleType));
+            Assert.That(result, Has.Count.EqualTo(ExpectedTypesCount));
+        }
+    }
+
+    private static ReadOnlyCollection<TraceMessageFormat> ExtractFromSymbolFiles()
     {
         string profilePdbPath = Path.GetFullPath(@".\symbols\BthPS3.pdb");
         string filterPdbPath = Path.GetFullPath(@".\symbols\BthPS3PSM.pdb");
@@ -89,13 +110,7 @@ public class Tests
             .Distinct()
             .ToList();
 
-        TraceMessageFormat sample = result.Single(format => format.Opcode.Equals("Bluetooth_Context_c149"));
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(sample, Is.EqualTo(ExpectedSampleType));
-            Assert.That(result, Has.Count.EqualTo(ExpectedTypesCount));
-        }
+        return result.AsReadOnly();
     }
 
     /// <summary>
