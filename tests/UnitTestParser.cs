@@ -18,9 +18,9 @@ public class Tests
     [Test]
     public void TmfFileParserTest()
     {
-        Parser parser = new();
+        TmfParser tmfParser = new();
 
-        IReadOnlyList<TraceMessageFormat> result = parser.ParseDirectory(Path.GetFullPath(@".\symbols"));
+        IReadOnlyList<TraceMessageFormat> result = tmfParser.ParseDirectory(Path.GetFullPath(@".\symbols"));
 
         Assert.That(result, Has.Count.EqualTo(1253));
     }
@@ -67,7 +67,7 @@ public class Tests
     private static IEnumerable<TraceMessageFormat> ExtractTraceMessageFormats(
         IEnumerable<(MsPdb.SymProc32 Proc, List<MsPdb.SymAnnotation> Annotations)> groups)
     {
-        Parser parser = new();
+        TmfParser tmfParser = new();
 
         foreach ((MsPdb.SymProc32 proc, List<MsPdb.SymAnnotation> annotations) in groups)
         {
@@ -75,7 +75,7 @@ public class Tests
                          string.Join(Environment.NewLine, annotation.Strings.Skip(1))))
             {
                 using StringReader sr = new(block);
-                IReadOnlyList<TraceMessageFormat> results = parser.ParseFile(sr, proc.Name.Value);
+                IReadOnlyList<TraceMessageFormat> results = tmfParser.ParseFile(sr, proc.Name.Value);
                 if (results.Any())
                 {
                     yield return results[0];

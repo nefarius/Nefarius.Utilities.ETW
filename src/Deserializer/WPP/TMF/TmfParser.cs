@@ -1,9 +1,13 @@
 ﻿using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
+
+using Kaitai;
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
-public sealed partial class Parser
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
+public sealed partial class TmfParser
 {
     [GeneratedRegex(
         @"(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1}) ([a-zA-Z0-9_\.]*)")]
@@ -102,7 +106,7 @@ public sealed partial class Parser
             string function = string.IsNullOrEmpty(functionName) ? typeDefinition.Groups[6].Value : functionName;
 
             ArgumentException.ThrowIfNullOrEmpty(function);
-            
+
             TraceMessageFormat tmf = new()
             {
                 MessageGuid = messageGuid,
@@ -158,5 +162,22 @@ public sealed partial class Parser
         }
 
         return messages.AsReadOnly();
+    }
+
+    public IEnumerable<TraceMessageFormat> ExtractTraceMessageFormats(IEnumerable<SymProc32AnnotationPair> pairs)
+    {
+        foreach ((MsPdb.SymProc32 proc, List<MsPdb.SymAnnotation> annotations) in pairs)
+        {
+            foreach (string block in annotations.Select(annotation =>
+                         string.Join(Environment.NewLine, annotation.Strings.Skip(1))))
+            {
+                using StringReader sr = new(block);
+                IReadOnlyList<TraceMessageFormat> results = ParseFile(sr, proc.Name.Value);
+                if (results.Any())
+                {
+                    yield return results[0];
+                }
+            }
+        }
     }
 }
