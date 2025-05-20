@@ -10,7 +10,7 @@ namespace EtwTestProject;
 
 public class Tests
 {
-    private static readonly TraceMessageFormat ExampleFormat = new()
+    private static readonly TraceMessageFormat ExpectedSampleType = new()
     {
         FileName = "Bluetooth.Context.c",
         Flags = "TRACE_BTH",
@@ -22,6 +22,8 @@ public class Tests
         Opcode = "Bluetooth_Context_c149",
         Provider = "BthPS3"
     };
+    
+    private const int ExpectedTypesCount = 1253;
 
     [SetUp]
     public void Setup()
@@ -42,8 +44,8 @@ public class Tests
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(sample, Is.EqualTo(ExampleFormat));
-            Assert.That(result, Has.Count.EqualTo(1253));
+            Assert.That(sample, Is.EqualTo(ExpectedSampleType));
+            Assert.That(result, Has.Count.EqualTo(ExpectedTypesCount));
         }
     }
 
@@ -91,8 +93,8 @@ public class Tests
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(sample, Is.EqualTo(ExampleFormat));
-            Assert.That(result, Has.Count.EqualTo(1253));
+            Assert.That(sample, Is.EqualTo(ExpectedSampleType));
+            Assert.That(result, Has.Count.EqualTo(ExpectedTypesCount));
         }
     }
 
