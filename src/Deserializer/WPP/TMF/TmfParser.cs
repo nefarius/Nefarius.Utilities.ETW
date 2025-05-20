@@ -6,6 +6,9 @@ using Kaitai;
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
+/// <summary>
+///     Trace Message Format parsing utilities.
+/// </summary>
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
 public sealed partial class TmfParser
 {
@@ -178,6 +181,11 @@ public sealed partial class TmfParser
         return messages.AsReadOnly();
     }
 
+    /// <summary>
+    ///     Converts a collection of <see cref="SymProc32AnnotationPair"/> into <see cref="TraceMessageFormat"/>s.
+    /// </summary>
+    /// <param name="pairs">The source <see cref="SymProc32AnnotationPair"/>s to convert.</param>
+    /// <returns>A collection of extracted <see cref="TraceMessageFormat"/>s.</returns>
     public IEnumerable<TraceMessageFormat> ExtractTraceMessageFormats(IEnumerable<SymProc32AnnotationPair> pairs)
     {
         foreach ((MsPdb.SymProc32 proc, List<MsPdb.SymAnnotation> annotations) in pairs)
