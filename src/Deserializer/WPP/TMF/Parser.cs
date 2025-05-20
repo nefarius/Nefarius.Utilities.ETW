@@ -16,12 +16,8 @@ public sealed partial class Parser
     private partial Regex CommentRegex();
 
     [GeneratedRegex(
-        @"^#typev ([a-zA-Z0-9_\.]*) (\d*) ""(.*)"" \/\/ *LEVEL=([a-zA-Z0-9_]*) FLAGS=([a-zA-Z0-9_]*) FUNC=([a-zA-Z0-9_]*)")]
-    private partial Regex TypeDefinitionFileRegex();
-
-    [GeneratedRegex(
-        @"^#typev ([a-zA-Z0-9_\.]*) (\d*) ""(.*)"" \/\/ *LEVEL=([a-zA-Z0-9_]*) FLAGS=([a-zA-Z0-9_]*)")]
-    private partial Regex TypeDefinitionAnnotationRegex();
+        @"^#typev ([a-zA-Z0-9_\.]*) (\d*) ""(.*)"" \/\/ *LEVEL=([a-zA-Z0-9_]*) FLAGS=([a-zA-Z0-9_]*)(?: FUNC=([a-zA-Z0-9_]*))?")]
+    private partial Regex TypeDefinitionRegex();
 
     [GeneratedRegex(@"^\}$")]
     private partial Regex ParamsEndRegex();
@@ -91,16 +87,10 @@ public sealed partial class Parser
                 break;
             }
 
-            Match typeDefinition = TypeDefinitionFileRegex().Match(typeDefLine);
+            Match typeDefinition = TypeDefinitionRegex().Match(typeDefLine);
             if (!typeDefinition.Success)
             {
-                // try fallback
-                typeDefinition = TypeDefinitionAnnotationRegex().Match(typeDefLine);
-
-                if (!typeDefinition.Success)
-                {
-                    continue;
-                }
+                continue;
             }
 
             string opcode = typeDefinition.Groups[1].Value;
