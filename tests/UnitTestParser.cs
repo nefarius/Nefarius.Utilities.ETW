@@ -10,6 +10,19 @@ namespace EtwTestProject;
 
 public class Tests
 {
+    private static readonly TraceMessageFormat ExampleFormat = new()
+    {
+        FileName = "Bluetooth.Context.c",
+        Flags = "TRACE_BTH",
+        Function = "BthPS3_DeviceContextHeaderInit",
+        Id = 12,
+        Level = "TRACE_LEVEL_VERBOSE",
+        MessageFormat = "%0 [%!FUNC!] <-- Exit <status=%10!s!>",
+        MessageGuid = Guid.Parse("e4b27b5e-24d0-369f-a4b5-23228e160bd2"),
+        Opcode = "Bluetooth_Context_c149",
+        Provider = "BthPS3"
+    };
+
     [SetUp]
     public void Setup()
     {
@@ -27,7 +40,11 @@ public class Tests
 
         TraceMessageFormat sample = result.Single(format => format.Opcode.Equals("Bluetooth_Context_c149"));
 
-        Assert.That(result, Has.Count.EqualTo(1253));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(sample, Is.EqualTo(ExampleFormat));
+            Assert.That(result, Has.Count.EqualTo(1253));
+        }
     }
 
     /// <summary>
@@ -72,7 +89,11 @@ public class Tests
 
         TraceMessageFormat sample = result.Single(format => format.Opcode.Equals("Bluetooth_Context_c149"));
 
-        Assert.That(result, Has.Count.EqualTo(1253));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(sample, Is.EqualTo(ExampleFormat));
+            Assert.That(result, Has.Count.EqualTo(1253));
+        }
     }
 
     /// <summary>
