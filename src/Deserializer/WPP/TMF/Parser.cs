@@ -17,7 +17,11 @@ public sealed partial class Parser
 
     [GeneratedRegex(
         @"^#typev ([a-zA-Z0-9_\.]*) (\d*) ""(.*)"" \/\/ *LEVEL=([a-zA-Z0-9_]*) FLAGS=([a-zA-Z0-9_]*) FUNC=([a-zA-Z0-9_]*)")]
-    private partial Regex TypeDefinitionRegex();
+    private partial Regex TypeDefinitionFileRegex();
+
+    [GeneratedRegex(
+        @"^#typev ([a-zA-Z0-9_\.]*) (\d*) ""(.*)"" \/\/ *LEVEL=([a-zA-Z0-9_]*) FLAGS=([a-zA-Z0-9_]*)")]
+    private partial Regex TypeDefinitionAnnotationRegex();
 
     [GeneratedRegex(@"^\}$")]
     private partial Regex ParamsEndRegex();
@@ -47,9 +51,9 @@ public sealed partial class Parser
     /// <summary>
     ///     Parses a <c>.TMF</c> file and extracts all containing <see cref="TraceMessageFormat" />s.
     /// </summary>
-    /// <param name="streamReader">Source file stream.</param>
+    /// <param name="reader">Source file stream.</param>
     /// <returns>A collection of extracted <see cref="TraceMessageFormat" /> entries.</returns>
-    public IReadOnlyList<TraceMessageFormat> ParseFile(StreamReader streamReader)
+    public IReadOnlyList<TraceMessageFormat> ParseFile(TextReader reader)
     {
         List<TraceMessageFormat> messages = [];
 
@@ -57,7 +61,7 @@ public sealed partial class Parser
         string fileName = string.Empty;
         string providerName = string.Empty;
 
-        while (streamReader.ReadLine() is { } line)
+        while (reader.ReadLine() is { } line)
         {
             // skip any comment lines
             if (CommentRegex().IsMatch(line))
@@ -74,7 +78,7 @@ public sealed partial class Parser
                 messageGuid = Guid.Parse(HeaderRegex().Match(line).Groups[1].Value);
                 providerName = headerMatch.Groups[7].Value;
                 fileName = FileNameRegex().Match(line).Groups[1].Value;
-                typeDefLine = streamReader.ReadLine();
+                typeDefLine = reader.ReadLine();
             }
             else
             {
@@ -87,10 +91,16 @@ public sealed partial class Parser
                 break;
             }
 
-            Match typeDefinition = TypeDefinitionRegex().Match(typeDefLine);
+            Match typeDefinition = TypeDefinitionFileRegex().Match(typeDefLine);
             if (!typeDefinition.Success)
             {
-                continue;
+                // try fallback
+                typeDefinition = TypeDefinitionAnnotationRegex().Match(typeDefLine);
+
+                if (!typeDefinition.Success)
+                {
+                    continue;
+                }
             }
 
             string opcode = typeDefinition.Groups[1].Value;
@@ -110,10 +120,11 @@ public sealed partial class Parser
                 MessageFormat = messageFormat,
                 Level = level,
                 Flags = flags,
-                Function = function
+                // TODO: can be null if coming from PDB annotation, improve!
+                Function = string.IsNullOrEmpty(function) ? null : function
             };
 
-            string? paramsBegin = streamReader.ReadLine();
+            string? paramsBegin = reader.ReadLine();
             if (string.IsNullOrEmpty(paramsBegin))
             {
                 continue;
@@ -122,7 +133,7 @@ public sealed partial class Parser
             List<FunctionParameter> parameters = [];
 
             // start of one or more parameter blocks
-            while (streamReader.ReadLine() is { } paramsBody)
+            while (reader.ReadLine() is { } paramsBody)
             {
                 // end or empty, we bail
                 if (ParamsEndRegex().IsMatch(paramsBody))

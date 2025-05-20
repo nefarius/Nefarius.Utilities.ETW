@@ -41,7 +41,11 @@ public class Tests
             .Select(a => string.Join(Environment.NewLine,
                 ((MsPdb.SymAnnotation)a.Data.Body).Strings.Where(s => !s.Contains("TMF:"))));
 
-        string example = formatBlocks.ToList()[200];
+        string block = formatBlocks.First();
+        StringReader sr = new(block);
+        Parser parser = new();
+
+        IReadOnlyList<TraceMessageFormat> result = parser.ParseFile(sr);
     }
 
     [Test]
