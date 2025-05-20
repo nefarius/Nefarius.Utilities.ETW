@@ -15,6 +15,9 @@ public class Tests
     {
     }
 
+    /// <summary>
+    ///     Parses all found .tmf files.
+    /// </summary>
     [Test]
     public void TmfFileParserTest()
     {
@@ -25,81 +28,52 @@ public class Tests
         Assert.That(result, Has.Count.EqualTo(1253));
     }
 
-    private static IEnumerable<(MsPdb.SymProc32 Proc, List<MsPdb.SymAnnotation> Annotations)> EnumerateGroups(
-        List<MsPdb.DbiSymbol> symbols)
-    {
-        for (int i = 0; i < symbols.Count;)
-        {
-            if (symbols[i].Data.Body is MsPdb.SymProc32 proc)
-            {
-                List<MsPdb.SymAnnotation> annotations = new();
-                i++; // Advance to check for annotations
-
-                while (i < symbols.Count)
-                {
-                    if (symbols[i].Data.Body is MsPdb.SymAnnotation annotation)
-                    {
-                        annotations.Add(annotation);
-                        i++;
-                    }
-                    else if (symbols[i].Data.Body is MsPdb.SymProc32)
-                    {
-                        // Next SymProc32 encountered – break to process it on the next loop iteration
-                        break;
-                    }
-                    else
-                    {
-                        // Skip unrelated symbol types
-                        i++;
-                    }
-                }
-
-                yield return (proc, annotations);
-            }
-            else
-            {
-                // Skip unrelated symbol types
-                i++;
-            }
-        }
-    }
-
-    private static IEnumerable<TraceMessageFormat> ExtractTraceMessageFormats(
-        IEnumerable<(MsPdb.SymProc32 Proc, List<MsPdb.SymAnnotation> Annotations)> groups)
-    {
-        TmfParser tmfParser = new();
-
-        foreach ((MsPdb.SymProc32 proc, List<MsPdb.SymAnnotation> annotations) in groups)
-        {
-            foreach (string block in annotations.Select(annotation =>
-                         string.Join(Environment.NewLine, annotation.Strings.Skip(1))))
-            {
-                using StringReader sr = new(block);
-                IReadOnlyList<TraceMessageFormat> results = tmfParser.ParseFile(sr, proc.Name.Value);
-                if (results.Any())
-                {
-                    yield return results[0];
-                }
-            }
-        }
-    }
-
+    /// <summary>
+    ///     Parses TMF information directly from PDBs.
+    /// </summary>
     [Test]
     public void PdbFileParserTest()
     {
-        string testPdb = Path.GetFullPath(@".\symbols\BthPS3.pdb");
+        string profilePdbPath = Path.GetFullPath(@".\symbols\BthPS3.pdb");
+        string filterPdbPath = Path.GetFullPath(@".\symbols\BthPS3PSM.pdb");
 
-        MsPdb pdb = new(new KaitaiStream(File.OpenRead(testPdb)));
+        TmfParser parser = new();
 
-        IEnumerable<(MsPdb.SymProc32 Proc, List<MsPdb.SymAnnotation> Annotations)> groups = EnumerateGroups(pdb
-                .DbiStream.ModulesList.Items
-                .SelectMany(m => m.ModuleData.SymbolsList.Items).ToList())
-            .Where((tuple, _) => tuple.Annotations.Count != 0 &&
-                                 tuple.Annotations.Any(annotation => annotation.Strings.Contains("TMF:")));
+        MsPdb profilePdb = new(new KaitaiStream(File.OpenRead(profilePdbPath)));
 
-        List<TraceMessageFormat> refined = ExtractTraceMessageFormats(groups).ToList();
+        IEnumerable<SymProc32AnnotationPair> profileAnnotations = profilePdb
+            .DbiStream.ModulesList.Items
+            .SelectMany(m => m.ModuleData.SymbolsList.Items)
+            .ToList()
+            .ExtractTmfAnnotations();
+
+        List<TraceMessageFormat> profileRefined = parser
+            .ExtractTraceMessageFormats(profileAnnotations)
+            .ToList();
+
+        MsPdb filterPdb = new(new KaitaiStream(File.OpenRead(filterPdbPath)));
+
+        IEnumerable<SymProc32AnnotationPair> filterAnnotations = filterPdb
+            .DbiStream.ModulesList.Items
+            .SelectMany(m => m.ModuleData.SymbolsList.Items)
+            .ToList()
+            .ExtractTmfAnnotations();
+
+        List<TraceMessageFormat> filterRefined = parser
+            .ExtractTraceMessageFormats(filterAnnotations)
+            .ToList();
+
+        List<TraceMessageFormat> result = profileRefined
+            .Concat(filterRefined)
+            .Distinct()
+            .ToList();
+        
+        Assert.That(result, Has.Count.EqualTo(1253));
     }
 
+    /// <summary>
+    ///     Decodes a sample .etl file with TMFs from PDBs.
+    /// </summary>
     [Test]
     public void WppTraceDecodingTest()
     {
