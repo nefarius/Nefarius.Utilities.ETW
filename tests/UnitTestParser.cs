@@ -25,6 +25,8 @@ public class Tests
 
         IReadOnlyList<TraceMessageFormat> result = tmfParser.ParseDirectory(Path.GetFullPath(@".\symbols"));
 
+        TraceMessageFormat sample = result.Single(format => format.Opcode.Equals("Bluetooth_Context_c149"));
+
         Assert.That(result, Has.Count.EqualTo(1253));
     }
 
@@ -67,7 +69,9 @@ public class Tests
             .Concat(filterRefined)
             .Distinct()
             .ToList();
-        
+
+        TraceMessageFormat sample = result.Single(format => format.Opcode.Equals("Bluetooth_Context_c149"));
+
         Assert.That(result, Has.Count.EqualTo(1253));
     }
 

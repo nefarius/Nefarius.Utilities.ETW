@@ -53,8 +53,10 @@ public sealed partial class TmfParser
     /// </summary>
     /// <param name="reader">Source file stream.</param>
     /// <param name="functionName">Optional function name to provide if missing from the <paramref name="reader" /> content.</param>
+    /// <param name="throwOnError">True to throw exception if a required field is missing, false to silently ignore.</param>
     /// <returns>A collection of extracted <see cref="TraceMessageFormat" /> entries.</returns>
-    public IReadOnlyList<TraceMessageFormat> ParseFile(TextReader reader, string? functionName = null)
+    private IReadOnlyList<TraceMessageFormat> ParseFile(TextReader reader, string? functionName = null,
+        bool throwOnError = false)
     {
         List<TraceMessageFormat> messages = [];
 
@@ -105,14 +107,25 @@ public sealed partial class TmfParser
             string flags = typeDefinition.Groups[5].Value;
             string function = string.IsNullOrEmpty(functionName) ? typeDefinition.Groups[6].Value : functionName;
 
-            ArgumentException.ThrowIfNullOrEmpty(function);
+            if (string.IsNullOrEmpty(function))
+            {
+                if (throwOnError)
+                {
+                    ArgumentException.ThrowIfNullOrEmpty(function);
+                }
+                else
+                {
+                    continue;
+                }
+            }
 
             TraceMessageFormat tmf = new()
             {
                 MessageGuid = messageGuid,
                 Provider = providerName,
                 FileName = fileName,
-                Opcode = opcode,
+                // NOTE: .tmf does not masque periods mid-filename, but S_ANNOTATION does, so we harmonize it here
+                Opcode = opcode.Replace(".", "_"),
                 Id = id,
                 MessageFormat = messageFormat,
                 Level = level,
