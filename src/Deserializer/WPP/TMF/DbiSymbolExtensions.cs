@@ -8,7 +8,7 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
 public static class DbiSymbolExtensions
 {
-    public static IEnumerable<SymProc32AnnotationPair> EnumerateTmfAnnotations(
+    public static IEnumerable<SymProc32AnnotationPair> ExtractTmfAnnotations(
         this List<MsPdb.DbiSymbol> symbols
     )
     {

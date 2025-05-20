@@ -49,7 +49,7 @@ public sealed partial class TmfParser
     }
 
     /// <summary>
-    ///     Parses a <c>.TMF</c> file and extracts all containing <see cref="TraceMessageFormat" />s.
+    ///     Parses a <c>.TMF</c> file content and extracts all containing <see cref="TraceMessageFormat" />s.
     /// </summary>
     /// <param name="reader">Source file stream.</param>
     /// <param name="functionName">Optional function name to provide if missing from the <paramref name="reader" /> content.</param>
