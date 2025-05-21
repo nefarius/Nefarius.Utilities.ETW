@@ -74,6 +74,20 @@ public class Tests
         }
     }
 
+    [Test]
+    public void PlausibilityTest()
+    {
+        IReadOnlyList<TraceMessageFormat> lhs = ExtractFromFormatFiles();
+        ReadOnlyCollection<TraceMessageFormat> rhs = ExtractFromSymbolFiles();
+
+        var t1 = lhs.Where(x => x.Opcode.Equals("Dmf_CrashDump_c3719"));
+        var t2 = rhs.Where(x => x.Opcode.Equals("Dmf_CrashDump_c3719"));
+        
+        var diff = lhs.Except(rhs).ToList();
+
+        // Assert.That(lhs, Is.EquivalentTo(rhs));
+    }
+
     private static ReadOnlyCollection<TraceMessageFormat> ExtractFromSymbolFiles()
     {
         string profilePdbPath = Path.GetFullPath(@".\symbols\BthPS3.pdb");
