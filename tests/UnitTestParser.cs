@@ -80,12 +80,12 @@ public class Tests
         IReadOnlyList<TraceMessageFormat> lhs = ExtractFromFormatFiles();
         ReadOnlyCollection<TraceMessageFormat> rhs = ExtractFromSymbolFiles();
 
-        var t1 = lhs.Where(x => x.Opcode.Equals("Dmf_CrashDump_c3719"));
-        var t2 = rhs.Where(x => x.Opcode.Equals("Dmf_CrashDump_c3719"));
-        
-        var diff = lhs.Except(rhs).ToList();
+        //var t1 = lhs.Where(x => x.MessageGuid.Equals(Guid.Parse("49c0500c-96ae-35e4-0b57-99f5eded038e")));
+        //var t2 = rhs.Where(x => x.MessageGuid.Equals(Guid.Parse("49c0500c-96ae-35e4-0b57-99f5eded038e")));
 
-        // Assert.That(lhs, Is.EquivalentTo(rhs));
+        //var diff = lhs.Except(rhs).ToList();
+
+        Assert.That(lhs, Is.EquivalentTo(rhs));
     }
 
     private static ReadOnlyCollection<TraceMessageFormat> ExtractFromSymbolFiles()

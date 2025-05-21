@@ -69,11 +69,11 @@ public sealed class TraceMessageFormat : IEquatable<TraceMessageFormat>, ICompar
             return fileNameComparison;
         }
 
-        int opcodeComparison = string.Compare(Opcode, other.Opcode, StringComparison.InvariantCulture);
-        if (opcodeComparison != 0)
-        {
-            return opcodeComparison;
-        }
+        //int opcodeComparison = string.Compare(Opcode, other.Opcode, StringComparison.InvariantCulture);
+        //if (opcodeComparison != 0)
+        //{
+        //    return opcodeComparison;
+        //}
 
         int idComparison = Id.CompareTo(other.Id);
         if (idComparison != 0)
@@ -118,7 +118,7 @@ public sealed class TraceMessageFormat : IEquatable<TraceMessageFormat>, ICompar
         return MessageGuid.Equals(other.MessageGuid) &&
                string.Equals(Provider, other.Provider, StringComparison.OrdinalIgnoreCase) &&
                string.Equals(FileName, other.FileName, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(Opcode, other.Opcode, StringComparison.OrdinalIgnoreCase) &&
+               //string.Equals(Opcode, other.Opcode, StringComparison.OrdinalIgnoreCase) &&
                Id == other.Id;
     }
 
@@ -133,7 +133,7 @@ public sealed class TraceMessageFormat : IEquatable<TraceMessageFormat>, ICompar
         hashCode.Add(MessageGuid);
         hashCode.Add(Provider, StringComparer.OrdinalIgnoreCase);
         hashCode.Add(FileName, StringComparer.OrdinalIgnoreCase);
-        hashCode.Add(Opcode, StringComparer.OrdinalIgnoreCase);
+        //hashCode.Add(Opcode, StringComparer.OrdinalIgnoreCase);
         hashCode.Add(Id);
         return hashCode.ToHashCode();
     }
