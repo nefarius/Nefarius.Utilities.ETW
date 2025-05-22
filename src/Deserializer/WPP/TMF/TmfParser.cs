@@ -166,9 +166,12 @@ public sealed partial class TmfParser
                 if (type == ItemType.ItemListByte)
                 {
                     string[] arrayItems = parameterMatch.Groups[3].Value.Split(',');
-                    parsed.ListItems = new ReadOnlyDictionary<int, string>(
-                        arrayItems.Select((value, index) => new KeyValuePair<int, string>(index, value))
-                            .ToDictionary(pair => pair.Key, pair => pair.Value));
+                    parsed = parsed with
+                    {
+                        ListItems = new ReadOnlyDictionary<int, string>(
+                            arrayItems.Select((value, index) => new KeyValuePair<int, string>(index, value))
+                                .ToDictionary(pair => pair.Key, pair => pair.Value))
+                    };
                 }
 
                 parameters.Add(parsed);

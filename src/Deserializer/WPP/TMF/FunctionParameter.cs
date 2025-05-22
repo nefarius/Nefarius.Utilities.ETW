@@ -66,13 +66,13 @@ public enum ItemType
     ItemGuid
 }
 
-public struct FunctionParameter
+public readonly struct FunctionParameter
 {
-    public required string Expression { get; set; }
+    public required string Expression { get; init; }
 
-    public required ItemType Type { get; set; }
+    public required ItemType Type { get; init; }
 
-    public required int Index { get; set; }
+    public required int Index { get; init; }
 
-    public IReadOnlyDictionary<int, string>? ListItems { get; set; }
+    public IReadOnlyDictionary<int, string>? ListItems { get; init; }
 }
