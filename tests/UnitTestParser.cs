@@ -81,6 +81,7 @@ public class Tests
         ReadOnlyCollection<TraceMessageFormat> rhs = ExtractFromSymbolFiles();
 
         var formats = rhs.Select(s => s.MessageFormat).ToList();
+        var types = rhs.SelectMany(format => format.FunctionParameters).Select(p => p.Type).Distinct().ToList();
         
         //var t1 = lhs.Where(x => x.MessageGuid.Equals(Guid.Parse("49c0500c-96ae-35e4-0b57-99f5eded038e")));
         //var t2 = rhs.Where(x => x.MessageGuid.Equals(Guid.Parse("49c0500c-96ae-35e4-0b57-99f5eded038e")));
