@@ -17,7 +17,10 @@ public abstract class DecodingContextType
 
     protected ReadOnlyMemory<byte> Buffer { get; init; }
 
-    public string Value => Encoding.Unicode.GetString(Buffer.Span[..(Buffer.Length - 2)]);
+    /// <summary>
+    ///     Managed string representation of <see cref="Buffer" /> content.
+    /// </summary>
+    public string BufferValue => Encoding.Unicode.GetString(Buffer.Span[..(Buffer.Length - 2)]);
 
     /// <summary>
     ///     Turns this instance into a <see cref="TDH_CONTEXT" /> for use with the TDH APIs.
@@ -49,19 +52,30 @@ public sealed class PdbFilesDecodingContextType()
     /// <summary>
     ///     Gets decoding info from one or multiple <c>.PDB</c> files.
     /// </summary>
-    /// <param name="pathList">
+    /// <param name="path">
     ///     Null-terminated Unicode string that contains the name of the .pdb file for the binary that
     ///     contains WPP messages. This parameter can be used as an alternative to TDH_CONTEXT_WPP_TMFFILE or
     ///     TDH_CONTEXT_WPP_TMFSEARCHPATH.
     /// </param>
-    public PdbFilesDecodingContextType(params IList<string> pathList) : this()
+    /// <remarks>To specify multiple files, use <see cref="CreateFrom"/>.</remarks>
+    public PdbFilesDecodingContextType(string path) : this()
     {
-        ArgumentNullException.ThrowIfNull(pathList);
-        Buffer = new ReadOnlyMemory<byte>(
-            Encoding.Unicode.GetBytes(string.Join(';', pathList.Select(Path.GetFullPath)))
-                .Concat("\0\0"u8.ToArray())
-                .ToArray()
+        ArgumentNullException.ThrowIfNull(path);
+        Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(Path.GetFullPath(path))
+            .Concat("\0\0"u8.ToArray())
+            .ToArray()
         );
+    }
+
+    /// <summary>
+    ///     Converts a list of paths to <c>*.pdb</c> files into their corresponding <see cref="PdbFilesDecodingContextType" />
+    ///     objects.
+    /// </summary>
+    /// <param name="pathList">One or more paths to <c>*.pdb</c> files.</param>
+    /// <returns>One or more <see cref="PdbFilesDecodingContextType" />s.</returns>
+    public static IList<DecodingContextType> CreateFrom(params IList<string> pathList)
+    {
+        return pathList.Select(DecodingContextType (path) => new PdbFilesDecodingContextType(path)).ToList();
     }
 }
 
@@ -76,7 +90,7 @@ public sealed class TmfFilesDecodingContextType()
     /// <summary>
     ///     Gets decoding info from multiple paths containing <c>.TMF</c> files.
     /// </summary>
-    /// <param name="pathList">
+    /// <param name="path">
     ///     Null-terminated Unicode string that contains the path to the .tmf file. You do not have to
     ///     specify this path if the search path contains the file. Only specify this context information if you also specify
     ///     the TDH_CONTEXT_WPP_TMFFILE context type. If the file is not found, TDH searches the following locations in the
@@ -86,13 +100,12 @@ public sealed class TmfFilesDecodingContextType()
     ///         <li>The current folder</li>
     ///     </ul>
     /// </param>
-    public TmfFilesDecodingContextType(params IList<string> pathList) : this()
+    public TmfFilesDecodingContextType(string path) : this()
     {
-        ArgumentNullException.ThrowIfNull(pathList);
-        Buffer = new ReadOnlyMemory<byte>(
-            Encoding.Unicode.GetBytes(string.Join(';', pathList.Select(Path.GetFullPath)))
-                .Concat("\0\0"u8.ToArray())
-                .ToArray()
+        ArgumentNullException.ThrowIfNull(path);
+        Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(Path.GetFullPath(path))
+            .Concat("\0\0"u8.ToArray())
+            .ToArray()
         );
     }
 }

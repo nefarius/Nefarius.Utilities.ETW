@@ -153,9 +153,13 @@ public class Tests
 
         using MemoryStream ms = new();
         using Utf8JsonWriter jsonWriter = new(ms, options);
-        using DecodingContext decodingContext = new(new PdbFilesDecodingContextType(
-            @".\symbols\BthPS3.pdb"/*,
-            @".\symbols\BthPS3PSM.pdb"*/
+        /*using DecodingContext decodingContext = new(new PdbFilesDecodingContextType(
+            @".\symbols\BthPS3.pdb",
+            @".\symbols\BthPS3PSM.pdb"
+        ));*/
+        using DecodingContext decodingContext = new(PdbFilesDecodingContextType.CreateFrom(
+            @".\symbols\BthPS3.pdb",
+            @".\symbols\BthPS3PSM.pdb"
         ));
 
         if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
