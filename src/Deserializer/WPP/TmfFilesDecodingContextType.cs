@@ -1,8 +1,5 @@
-﻿using System.Collections.ObjectModel;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Text;
-
-using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 
@@ -35,7 +32,4 @@ public sealed class TmfFilesDecodingContextType()
             .ToArray()
         );
     }
-
-    /// <inheritdoc />
-    internal override ReadOnlyCollection<TraceMessageFormat> TraceMessageFormats => throw new NotImplementedException();
 }

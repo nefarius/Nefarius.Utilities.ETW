@@ -1,5 +1,4 @@
-﻿using System.Collections.ObjectModel;
-using System.Text;
+﻿using System.Text;
 
 using Kaitai;
 
@@ -24,35 +23,28 @@ public sealed class PdbFilesDecodingContextType()
     /// <remarks>To specify multiple files, use <see cref="CreateFrom" />.</remarks>
     public PdbFilesDecodingContextType(string path) : this()
     {
-        ArgumentNullException.ThrowIfNull(path);
+        ArgumentException.ThrowIfNullOrEmpty(path);
         Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(Path.GetFullPath(path))
             .Concat("\0\0"u8.ToArray())
             .ToArray()
         );
-    }
 
-    /// <inheritdoc />
-    internal override ReadOnlyCollection<TraceMessageFormat> TraceMessageFormats
-    {
-        get
-        {
-            TmfParser parser = new();
+        TmfParser parser = new();
 
-            using KaitaiStream stream = new(File.OpenRead(BufferValue));
-            MsPdb pdb = new(stream);
+        using KaitaiStream stream = new(File.OpenRead(BufferValue));
+        MsPdb pdb = new(stream);
 
-            IEnumerable<SymProc32AnnotationPair> annotations = pdb
-                .DbiStream.ModulesList.Items
-                .SelectMany(m => m.ModuleData.SymbolsList.Items)
-                .ToList()
-                .ExtractTmfAnnotations();
+        IEnumerable<SymProc32AnnotationPair> annotations = pdb
+            .DbiStream.ModulesList.Items
+            .SelectMany(m => m.ModuleData.SymbolsList.Items)
+            .ToList()
+            .ExtractTmfAnnotations();
 
-            List<TraceMessageFormat> result = parser
-                .ExtractTraceMessageFormats(annotations)
-                .ToList();
+        List<TraceMessageFormat> result = parser
+            .ExtractTraceMessageFormats(annotations)
+            .ToList();
 
-            return result.AsReadOnly();
-        }
+        TraceMessageFormats = result.AsReadOnly();
     }
 
     /// <summary>

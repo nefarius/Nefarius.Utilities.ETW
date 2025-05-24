@@ -17,12 +17,13 @@ public abstract class DecodingContextType
 
     private TDH_CONTEXT_TYPE ContextType { get; }
 
+    [Obsolete]
     protected ReadOnlyMemory<byte> Buffer { get; init; }
 
     /// <summary>
     ///     Collection of extracted <see cref="TraceMessageFormat" />s of this <see cref="DecodingContextType" />.
     /// </summary>
-    internal abstract ReadOnlyCollection<TraceMessageFormat> TraceMessageFormats { get; }
+    public ReadOnlyCollection<TraceMessageFormat> TraceMessageFormats { get; protected set; }
 
     /// <summary>
     ///     Managed string representation of <see cref="Buffer" /> content.

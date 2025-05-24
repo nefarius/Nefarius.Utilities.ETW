@@ -1,8 +1,5 @@
-﻿using System.Collections.ObjectModel;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Text;
-
-using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 
@@ -10,6 +7,7 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 ///     A <see cref="TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFFILE" />  wrapper for use with <see cref="DecodingContext" />.
 /// </summary>
 [SuppressMessage("ReSharper", "UnusedType.Global")]
+[Obsolete]
 public sealed class TmfFileDecodingContextType() : DecodingContextType(TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFFILE)
 {
     /// <summary>
@@ -27,7 +25,4 @@ public sealed class TmfFileDecodingContextType() : DecodingContextType(TDH_CONTE
             .ToArray()
         );
     }
-
-    /// <inheritdoc />
-    internal override ReadOnlyCollection<TraceMessageFormat> TraceMessageFormats => throw new NotImplementedException();
 }
