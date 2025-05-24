@@ -45,15 +45,6 @@ public class Tests
         }
     }
 
-    private static IReadOnlyList<TraceMessageFormat> ExtractFromFormatFiles()
-    {
-        TmfParser tmfParser = new();
-
-        IReadOnlyList<TraceMessageFormat> result = tmfParser.ParseDirectory(Path.GetFullPath(@".\symbols"));
-
-        return result;
-    }
-
     /// <summary>
     ///     Parses TMF information directly from PDBs.
     /// </summary>
@@ -97,6 +88,15 @@ public class Tests
         //var diff = lhs.Except(rhs).ToList();
 
         Assert.That(lhs, Is.EquivalentTo(rhs));
+    }
+
+    private static IReadOnlyList<TraceMessageFormat> ExtractFromFormatFiles()
+    {
+        return TmfFilesDirectoryDecodingContextType
+            .CreateFrom(@".\symbols")
+            .SelectMany(item => item.TraceMessageFormats)
+            .Distinct()
+            .ToList();
     }
 
     private static ReadOnlyCollection<TraceMessageFormat> ExtractFromSymbolFiles()
