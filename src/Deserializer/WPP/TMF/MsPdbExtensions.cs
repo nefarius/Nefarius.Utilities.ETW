@@ -2,7 +2,7 @@
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
-public static class MsPdbExtensions
+internal static class MsPdbExtensions
 {
     /// <summary>
     ///     Grabs the original file name from the PDB stream.
