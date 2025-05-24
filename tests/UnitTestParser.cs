@@ -1,8 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
 
-using Kaitai;
-
 using Nefarius.Utilities.ETW.Deserializer.WPP;
 using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
@@ -85,7 +83,7 @@ public class Tests
             .Select(p => p.Type)
             .Distinct()
             .ToList();
-        var listItems = rhs
+        List<string> listItems = rhs
             .SelectMany(format => format.FunctionParameters)
             .Where(p => p is { Type: ItemType.ItemListByte, ListItems: not null })
             .SelectMany(p => p.ListItems!)
@@ -103,41 +101,12 @@ public class Tests
 
     private static ReadOnlyCollection<TraceMessageFormat> ExtractFromSymbolFiles()
     {
-        string profilePdbPath = Path.GetFullPath(@".\symbols\BthPS3.pdb");
-        string filterPdbPath = Path.GetFullPath(@".\symbols\BthPS3PSM.pdb");
-
-        TmfParser parser = new();
-
-        MsPdb profilePdb = new(new KaitaiStream(File.OpenRead(profilePdbPath)));
-
-        IEnumerable<SymProc32AnnotationPair> profileAnnotations = profilePdb
-            .DbiStream.ModulesList.Items
-            .SelectMany(m => m.ModuleData.SymbolsList.Items)
-            .ToList()
-            .ExtractTmfAnnotations();
-
-        List<TraceMessageFormat> profileRefined = parser
-            .ExtractTraceMessageFormats(profileAnnotations)
-            .ToList();
-
-        MsPdb filterPdb = new(new KaitaiStream(File.OpenRead(filterPdbPath)));
-
-        IEnumerable<SymProc32AnnotationPair> filterAnnotations = filterPdb
-            .DbiStream.ModulesList.Items
-            .SelectMany(m => m.ModuleData.SymbolsList.Items)
-            .ToList()
-            .ExtractTmfAnnotations();
-
-        List<TraceMessageFormat> filterRefined = parser
-            .ExtractTraceMessageFormats(filterAnnotations)
-            .ToList();
-
-        List<TraceMessageFormat> result = profileRefined
-            .Concat(filterRefined)
+        return PdbFilesDecodingContextType
+            .CreateFrom(@".\symbols\BthPS3.pdb", @".\symbols\BthPS3PSM.pdb")
+            .SelectMany(pdb => pdb.TraceMessageFormats)
             .Distinct()
-            .ToList();
-
-        return result.AsReadOnly();
+            .ToList()
+            .AsReadOnly();
     }
 
     /// <summary>
