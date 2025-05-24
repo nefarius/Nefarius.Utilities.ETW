@@ -9,7 +9,7 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 /// <summary>
 ///     A <see cref="TDH_CONTEXT_TYPE.TDH_CONTEXT_PDB_PATH" /> wrapper for use with <see cref="DecodingContext" />.
 /// </summary>
-public sealed class PdbFilesDecodingContextType()
+public sealed class PdbFileDecodingContextType()
     : DecodingContextType(TDH_CONTEXT_TYPE.TDH_CONTEXT_PDB_PATH)
 {
     /// <summary>
@@ -21,7 +21,7 @@ public sealed class PdbFilesDecodingContextType()
     ///     TDH_CONTEXT_WPP_TMFSEARCHPATH.
     /// </param>
     /// <remarks>To specify multiple files, use <see cref="CreateFrom" />.</remarks>
-    public PdbFilesDecodingContextType(string path) : this()
+    public PdbFileDecodingContextType(string path) : this()
     {
         ArgumentException.ThrowIfNullOrEmpty(path);
         Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(Path.GetFullPath(path))
@@ -48,13 +48,13 @@ public sealed class PdbFilesDecodingContextType()
     }
 
     /// <summary>
-    ///     Converts a list of paths to <c>*.pdb</c> files into their corresponding <see cref="PdbFilesDecodingContextType" />
+    ///     Converts a list of paths to <c>*.pdb</c> files into their corresponding <see cref="PdbFileDecodingContextType" />
     ///     objects.
     /// </summary>
     /// <param name="pathList">One or more paths to <c>*.pdb</c> files.</param>
-    /// <returns>One or more <see cref="PdbFilesDecodingContextType" />s.</returns>
+    /// <returns>One or more <see cref="PdbFileDecodingContextType" />s.</returns>
     public static IList<DecodingContextType> CreateFrom(params IList<string> pathList)
     {
-        return pathList.Select(DecodingContextType (path) => new PdbFilesDecodingContextType(path)).ToList();
+        return pathList.Select(DecodingContextType (path) => new PdbFileDecodingContextType(path)).ToList();
     }
 }

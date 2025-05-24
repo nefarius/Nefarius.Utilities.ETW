@@ -101,7 +101,7 @@ public class Tests
 
     private static ReadOnlyCollection<TraceMessageFormat> ExtractFromSymbolFiles()
     {
-        return PdbFilesDecodingContextType
+        return PdbFileDecodingContextType
             .CreateFrom(@".\symbols\BthPS3.pdb", @".\symbols\BthPS3PSM.pdb")
             .SelectMany(pdb => pdb.TraceMessageFormats)
             .Distinct()
@@ -125,7 +125,7 @@ public class Tests
             @".\symbols\BthPS3.pdb",
             @".\symbols\BthPS3PSM.pdb"
         ));*/
-        using DecodingContext decodingContext = new(PdbFilesDecodingContextType.CreateFrom(
+        using DecodingContext decodingContext = new(PdbFileDecodingContextType.CreateFrom(
             @".\symbols\BthPS3.pdb",
             @".\symbols\BthPS3PSM.pdb"
         ));
