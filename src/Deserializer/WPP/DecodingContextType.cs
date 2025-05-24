@@ -15,6 +15,7 @@ public abstract class DecodingContextType
         ContextType = contextType;
     }
 
+    [Obsolete]
     private TDH_CONTEXT_TYPE ContextType { get; }
 
     [Obsolete]
@@ -28,12 +29,14 @@ public abstract class DecodingContextType
     /// <summary>
     ///     Managed string representation of <see cref="Buffer" /> content.
     /// </summary>
+    [Obsolete]
     protected string BufferValue => Encoding.Unicode.GetString(Buffer.Span[..(Buffer.Length - 2)]);
 
     /// <summary>
     ///     Turns this instance into a <see cref="TDH_CONTEXT" /> for use with the TDH APIs.
     /// </summary>
     /// <returns>An instance of <see cref="TDH_CONTEXT" />.</returns>
+    [Obsolete]
     internal unsafe TDH_CONTEXT AsContext()
     {
         fixed (byte* valueBuffer = Buffer.Span)

@@ -31,7 +31,7 @@ public sealed class PdbFilesDecodingContextType()
 
         TmfParser parser = new();
 
-        using KaitaiStream stream = new(File.OpenRead(BufferValue));
+        using KaitaiStream stream = new(File.OpenRead(path));
         MsPdb pdb = new(stream);
 
         IEnumerable<SymProc32AnnotationPair> annotations = pdb
