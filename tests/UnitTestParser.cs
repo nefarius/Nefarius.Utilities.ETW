@@ -3,11 +3,10 @@ using System.Text.Json;
 
 using Kaitai;
 
-using Nefarius.Utilities.ETW;
 using Nefarius.Utilities.ETW.Deserializer.WPP;
 using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
-namespace EtwTestProject;
+namespace Nefarius.Utilities.ETW.Tests;
 
 public class Tests
 {

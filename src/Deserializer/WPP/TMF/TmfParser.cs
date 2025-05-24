@@ -189,7 +189,7 @@ public sealed partial class TmfParser
     /// </summary>
     /// <param name="pairs">The source <see cref="SymProc32AnnotationPair"/>s to convert.</param>
     /// <returns>A collection of extracted <see cref="TraceMessageFormat"/>s.</returns>
-    public IEnumerable<TraceMessageFormat> ExtractTraceMessageFormats(IEnumerable<SymProc32AnnotationPair> pairs)
+    internal IEnumerable<TraceMessageFormat> ExtractTraceMessageFormats(IEnumerable<SymProc32AnnotationPair> pairs)
     {
         foreach ((MsPdb.SymProc32 proc, List<MsPdb.SymAnnotation> annotations) in pairs)
         {
