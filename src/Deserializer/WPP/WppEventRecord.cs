@@ -27,6 +27,8 @@ internal unsafe class WppEventRecord
         _eventRecord = eventRecord;
     }
 
+    private ushort GuidTypeNameFormatId => _eventRecord->EventHeader.EventDescriptor.Id;
+
     public uint Version { get; private set; }
     public Guid TraceGuid { get; private set; }
     public string GuidName { get; private set; }
