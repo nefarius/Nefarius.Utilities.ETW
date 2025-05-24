@@ -90,13 +90,14 @@ public class Tests
         Assert.That(lhs, Is.EquivalentTo(rhs));
     }
 
-    private static IReadOnlyList<TraceMessageFormat> ExtractFromFormatFiles()
+    private static ReadOnlyCollection<TraceMessageFormat> ExtractFromFormatFiles()
     {
         return TmfFilesDirectoryDecodingContextType
             .CreateFrom(@".\symbols")
             .SelectMany(item => item.TraceMessageFormats)
             .Distinct()
-            .ToList();
+            .ToList()
+            .AsReadOnly();
     }
 
     private static ReadOnlyCollection<TraceMessageFormat> ExtractFromSymbolFiles()
