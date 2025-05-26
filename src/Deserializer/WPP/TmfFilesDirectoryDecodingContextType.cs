@@ -31,6 +31,7 @@ public sealed class TmfFilesDirectoryDecodingContextType()
 
         TraceMessageFormats = tmfParser
             .ParseDirectory(path)
+            .Distinct()
             .ToList()
             .AsReadOnly();
     }

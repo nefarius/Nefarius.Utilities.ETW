@@ -42,6 +42,7 @@ public sealed class PdbFileDecodingContextType()
 
         List<TraceMessageFormat> result = parser
             .ExtractTraceMessageFormats(annotations)
+            .Distinct()
             .ToList();
 
         TraceMessageFormats = result.AsReadOnly();
