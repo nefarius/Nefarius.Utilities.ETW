@@ -87,6 +87,7 @@ internal unsafe class WppEventRecord
             throw new TdhGetEventInformationException(infoRet);
         }
 
+        // we can look for this once we have the "TraceGuid" property value
         TraceMessageFormat? format = null;
 
         // we expect 20 WPP properties, but this dynamic approach is safer
