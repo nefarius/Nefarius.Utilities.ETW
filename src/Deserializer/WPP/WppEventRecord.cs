@@ -210,6 +210,7 @@ internal unsafe class WppEventRecord
                     throw new TdhGetPropertyException(infoRet);
                 }
 
+                // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
                 switch (propertyType)
                 {
                     case _TDH_IN_TYPE.TDH_INTYPE_UINT32:
