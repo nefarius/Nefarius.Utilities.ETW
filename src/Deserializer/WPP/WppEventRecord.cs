@@ -82,10 +82,10 @@ internal unsafe partial class WppEventRecord
                     case "p":
                         return pair.Value switch
                         {
-                            IntPtr ptr => $"0x{ptr.ToString("X")}",
-                            long l => $"0x{l:X}",
-                            int i => $"0x{i:X}",
-                            _ => $"0x{Convert.ToUInt64(pair.Value):X}"
+                            IntPtr ptr => $"{ptr:X}",
+                            long l => $"{l:X}",
+                            int i => $"{i:X}",
+                            _ => $"{Convert.ToUInt64(pair.Value):X}"
                         };
                     // complex numerical values 
                     default:
