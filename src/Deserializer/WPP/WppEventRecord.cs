@@ -83,8 +83,16 @@ internal unsafe partial class WppEventRecord
                         {
                             return pair.Parameter.ListItems[(byte)pair.Value];
                         }
-                        // TODO: translate NTSTATUS
-                        return pair.Value.ToString();
+
+                        // handle NTSTATUS translation
+                        if (pair.Parameter.Type == ItemType.ItemNTSTATUS)
+                        {
+                            uint ntStatus = (uint)pair.Value;
+                            string ntStatusLabel = NtStatus.Values[ntStatus];
+                            return $"{ntStatusLabel} (0x{ntStatus:X8})";
+                        }
+
+                        return pair.Value.ToString() ?? throw new InvalidOperationException("Unexpected null value.");
                     // pointer values
                     case "p":
                         return pair.Value switch
