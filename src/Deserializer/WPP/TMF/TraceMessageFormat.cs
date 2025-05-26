@@ -1,5 +1,8 @@
 ﻿namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
+/// <summary>
+///     Decoding information for WPP events.
+/// </summary>
 public sealed class TraceMessageFormat : IEquatable<TraceMessageFormat>, IComparable<TraceMessageFormat>, IComparable
 {
     public Guid MessageGuid { get; init; }

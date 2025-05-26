@@ -16,6 +16,8 @@ public sealed class DecodingContext : IDisposable
 {
     private readonly ReadOnlyCollection<DecodingContextType> _decodingTypes;
 
+    private readonly ReadOnlyDictionary<TraceMessageFormatLookupKey, TraceMessageFormat> _lookup;
+
     /// <summary>
     ///     New decoding context instance.
     /// </summary>
@@ -25,6 +27,14 @@ public sealed class DecodingContext : IDisposable
     {
         ArgumentNullException.ThrowIfNull(decodingTypes);
         _decodingTypes = decodingTypes.AsReadOnly();
+
+        _lookup = decodingTypes
+            .SelectMany(t => t.TraceMessageFormats)
+            .Distinct()
+            .ToDictionary(key => new TraceMessageFormatLookupKey(key.MessageGuid, key.Id), value => value)
+            .AsReadOnly();
+
+        #region Legacy
 
         TDH_CONTEXT* ctx = stackalloc TDH_CONTEXT[_decodingTypes.Count];
         for (int i = 0; i < _decodingTypes.Count; i++)
@@ -48,6 +58,8 @@ public sealed class DecodingContext : IDisposable
         }
 
         Handle = decodingHandle;
+
+        #endregion
     }
 
     /// <summary>
@@ -56,14 +68,25 @@ public sealed class DecodingContext : IDisposable
     public IEnumerable<TraceMessageFormat> TraceMessageFormats => _decodingTypes
         .SelectMany(t => t.TraceMessageFormats);
 
-    [Obsolete]
-    internal TDH_HANDLE Handle { get; }
+    [Obsolete] internal TDH_HANDLE Handle { get; }
 
     /// <inheritdoc />
     public void Dispose()
     {
         ReleaseUnmanagedResources();
         GC.SuppressFinalize(this);
+    }
+
+    internal TraceMessageFormat? GetTraceMessageFormatFor(Guid? messageGuid, int id)
+    {
+        if (messageGuid == null)
+        {
+            return null;
+        }
+
+        TraceMessageFormatLookupKey key = new(messageGuid.Value, id);
+
+        return _lookup.GetValueOrDefault(key);
     }
 
     /// <summary>
@@ -90,4 +113,6 @@ public sealed class DecodingContext : IDisposable
     {
         ReleaseUnmanagedResources();
     }
+
+    private record TraceMessageFormatLookupKey(Guid MessageGuid, int Id);
 }

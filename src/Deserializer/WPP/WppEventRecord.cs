@@ -7,6 +7,7 @@ using Windows.Win32.Foundation;
 
 using FastMember;
 
+using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 using Nefarius.Utilities.ETW.Exceptions;
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP;
@@ -18,16 +19,14 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
 internal unsafe class WppEventRecord
 {
-    private readonly EVENT_RECORD* _eventRecord;
+    private readonly EventRecordReader _eventRecordReaderReader;
 
-#pragma warning disable CS8618, CS9264
-    public WppEventRecord(EVENT_RECORD* eventRecord)
-#pragma warning restore CS8618, CS9264
+    public WppEventRecord(EventRecordReader eventRecordReader)
     {
-        _eventRecord = eventRecord;
+        _eventRecordReaderReader = eventRecordReader;
     }
 
-    private ushort GuidTypeNameFormatId => _eventRecord->EventHeader.EventDescriptor.Id;
+    private ushort GuidTypeNameFormatId => _eventRecordReaderReader.NativeEventRecord->EventHeader.EventDescriptor.Id;
 
     public uint Version { get; private set; }
     public Guid TraceGuid { get; private set; }
@@ -61,7 +60,7 @@ internal unsafe class WppEventRecord
 
         uint bufferSize = 0;
         WIN32_ERROR infoRet = (WIN32_ERROR)PInvoke.TdhGetEventInformation(
-            _eventRecord,
+            _eventRecordReaderReader.NativeEventRecord,
             0,
             null,
             null,
@@ -76,7 +75,7 @@ internal unsafe class WppEventRecord
         byte* infoBuffer = stackalloc byte[(int)bufferSize];
         TRACE_EVENT_INFO* traceEventInfo = (TRACE_EVENT_INFO*)infoBuffer;
         infoRet = (WIN32_ERROR)PInvoke.TdhGetEventInformation(
-            _eventRecord,
+            _eventRecordReaderReader.NativeEventRecord,
             0,
             null,
             traceEventInfo,
@@ -87,6 +86,8 @@ internal unsafe class WppEventRecord
         {
             throw new TdhGetEventInformationException(infoRet);
         }
+
+        TraceMessageFormat? format = null;
 
         // we expect 20 WPP properties, but this dynamic approach is safer
         for (int propertyIndex = 0; propertyIndex < traceEventInfo->PropertyCount; propertyIndex++)
@@ -109,7 +110,7 @@ internal unsafe class WppEventRecord
             uint propSize = 0;
             // fetch the size of properties that do not need decoding 
             WIN32_ERROR sizeRet = (WIN32_ERROR)PInvoke.TdhGetPropertySize(
-                _eventRecord,
+                _eventRecordReaderReader.NativeEventRecord,
                 0,
                 null,
                 1,
@@ -137,7 +138,7 @@ internal unsafe class WppEventRecord
                     // query property content
                     WIN32_ERROR getWppPropRet = (WIN32_ERROR)PInvoke.TdhGetWppProperty(
                         decodingContext.Handle,
-                        _eventRecord,
+                        _eventRecordReaderReader.NativeEventRecord,
                         (char*)propertyDescriptor.PropertyName,
                         &propSize,
                         (byte*)wppPropBuffer.ToPointer()
@@ -178,7 +179,7 @@ internal unsafe class WppEventRecord
             try
             {
                 WIN32_ERROR getPrimPropRet = (WIN32_ERROR)PInvoke.TdhGetProperty(
-                    _eventRecord,
+                    _eventRecordReaderReader.NativeEventRecord,
                     0,
                     null,
                     1,
@@ -199,6 +200,11 @@ internal unsafe class WppEventRecord
                         break;
                     case _TDH_IN_TYPE.TDH_INTYPE_GUID:
                         value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(Guid));
+                        if (propertyName.Equals(nameof(TraceGuid)))
+                        {
+                            format = decodingContext.GetTraceMessageFormatFor((Guid?)value, GuidTypeNameFormatId);
+                        }
+
                         break;
                     case _TDH_IN_TYPE.TDH_INTYPE_SYSTEMTIME:
                         value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(SYSTEMTIME));

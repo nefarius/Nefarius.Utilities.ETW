@@ -110,8 +110,7 @@ internal sealed class WppTraceEventParser : ICustomParser
             ]
         );
         
-        // we cannot use EventRecordReader for this since the properties are not user data
-        WppEventRecord decodedRecord = new(reader.NativeEventRecord);
+        WppEventRecord decodedRecord = new(reader);
         // this does the heavy lifting of retrieving properties with the decoding context 
         decodedRecord.Decode(_decodingContext);
 
