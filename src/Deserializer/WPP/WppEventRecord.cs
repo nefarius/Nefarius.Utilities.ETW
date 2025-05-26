@@ -96,7 +96,7 @@ internal unsafe partial class WppEventRecord
 
                             string pad = numberMatch.Groups["pad"].Success ? "0" : "";
                             string width = numberMatch.Groups["width"].Value;
-                            string specifier = numberMatch.Groups["specifier"].Value.ToUpper();
+                            string specifier = numberMatch.Groups["specifier"].Value.ToUpperInvariant();
 
                             string formatSuffix = $"{pad}{width}";
                             string finalFormat = $"{{0:{specifier}{formatSuffix}}}";
