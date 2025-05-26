@@ -62,8 +62,9 @@ internal unsafe partial class WppEventRecord
         // substitute the placeholders with the real variable values
         string formatted = PlaceholderRegex().Replace(formatString, match =>
         {
-            int index = int.Parse(match.Groups[1].Value);
-            string formatSpec = match.Groups[2].Value;
+            bool isHexPrefixed = match.Groups[1].Success;
+            int index = int.Parse(match.Groups[2].Value);
+            string formatSpec = match.Groups[3].Value;
 
             if (!indexedParameterValues.TryGetValue(index, out ParameterTypeValuePair? pair))
             {
@@ -82,10 +83,10 @@ internal unsafe partial class WppEventRecord
                     case "p":
                         return pair.Value switch
                         {
-                            IntPtr ptr => $"{ptr:X}",
-                            long l => $"{l:X}",
-                            int i => $"{i:X}",
-                            _ => $"{Convert.ToUInt64(pair.Value):X}"
+                            IntPtr ptr => $"0x{ptr:X}",
+                            long l => $"0x{l:X}",
+                            int i => $"0x{i:X}",
+                            _ => $"0x{Convert.ToUInt64(pair.Value):X}"
                         };
                     // complex numerical values 
                     default:
@@ -102,7 +103,9 @@ internal unsafe partial class WppEventRecord
                             string specifier = numberMatch.Groups["specifier"].Value.ToUpperInvariant();
 
                             string formatSuffix = $"{pad}{width}";
-                            string finalFormat = $"{{0:{specifier}{formatSuffix}}}";
+                            string finalFormat = isHexPrefixed
+                                ? $"0x{{0:{specifier}{formatSuffix}}}"
+                                : $"{{0:{specifier}{formatSuffix}}}";
                             string result = string.Format(finalFormat, pair.Value);
                             return result;
                         }
@@ -322,7 +325,7 @@ internal unsafe partial class WppEventRecord
         }
     }
 
-    [GeneratedRegex(@"%(\d+)!([^!]*)!", RegexOptions.Compiled)]
+    [GeneratedRegex(@"(0[xX])?%(\d+)!([^!]*)!", RegexOptions.Compiled)]
     private static partial Regex PlaceholderRegex();
 
     [GeneratedRegex(@"^(?<pad>0)?(?<width>\d+)?(?<modifier>I\d+)?(?<specifier>[Xxdu])$")]
