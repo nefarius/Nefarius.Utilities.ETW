@@ -2,6 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
+using System.Text.RegularExpressions;
 
 using Windows.Win32.Foundation;
 
@@ -17,7 +18,7 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 /// </summary>
 [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Local")]
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
-internal unsafe class WppEventRecord
+internal unsafe partial class WppEventRecord
 {
     private readonly EventRecordReader _eventRecordReader;
 
@@ -28,35 +29,14 @@ internal unsafe class WppEventRecord
 
     private ushort GuidTypeNameFormatId => _eventRecordReader.NativeEventRecord->EventHeader.EventDescriptor.Id;
 
-    public uint Version { get; private set; }
-    public Guid TraceGuid { get; private set; }
-    public string GuidName { get; private set; }
-    public string GuidTypeName { get; private set; }
-    public uint ThreadId { get; private set; }
-    public SYSTEMTIME SystemTime { get; private set; }
-    public uint UserTime { get; private set; }
-    public uint KernelTime { get; private set; }
-    public uint SequenceNum { get; private set; }
-    public uint ProcessId { get; private set; }
-    public uint CpuNumber { get; private set; }
-    public uint Indent { get; private set; }
-    public string FlagsName { get; private set; }
-    public string LevelName { get; private set; }
-    public string FunctionName { get; private set; }
-    public string ComponentName { get; private set; }
-    public string SubComponentName { get; private set; }
-    public string FormattedString { get; private set; }
-    public FILETIME RawSystemTime { get; private set; }
-    public Guid ProviderGuid { get; private set; }
-
-    private string? BuildFormattedString(TraceMessageFormat format)
+    private string BuildFormattedString(TraceMessageFormat format)
     {
         if (!format.FunctionParameters.Any())
         {
-            return null;
+            return format.MessageFormat;
         }
 
-        Dictionary<int, object> indexedParameterValues = [];
+        Dictionary<int, ParameterTypeValuePair> indexedParameterValues = [];
 
         foreach (FunctionParameter parameter in format.FunctionParameters)
         {
@@ -74,12 +54,47 @@ internal unsafe class WppEventRecord
                 _ => throw new ArgumentOutOfRangeException()
             };
 
-            indexedParameterValues.Add(parameter.Index, value);
+            indexedParameterValues.Add(parameter.Index, new ParameterTypeValuePair(parameter.Type, value));
         }
 
         string formatString = format.MessageFormat;
 
-        return "null";
+        string formatted = PlaceholderRegex().Replace(formatString, match =>
+        {
+            int index = int.Parse(match.Groups[1].Value);
+            string formatSpec = match.Groups[2].Value;
+
+            if (!indexedParameterValues.TryGetValue(index, out ParameterTypeValuePair? pair))
+            {
+                return match.Value; // Leave as is if missing
+            }
+
+            // Apply formatting
+            try
+            {
+                switch (formatSpec)
+                {
+                    case "s":
+                        return pair.Value.ToString();
+                    case "p":
+                        return pair.Value switch
+                        {
+                            IntPtr ptr => $"0x{ptr.ToString("X")}",
+                            long l => $"0x{l:X}",
+                            int i => $"0x{i:X}",
+                            _ => $"0x{Convert.ToUInt64(pair.Value):X}"
+                        };
+                    default:
+                        return string.Format($"{{0:{formatSpec}}}", pair.Value);
+                }
+            }
+            catch
+            {
+                return $"<format error for %{index}!{formatSpec}!>";
+            }
+        });
+
+        return formatted;
     }
 
     /// <summary>
@@ -171,7 +186,11 @@ internal unsafe class WppEventRecord
                         nameof(FlagsName) => format.Flags,
                         nameof(LevelName) => format.Level,
                         nameof(FunctionName) => format.Function,
-                        nameof(FormattedString) => BuildFormattedString(format),
+                        nameof(FormattedString) =>
+                            BuildFormattedString(format)
+                                .Replace("%0 ", string.Empty)
+                                // TODO: can there be more than these?
+                                .Replace("%!FUNC!", format.Function),
                         _ => value
                     };
                 }
@@ -282,4 +301,34 @@ internal unsafe class WppEventRecord
             }
         }
     }
+
+    [GeneratedRegex(@"%(\d+)!([^!]*)!", RegexOptions.Compiled)]
+    private static partial Regex PlaceholderRegex();
+
+    private record ParameterTypeValuePair(ItemType Type, object Value);
+
+    #region WPP Properties
+
+    public uint Version { get; private set; }
+    public Guid TraceGuid { get; private set; }
+    public string GuidName { get; private set; }
+    public string GuidTypeName { get; private set; }
+    public uint ThreadId { get; private set; }
+    public SYSTEMTIME SystemTime { get; private set; }
+    public uint UserTime { get; private set; }
+    public uint KernelTime { get; private set; }
+    public uint SequenceNum { get; private set; }
+    public uint ProcessId { get; private set; }
+    public uint CpuNumber { get; private set; }
+    public uint Indent { get; private set; }
+    public string FlagsName { get; private set; }
+    public string LevelName { get; private set; }
+    public string FunctionName { get; private set; }
+    public string ComponentName { get; private set; }
+    public string SubComponentName { get; private set; }
+    public string FormattedString { get; private set; }
+    public FILETIME RawSystemTime { get; private set; }
+    public Guid ProviderGuid { get; private set; }
+
+    #endregion
 }
