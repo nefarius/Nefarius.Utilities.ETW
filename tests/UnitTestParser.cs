@@ -116,7 +116,7 @@ public class Tests
     [Test]
     public void WppTraceDecodingTest()
     {
-        string etwFilePath = @".\traces\BthPS3.etl";
+        string etwFilePath = @".\traces\BthPS3_0.etl";
 
         JsonWriterOptions options = new() { Indented = true };
 
@@ -142,7 +142,7 @@ public class Tests
 
         ms.Seek(0, SeekOrigin.Begin);
 
-        using FileStream outFile = File.OpenWrite("BthPS3.json");
+        using FileStream outFile = File.OpenWrite("BthPS3_0.json");
         ms.CopyTo(outFile);
 
         Assert.Pass();
