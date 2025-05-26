@@ -36,7 +36,7 @@ internal unsafe partial class WppEventRecord
             return format.MessageFormat;
         }
 
-        Dictionary<int, ParameterTypeValuePair> indexedParameterValues = [];
+        Dictionary<int, FunctionParameterValuePair> indexedParameterValues = [];
 
         foreach (FunctionParameter parameter in format.FunctionParameters)
         {
@@ -54,7 +54,7 @@ internal unsafe partial class WppEventRecord
                 _ => throw new ArgumentOutOfRangeException()
             };
 
-            indexedParameterValues.Add(parameter.Index, new ParameterTypeValuePair(parameter.Type, value));
+            indexedParameterValues.Add(parameter.Index, new FunctionParameterValuePair(parameter, value));
         }
 
         string formatString = format.MessageFormat;
@@ -66,7 +66,7 @@ internal unsafe partial class WppEventRecord
             int index = int.Parse(match.Groups[2].Value);
             string formatSpec = match.Groups[3].Value;
 
-            if (!indexedParameterValues.TryGetValue(index, out ParameterTypeValuePair? pair))
+            if (!indexedParameterValues.TryGetValue(index, out FunctionParameterValuePair? pair))
             {
                 return match.Value; // Leave as is if missing
             }
@@ -78,6 +78,12 @@ internal unsafe partial class WppEventRecord
                 {
                     // value results in a string
                     case "s":
+                        // handle "enum" values like %irql%
+                        if (pair.Parameter is { Type: ItemType.ItemListByte, ListItems: not null })
+                        {
+                            return pair.Parameter.ListItems[(byte)pair.Value];
+                        }
+                        // TODO: translate NTSTATUS
                         return pair.Value.ToString();
                     // pointer values
                     case "p":
@@ -331,7 +337,7 @@ internal unsafe partial class WppEventRecord
     [GeneratedRegex(@"^(?<pad>0)?(?<width>\d+)?(?<modifier>I\d+)?(?<specifier>[Xxdu])$")]
     private static partial Regex NumericFormatTokenRegex();
 
-    private record ParameterTypeValuePair(ItemType Type, object Value);
+    private record FunctionParameterValuePair(FunctionParameter Parameter, object Value);
 
     #region WPP Properties
 
