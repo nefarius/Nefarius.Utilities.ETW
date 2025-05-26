@@ -4,6 +4,8 @@ using System.Diagnostics.CodeAnalysis;
 
 using Windows.Win32.Foundation;
 
+using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
+
 namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 
 /// <summary>
@@ -12,7 +14,6 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
 public sealed class DecodingContext : IDisposable
 {
-    [SuppressMessage("ReSharper", "PrivateFieldCanBeConvertedToLocalVariable")]
     private readonly ReadOnlyCollection<DecodingContextType> _decodingTypes;
 
     /// <summary>
@@ -49,6 +50,13 @@ public sealed class DecodingContext : IDisposable
         Handle = decodingHandle;
     }
 
+    /// <summary>
+    ///     Collection of extracted <see cref="TraceMessageFormat" />s of this <see cref="DecodingContext" />.
+    /// </summary>
+    public IEnumerable<TraceMessageFormat> TraceMessageFormats => _decodingTypes
+        .SelectMany(t => t.TraceMessageFormats);
+
+    [Obsolete]
     internal TDH_HANDLE Handle { get; }
 
     /// <inheritdoc />
