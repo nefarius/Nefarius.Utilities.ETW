@@ -75,8 +75,10 @@ internal unsafe partial class WppEventRecord
             {
                 switch (formatSpec)
                 {
+                    // value results in a string
                     case "s":
                         return pair.Value.ToString();
+                    // pointer values
                     case "p":
                         return pair.Value switch
                         {
@@ -85,6 +87,7 @@ internal unsafe partial class WppEventRecord
                             int i => $"0x{i:X}",
                             _ => $"0x{Convert.ToUInt64(pair.Value):X}"
                         };
+                    // complex numerical values 
                     default:
                         {
                             Match numberMatch = NumericFormatTokenRegex().Match(formatSpec);
