@@ -129,49 +129,65 @@ internal unsafe class WppEventRecord
             // we need to decode those with a WPP-specific API
             if (propertyType == _TDH_IN_TYPE.TDH_INTYPE_UNICODESTRING)
             {
-                // TODO: propSize doesn't equal the rendered string, maybe there is a better way to do this
-                // this doesn't appear to work: https://github.com/microsoft/ETW/blob/a5ed49d12b9ef2af6545de0b25a76b334caad066/EtwEnumerator/samples/EtwEnumeratorDecode.cpp#L178-L184
-                propSize = 4096;
-                IntPtr wppPropBuffer = Marshal.AllocHGlobal((int)propSize);
-                try
+                if (format is not null)
                 {
-                    retry:
-                    // query property content
-                    WIN32_ERROR getWppPropRet = (WIN32_ERROR)PInvoke.TdhGetWppProperty(
-                        decodingContext.Handle,
-                        _eventRecordReaderReader.NativeEventRecord,
-                        (char*)propertyDescriptor.PropertyName,
-                        &propSize,
-                        (byte*)wppPropBuffer.ToPointer()
-                    );
-
-                    // crude but hey, works ;)
-                    if (getWppPropRet == WIN32_ERROR.ERROR_INSUFFICIENT_BUFFER)
+                    value = propertyName switch
                     {
-                        propSize *= 2;
-                        Marshal.ReAllocHGlobal(wppPropBuffer, (IntPtr)propSize);
-                        goto retry;
-                    }
-
-                    if (getWppPropRet != WIN32_ERROR.ERROR_SUCCESS)
-                    {
-                        throw new TdhGetWppPropertyException(getWppPropRet);
-                    }
-
-                    value = Marshal.PtrToStringUni(wppPropBuffer); // ANSI strings not used in WPP
-
-                    if (value is not null)
-                    {
-                        // set managed property by name
-                        self[propertyName] = value;
-                    }
-
-                    continue;
+                        nameof(GuidName) => format.Provider,
+                        nameof(GuidTypeName) => format.Opcode,
+                        nameof(FlagsName) => format.Flags,
+                        nameof(LevelName) => format.Level,
+                        nameof(FunctionName) => format.Function,
+                        _ => value
+                    };
                 }
-                finally
+
+                if (value is null)
                 {
-                    Marshal.FreeHGlobal(wppPropBuffer);
+                    // TODO: propSize doesn't equal the rendered string, maybe there is a better way to do this
+                    // this doesn't appear to work: https://github.com/microsoft/ETW/blob/a5ed49d12b9ef2af6545de0b25a76b334caad066/EtwEnumerator/samples/EtwEnumeratorDecode.cpp#L178-L184
+                    propSize = 4096;
+                    IntPtr wppPropBuffer = Marshal.AllocHGlobal((int)propSize);
+                    try
+                    {
+                        retry:
+                        // query property content
+                        WIN32_ERROR getWppPropRet = (WIN32_ERROR)PInvoke.TdhGetWppProperty(
+                            decodingContext.Handle,
+                            _eventRecordReaderReader.NativeEventRecord,
+                            (char*)propertyDescriptor.PropertyName,
+                            &propSize,
+                            (byte*)wppPropBuffer.ToPointer()
+                        );
+
+                        // crude but hey, works ;)
+                        if (getWppPropRet == WIN32_ERROR.ERROR_INSUFFICIENT_BUFFER)
+                        {
+                            propSize *= 2;
+                            Marshal.ReAllocHGlobal(wppPropBuffer, (IntPtr)propSize);
+                            goto retry;
+                        }
+
+                        if (getWppPropRet != WIN32_ERROR.ERROR_SUCCESS)
+                        {
+                            throw new TdhGetWppPropertyException(getWppPropRet);
+                        }
+
+                        value = Marshal.PtrToStringUni(wppPropBuffer); // ANSI strings not used in WPP
+                    }
+                    finally
+                    {
+                        Marshal.FreeHGlobal(wppPropBuffer);
+                    }
                 }
+                
+                if (value is not null)
+                {
+                    // set managed property by name
+                    self[propertyName] = value;
+                }
+
+                continue;
             }
 
             // these properties can be fetched with the way faster API

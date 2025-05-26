@@ -24,7 +24,7 @@ public abstract class DecodingContextType
     /// <summary>
     ///     Collection of extracted <see cref="TraceMessageFormat" />s of this <see cref="DecodingContextType" />.
     /// </summary>
-    public ReadOnlyCollection<TraceMessageFormat> TraceMessageFormats { get; protected set; }
+    public ReadOnlyCollection<TraceMessageFormat> TraceMessageFormats { get; protected init; }
 
     /// <summary>
     ///     Managed string representation of <see cref="Buffer" /> content.
