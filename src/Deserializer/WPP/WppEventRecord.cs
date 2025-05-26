@@ -88,8 +88,9 @@ internal unsafe partial class WppEventRecord
                         if (pair.Parameter.Type == ItemType.ItemNTSTATUS)
                         {
                             uint ntStatus = (uint)pair.Value;
-                            string ntStatusLabel = NtStatus.Values[ntStatus];
-                            return $"{ntStatusLabel} (0x{ntStatus:X8})";
+                            return NtStatus.Values.TryGetValue(ntStatus, out string? status)
+                                ? $"{status} (0x{ntStatus:X8})"
+                                : $"<unknown NTSTATUS value> (0x{ntStatus:X8})";
                         }
 
                         return pair.Value.ToString() ?? throw new InvalidOperationException("Unexpected null value.");
