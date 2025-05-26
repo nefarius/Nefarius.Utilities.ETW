@@ -19,14 +19,14 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
 internal unsafe class WppEventRecord
 {
-    private readonly EventRecordReader _eventRecordReaderReader;
+    private readonly EventRecordReader _eventRecordReader;
 
     public WppEventRecord(EventRecordReader eventRecordReader)
     {
-        _eventRecordReaderReader = eventRecordReader;
+        _eventRecordReader = eventRecordReader;
     }
 
-    private ushort GuidTypeNameFormatId => _eventRecordReaderReader.NativeEventRecord->EventHeader.EventDescriptor.Id;
+    private ushort GuidTypeNameFormatId => _eventRecordReader.NativeEventRecord->EventHeader.EventDescriptor.Id;
 
     public uint Version { get; private set; }
     public Guid TraceGuid { get; private set; }
@@ -49,6 +49,39 @@ internal unsafe class WppEventRecord
     public FILETIME RawSystemTime { get; private set; }
     public Guid ProviderGuid { get; private set; }
 
+    private string? BuildFormattedString(TraceMessageFormat format)
+    {
+        if (!format.FunctionParameters.Any())
+        {
+            return null;
+        }
+
+        Dictionary<int, object> indexedParameterValues = [];
+
+        foreach (FunctionParameter parameter in format.FunctionParameters)
+        {
+            object value = parameter.Type switch
+            {
+                ItemType.ItemListByte => _eventRecordReader.ReadUInt8(),
+                ItemType.ItemLong => _eventRecordReader.ReadInt32(),
+                ItemType.ItemLongLong => _eventRecordReader.ReadUInt64(),
+                ItemType.ItemLongLongXX => _eventRecordReader.ReadUInt64(),
+                ItemType.ItemNTSTATUS => _eventRecordReader.ReadUInt32(),
+                ItemType.ItemPWString => _eventRecordReader.ReadCountedString(),
+                ItemType.ItemPtr => _eventRecordReader.ReadPointer(),
+                ItemType.ItemString => _eventRecordReader.ReadAnsiString(),
+                ItemType.ItemGuid => _eventRecordReader.ReadGuid(),
+                _ => throw new ArgumentOutOfRangeException()
+            };
+
+            indexedParameterValues.Add(parameter.Index, value);
+        }
+
+        string formatString = format.MessageFormat;
+
+        return "null";
+    }
+
     /// <summary>
     ///     Decodes well-known properties from a given <see cref="EVENT_RECORD" />.
     /// </summary>
@@ -60,7 +93,7 @@ internal unsafe class WppEventRecord
 
         uint bufferSize = 0;
         WIN32_ERROR infoRet = (WIN32_ERROR)PInvoke.TdhGetEventInformation(
-            _eventRecordReaderReader.NativeEventRecord,
+            _eventRecordReader.NativeEventRecord,
             0,
             null,
             null,
@@ -75,7 +108,7 @@ internal unsafe class WppEventRecord
         byte* infoBuffer = stackalloc byte[(int)bufferSize];
         TRACE_EVENT_INFO* traceEventInfo = (TRACE_EVENT_INFO*)infoBuffer;
         infoRet = (WIN32_ERROR)PInvoke.TdhGetEventInformation(
-            _eventRecordReaderReader.NativeEventRecord,
+            _eventRecordReader.NativeEventRecord,
             0,
             null,
             traceEventInfo,
@@ -111,7 +144,7 @@ internal unsafe class WppEventRecord
             uint propSize = 0;
             // fetch the size of properties that do not need decoding 
             WIN32_ERROR sizeRet = (WIN32_ERROR)PInvoke.TdhGetPropertySize(
-                _eventRecordReaderReader.NativeEventRecord,
+                _eventRecordReader.NativeEventRecord,
                 0,
                 null,
                 1,
@@ -138,6 +171,7 @@ internal unsafe class WppEventRecord
                         nameof(FlagsName) => format.Flags,
                         nameof(LevelName) => format.Level,
                         nameof(FunctionName) => format.Function,
+                        nameof(FormattedString) => BuildFormattedString(format),
                         _ => value
                     };
                 }
@@ -154,7 +188,7 @@ internal unsafe class WppEventRecord
                         // query property content
                         WIN32_ERROR getWppPropRet = (WIN32_ERROR)PInvoke.TdhGetWppProperty(
                             decodingContext.Handle,
-                            _eventRecordReaderReader.NativeEventRecord,
+                            _eventRecordReader.NativeEventRecord,
                             (char*)propertyDescriptor.PropertyName,
                             &propSize,
                             (byte*)wppPropBuffer.ToPointer()
@@ -180,7 +214,7 @@ internal unsafe class WppEventRecord
                         Marshal.FreeHGlobal(wppPropBuffer);
                     }
                 }
-                
+
                 if (value is not null)
                 {
                     // set managed property by name
@@ -196,7 +230,7 @@ internal unsafe class WppEventRecord
             try
             {
                 WIN32_ERROR getPrimPropRet = (WIN32_ERROR)PInvoke.TdhGetProperty(
-                    _eventRecordReaderReader.NativeEventRecord,
+                    _eventRecordReader.NativeEventRecord,
                     0,
                     null,
                     1,

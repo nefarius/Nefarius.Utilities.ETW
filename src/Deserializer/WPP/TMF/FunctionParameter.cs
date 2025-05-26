@@ -6,10 +6,10 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 ///     Possible trace message parameter types.
 /// </summary>
 /// <remarks>
-///     Partial source:
-///     https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-inputtype-complextype#remarks
-///     and:
-///     https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-outputtype-complextype#remarks
+///     Partial sources from
+///     <a href="https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-inputtype-complextype#remarks">here</a>
+///     and
+///     <a href="https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-outputtype-complextype#remarks">here</a>
 /// </remarks>
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
@@ -86,6 +86,6 @@ public readonly struct FunctionParameter
     /// <summary>
     ///     List item values as their string representation.
     /// </summary>
-    /// <remarks>Only populated if <see cref="Type"/> is <see cref="ItemType.ItemListByte"/>.</remarks>
+    /// <remarks>Only populated if <see cref="Type" /> is <see cref="ItemType.ItemListByte" />.</remarks>
     public IReadOnlyDictionary<int, string>? ListItems { get; init; }
 }
