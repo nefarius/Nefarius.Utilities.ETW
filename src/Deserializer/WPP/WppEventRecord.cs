@@ -59,6 +59,7 @@ internal unsafe partial class WppEventRecord
 
         string formatString = format.MessageFormat;
 
+        // substitute the placeholders with the real variable values
         string formatted = PlaceholderRegex().Replace(formatString, match =>
         {
             int index = int.Parse(match.Groups[1].Value);
@@ -85,7 +86,23 @@ internal unsafe partial class WppEventRecord
                             _ => $"0x{Convert.ToUInt64(pair.Value):X}"
                         };
                     default:
-                        return string.Format($"{{0:{formatSpec}}}", pair.Value);
+                        {
+                            Match numberMatch = NumericFormatTokenRegex().Match(formatSpec);
+
+                            if (!numberMatch.Success)
+                            {
+                                return string.Format($"{{0:{formatSpec}}}", pair.Value);
+                            }
+
+                            string pad = numberMatch.Groups["pad"].Success ? "0" : "";
+                            string width = numberMatch.Groups["width"].Value;
+                            string specifier = numberMatch.Groups["specifier"].Value.ToUpper();
+
+                            string formatSuffix = $"{pad}{width}";
+                            string finalFormat = $"{{0:{specifier}{formatSuffix}}}";
+                            string result = string.Format(finalFormat, pair.Value);
+                            return result;
+                        }
                 }
             }
             catch
@@ -304,6 +321,9 @@ internal unsafe partial class WppEventRecord
 
     [GeneratedRegex(@"%(\d+)!([^!]*)!", RegexOptions.Compiled)]
     private static partial Regex PlaceholderRegex();
+
+    [GeneratedRegex(@"^(?<pad>0)?(?<width>\d+)?(?<modifier>I\d+)?(?<specifier>[Xxdu])$")]
+    private static partial Regex NumericFormatTokenRegex();
 
     private record ParameterTypeValuePair(ItemType Type, object Value);
 
