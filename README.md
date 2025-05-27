@@ -24,7 +24,6 @@ contributors.*
 ## Known limitations
 
 - Currently relies on Windows-only APIs so no support for other platforms 🪟
-- WPP decoding of events *could* be faster but I optimized what's possible so far 🚅
 
 ## Documentation
 
