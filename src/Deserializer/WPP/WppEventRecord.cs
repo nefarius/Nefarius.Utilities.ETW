@@ -69,6 +69,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
         // substitute the placeholders with the real variable values
         string formatted = PlaceholderRegex().Replace(formatString, match =>
         {
+            // ensures we don't generate "0x0x..."
             bool isHexPrefixed = match.Groups[1].Success;
             int index = int.Parse(match.Groups[2].Value);
             string formatSpec = match.Groups[3].Value;
@@ -119,12 +120,13 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                             {
                                 return string.Format($"{{0:{formatSpec}}}", pair.Value);
                             }
-
+                            
                             string pad = numberMatch.Groups["pad"].Success ? "0" : "";
                             string width = numberMatch.Groups["width"].Value;
                             string specifier = numberMatch.Groups["specifier"].Value.ToUpperInvariant();
 
                             string formatSuffix = $"{pad}{width}";
+                            // convert so string.Format can do the job for us
                             string finalFormat = isHexPrefixed
                                 ? $"0x{{0:{specifier}{formatSuffix}}}"
                                 : $"{{0:{specifier}{formatSuffix}}}";
