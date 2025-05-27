@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using System.Text;
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 
@@ -9,7 +8,7 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 /// </summary>
 [SuppressMessage("ReSharper", "UnusedType.Global")]
 public sealed class TmfFileDecodingContextType()
-    : DecodingContextType(TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFSEARCHPATH)
+    : DecodingContextType
 {
     /// <summary>
     ///     Gets decoding info from multiple paths containing <c>.TMF</c> files.
@@ -27,9 +26,6 @@ public sealed class TmfFileDecodingContextType()
     public TmfFileDecodingContextType(string path) : this()
     {
         ArgumentNullException.ThrowIfNull(path);
-        Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(Path.GetFullPath(path))
-            .Concat("\0\0"u8.ToArray())
-            .ToArray()
-        );
+        throw new NotImplementedException();
     }
 }

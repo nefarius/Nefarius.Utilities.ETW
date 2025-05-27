@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using System.Text;
 
 using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
@@ -10,22 +9,15 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 /// </summary>
 [SuppressMessage("ReSharper", "UnusedType.Global")]
 public sealed class TmfFilesDirectoryDecodingContextType()
-    : DecodingContextType(TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFFILE)
+    : DecodingContextType
 {
     /// <summary>
-    ///     Gets decoding info from a single <c>.tmf</c> file.
+    ///     Gets decoding info from a directory containing multiple <c>.tmf</c> files.
     /// </summary>
-    /// <param name="path">
-    ///     Null-terminated Unicode string that contains the name of the .tmf file used for parsing the WPP log.
-    ///     Typically, the .tmf file name is picked up from the event GUID so you do not have to specify the file name.
-    /// </param>
+    /// <param name="path">Path to a directory containing multiple <c>.tmf</c> files. </param>
     public TmfFilesDirectoryDecodingContextType(string path) : this()
     {
         ArgumentException.ThrowIfNullOrEmpty(path);
-        Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(Path.GetFullPath(path))
-            .Concat("\0\0"u8.ToArray())
-            .ToArray()
-        );
 
         TmfParser tmfParser = new();
 

@@ -1,6 +1,4 @@
-﻿using System.Text;
-
-using Kaitai;
+﻿using Kaitai;
 
 using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
@@ -10,7 +8,7 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 ///     A <see cref="TDH_CONTEXT_TYPE.TDH_CONTEXT_PDB_PATH" /> wrapper for use with <see cref="DecodingContext" />.
 /// </summary>
 public sealed class PdbFileDecodingContextType()
-    : DecodingContextType(TDH_CONTEXT_TYPE.TDH_CONTEXT_PDB_PATH)
+    : DecodingContextType
 {
     /// <summary>
     ///     Gets decoding info from one or multiple <c>.PDB</c> files.
@@ -24,10 +22,6 @@ public sealed class PdbFileDecodingContextType()
     public PdbFileDecodingContextType(string path) : this()
     {
         ArgumentException.ThrowIfNullOrEmpty(path);
-        Buffer = new ReadOnlyMemory<byte>(Encoding.Unicode.GetBytes(Path.GetFullPath(path))
-            .Concat("\0\0"u8.ToArray())
-            .ToArray()
-        );
 
         TmfParser parser = new();
 

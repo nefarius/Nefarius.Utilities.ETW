@@ -18,16 +18,9 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 /// </summary>
 [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Local")]
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
-internal unsafe partial class WppEventRecord
+internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader)
 {
-    private readonly EventRecordReader _eventRecordReader;
-
-    public WppEventRecord(EventRecordReader eventRecordReader)
-    {
-        _eventRecordReader = eventRecordReader;
-    }
-
-    private ushort GuidTypeNameFormatId => _eventRecordReader.NativeEventRecord->EventHeader.EventDescriptor.Id;
+    private ushort GuidTypeNameFormatId => eventRecordReader.NativeEventRecord->EventHeader.EventDescriptor.Id;
 
     private string BuildFormattedString(TraceMessageFormat format)
     {
@@ -42,15 +35,15 @@ internal unsafe partial class WppEventRecord
         {
             object value = parameter.Type switch
             {
-                ItemType.ItemListByte => _eventRecordReader.ReadUInt8(),
-                ItemType.ItemLong => _eventRecordReader.ReadInt32(),
-                ItemType.ItemLongLong => _eventRecordReader.ReadUInt64(),
-                ItemType.ItemLongLongXX => _eventRecordReader.ReadUInt64(),
-                ItemType.ItemNTSTATUS => _eventRecordReader.ReadUInt32(),
-                ItemType.ItemPWString => _eventRecordReader.ReadCountedString(),
-                ItemType.ItemPtr => _eventRecordReader.ReadPointer(),
-                ItemType.ItemString => _eventRecordReader.ReadAnsiString(),
-                ItemType.ItemGuid => _eventRecordReader.ReadGuid(),
+                ItemType.ItemListByte => eventRecordReader.ReadUInt8(),
+                ItemType.ItemLong => eventRecordReader.ReadInt32(),
+                ItemType.ItemLongLong => eventRecordReader.ReadUInt64(),
+                ItemType.ItemLongLongXX => eventRecordReader.ReadUInt64(),
+                ItemType.ItemNTSTATUS => eventRecordReader.ReadUInt32(),
+                ItemType.ItemPWString => eventRecordReader.ReadCountedString(),
+                ItemType.ItemPtr => eventRecordReader.ReadPointer(),
+                ItemType.ItemString => eventRecordReader.ReadAnsiString(),
+                ItemType.ItemGuid => eventRecordReader.ReadGuid(),
                 _ => throw new ArgumentOutOfRangeException()
             };
 
@@ -146,7 +139,7 @@ internal unsafe partial class WppEventRecord
 
         uint bufferSize = 0;
         WIN32_ERROR infoRet = (WIN32_ERROR)PInvoke.TdhGetEventInformation(
-            _eventRecordReader.NativeEventRecord,
+            eventRecordReader.NativeEventRecord,
             0,
             null,
             null,
@@ -161,7 +154,7 @@ internal unsafe partial class WppEventRecord
         byte* infoBuffer = stackalloc byte[(int)bufferSize];
         TRACE_EVENT_INFO* traceEventInfo = (TRACE_EVENT_INFO*)infoBuffer;
         infoRet = (WIN32_ERROR)PInvoke.TdhGetEventInformation(
-            _eventRecordReader.NativeEventRecord,
+            eventRecordReader.NativeEventRecord,
             0,
             null,
             traceEventInfo,
@@ -197,7 +190,7 @@ internal unsafe partial class WppEventRecord
             uint propSize = 0;
             // fetch the size of properties that do not need decoding 
             WIN32_ERROR sizeRet = (WIN32_ERROR)PInvoke.TdhGetPropertySize(
-                _eventRecordReader.NativeEventRecord,
+                eventRecordReader.NativeEventRecord,
                 0,
                 null,
                 1,
@@ -233,45 +226,6 @@ internal unsafe partial class WppEventRecord
                     };
                 }
 
-                if (value is null)
-                {
-                    // TODO: propSize doesn't equal the rendered string, maybe there is a better way to do this
-                    // this doesn't appear to work: https://github.com/microsoft/ETW/blob/a5ed49d12b9ef2af6545de0b25a76b334caad066/EtwEnumerator/samples/EtwEnumeratorDecode.cpp#L178-L184
-                    propSize = 4096;
-                    IntPtr wppPropBuffer = Marshal.AllocHGlobal((int)propSize);
-                    try
-                    {
-                        retry:
-                        // query property content
-                        WIN32_ERROR getWppPropRet = (WIN32_ERROR)PInvoke.TdhGetWppProperty(
-                            decodingContext.Handle,
-                            _eventRecordReader.NativeEventRecord,
-                            (char*)propertyDescriptor.PropertyName,
-                            &propSize,
-                            (byte*)wppPropBuffer.ToPointer()
-                        );
-
-                        // crude but hey, works ;)
-                        if (getWppPropRet == WIN32_ERROR.ERROR_INSUFFICIENT_BUFFER)
-                        {
-                            propSize *= 2;
-                            Marshal.ReAllocHGlobal(wppPropBuffer, (IntPtr)propSize);
-                            goto retry;
-                        }
-
-                        if (getWppPropRet != WIN32_ERROR.ERROR_SUCCESS)
-                        {
-                            throw new TdhGetWppPropertyException(getWppPropRet);
-                        }
-
-                        value = Marshal.PtrToStringUni(wppPropBuffer); // ANSI strings not used in WPP
-                    }
-                    finally
-                    {
-                        Marshal.FreeHGlobal(wppPropBuffer);
-                    }
-                }
-
                 if (value is not null)
                 {
                     // set managed property by name
@@ -287,7 +241,7 @@ internal unsafe partial class WppEventRecord
             try
             {
                 WIN32_ERROR getPrimPropRet = (WIN32_ERROR)PInvoke.TdhGetProperty(
-                    _eventRecordReader.NativeEventRecord,
+                    eventRecordReader.NativeEventRecord,
                     0,
                     null,
                     1,
