@@ -20,10 +20,14 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
 internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader)
 {
+    /// <summary>
+    ///     Equivalent to <see cref="TraceMessageFormat.Id"/>.
+    /// </summary>
     private ushort GuidTypeNameFormatId => eventRecordReader.NativeEventRecord->EventHeader.EventDescriptor.Id;
 
     private string BuildFormattedString(TraceMessageFormat format)
     {
+        // no parameters means it's basically a verbatim message string
         if (!format.FunctionParameters.Any())
         {
             return format.MessageFormat;
@@ -35,16 +39,26 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
         {
             object value = parameter.Type switch
             {
+                // this is basically an uint8_t enum value
                 ItemType.ItemListByte => eventRecordReader.ReadUInt8(),
+                // signed 32-bit integer, LONG
                 ItemType.ItemLong => eventRecordReader.ReadInt32(),
+                // signed 64-bit integer, LONGLONG
                 ItemType.ItemLongLong => eventRecordReader.ReadUInt64(),
+                // signed 64-bit integer, LONGLONG, to be represented as hexadecimal
                 ItemType.ItemLongLongXX => eventRecordReader.ReadUInt64(),
+                // unsigned 32-bit integer, DWORD, NTSTATUS code
                 ItemType.ItemNTSTATUS => eventRecordReader.ReadUInt32(),
+                // wchar_t strings are length prefixed (uint16_t) and not NULL terminated
                 ItemType.ItemPWString => eventRecordReader.ReadCountedString(),
+                // pointer value, unsigned 64-bit integer, LPVOID
                 ItemType.ItemPtr => eventRecordReader.ReadPointer(),
+                // char strings are NULL terminated
                 ItemType.ItemString => eventRecordReader.ReadAnsiString(),
+                // a GUID
                 ItemType.ItemGuid => eventRecordReader.ReadGuid(),
-                _ => throw new ArgumentOutOfRangeException()
+                // should never happen, make some noise if it does
+                _ => throw new ArgumentOutOfRangeException(nameof(parameter.Type))
             };
 
             indexedParameterValues.Add(parameter.Index, new FunctionParameterValuePair(parameter, value));
@@ -275,8 +289,6 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                     case _TDH_IN_TYPE.TDH_INTYPE_FILETIME:
                         value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(FILETIME));
                         break;
-                    // unformatted or unknown properties would get mangled so this must not be used
-                    case _TDH_IN_TYPE.TDH_INTYPE_UNICODESTRING:
                     default:
                         throw new InvalidCastException();
                 }
