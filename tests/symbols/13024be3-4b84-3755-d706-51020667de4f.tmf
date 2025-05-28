@@ -1,0 +1,99 @@
+// PDB:  dshidmini.pdb
+// PDB:  Last Updated :2024-11-03:01:04:26:104 (UTC) [Tracepdb]
+13024be3-4b84-3755-d706-51020667de4f sys // SRC=Configuration.c MJ= MN=
+#typev Configuration_c973 31 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Configuration_c951 30 "%0 [%!FUNC!]Disallowing heavy rumble rescalling because an invalid range was defined" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+}
+#typev Configuration_c942 29 "%0 [%!FUNC!]Heavy rumble rescaling constants:  A = %10!s! and B = %11!s!." //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+Context->RumbleControlState.HeavyRescale.ConstA, ItemDouble -- 10
+Context->RumbleControlState.HeavyRescale.ConstB, ItemDouble -- 11
+}
+#typev Configuration_c918 28 "%0 [%!FUNC!]Disallowing light rumble rescaling because an invalid range was defined" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+}
+#typev Configuration_c909 27 "%0 [%!FUNC!]Light rumble rescaling constants: A = %10!s! and B = %11!s!." //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+Context->RumbleControlState.AltMode.LightRescale.ConstA, ItemDouble -- 10
+Context->RumbleControlState.AltMode.LightRescale.ConstB, ItemDouble -- 11
+}
+#typev Configuration_c881 26 "%0 [%!FUNC!]Device-specific (%10!s!) config not found" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+Context->DeviceAddressString, ItemString -- 10
+}
+#typev Configuration_c869 25 "%0 [%!FUNC!]Found device-specific (%10!s!) config, loading" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+Context->DeviceAddressString, ItemString -- 10
+}
+#typev Configuration_c847 24 "%0 [%!FUNC!]Loading global configuration" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+}
+#typev Configuration_c828 23 "%0 [%!FUNC!] ERROR:JSON parsing error: %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+error_ptr, ItemString -- 10
+}
+#typev Configuration_c820 22 "%0 [%!FUNC!] ERROR:JSON parsing failed" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+}
+#typev Configuration_c806 21 "%0 [%!FUNC!] ERROR:Failed to read configuration file content, error: %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+error, ItemWINERROR -- 10
+}
+#typev Configuration_c782 20 "%0 [%!FUNC!] ERROR:Configuration file too big to parse, reported size: %10!I64d!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+size.QuadPart, ItemLongLong -- 10
+}
+#typev Configuration_c771 19 "%0 [%!FUNC!]File size in bytes: %10!Iu!64" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+(size_t)size.QuadPart, ItemPtr -- 10
+}
+#typev Configuration_c760 18 "%0 [%!FUNC!] ERROR:Failed to get configuration file size, error: %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+error, ItemWINERROR -- 10
+}
+#typev Configuration_c744 17 "%0 [%!FUNC!] ERROR:Configuration file %10!s! not accessible, error: %11!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+configFilePath, ItemString -- 10
+error, ItemWINERROR -- 11
+}
+#typev Configuration_c725 16 "%0 [%!FUNC!]Set config file path to %10!s!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+configFilePath, ItemString -- 10
+}
+#typev Configuration_c706 15 "%0 [%!FUNC!]Expanded environment variable to %10!s!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+programDataPath, ItemString -- 10
+}
+#typev Configuration_c687 14 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_CONFIG FUNC=ConfigLoadForDevice
+{
+}
+#typev Configuration_c663 13 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_CONFIG FUNC=ConfigNodeParse
+{
+}
+#typev Configuration_c510 12 "%0 [%!FUNC!]Configuration custom address: %10!02X!:%11!02X!:%12!02X!:%13!02X!:%14!02X!:%15!02X!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DS3 FUNC=ConfigNodeParse
+{
+pCfg->CustomHostAddress[0], ItemLong -- 10
+pCfg->CustomHostAddress[1], ItemLong -- 11
+pCfg->CustomHostAddress[2], ItemLong -- 12
+pCfg->CustomHostAddress[3], ItemLong -- 13
+pCfg->CustomHostAddress[4], ItemLong -- 14
+pCfg->CustomHostAddress[5], ItemLong -- 15
+}
+#typev Configuration_c460 11 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_CONFIG FUNC=ConfigNodeParse
+{
+}
+#typev Configuration_c186 10 "%0 [%!FUNC!] ERROR:Provided button offset %10!d! for %11!s! out of range, ignoring" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_CONFIG FUNC=ConfigParseButtonComboSettings
+{
+offset, ItemLong -- 10
+G_DS_BUTTON_COMBO_NAMES[buttonIndex], ItemString -- 11
+}
+#typev Configuration_c1067 33 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_CONFIG FUNC=ConfigSetDefaults
+{
+}
+#typev Configuration_c987 32 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_CONFIG FUNC=ConfigSetDefaults
+{
+}

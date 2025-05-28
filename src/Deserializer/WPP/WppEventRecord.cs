@@ -57,8 +57,10 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                 ItemType.ItemString => eventRecordReader.ReadAnsiString(),
                 // a GUID
                 ItemType.ItemGuid => eventRecordReader.ReadGuid(),
+                // unsigned 32-bit integer, DWORD, Windows Error Code
+                ItemType.ItemWINERROR => eventRecordReader.ReadUInt32(),
                 // should never happen, make some noise if it does
-                _ => throw new ArgumentOutOfRangeException(nameof(parameter.Type))
+                _ => throw new NotImplementedException($"Type of item {parameter.Type} not implemented.")
             };
 
             indexedParameterValues.Add(parameter.Index, new FunctionParameterValuePair(parameter, value));
@@ -99,6 +101,13 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                             return NtStatus.Values.TryGetValue(ntStatus, out string? status)
                                 ? $"{status} (0x{ntStatus:X8})"
                                 : $"<unknown NTSTATUS value> (0x{ntStatus:X8})";
+                        }
+                        
+                        // handle WINERROR translation
+                        if (pair.Parameter.Type == ItemType.ItemWINERROR)
+                        {
+                            uint error = (uint)pair.Value;
+                            return new Win32Exception((int)error).Message;
                         }
 
                         return pair.Value.ToString() ?? throw new InvalidOperationException("Unexpected null value.");
@@ -237,6 +246,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                             BuildFormattedString(format)
                                 .Replace("%0 ", string.Empty)
                                 // TODO: can there be more than these?
+                                // see: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-#software-tracing
                                 .Replace("%!FUNC!", format.Function),
                         _ => value
                     };

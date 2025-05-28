@@ -34,3 +34,38 @@ status, ItemNTSTATUS -- 10
 {
 status, ItemNTSTATUS -- 10
 }
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+#typev L2CAP.Transfer_c375 15 "%0 [%!FUNC!]Control read transfer request completed with status %10!s!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_AsyncReadControlTransferCompleted
+{
+Params->IoStatus.Status, ItemNTSTATUS -- 10
+}
+#typev L2CAP.Transfer_c409 16 "%0 [%!FUNC!]Interrupt read transfer request completed with status %10!s! (remaining: %11!d!)" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_AsyncReadInterruptTransferCompleted
+{
+Params->IoStatus.Status, ItemNTSTATUS -- 10
+brb->RemainingBufferSize, ItemLong -- 11
+}
+#typev L2CAP.Transfer_c346 14 "%0 [%!FUNC!]Control transfer request completed with status %10!s!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_AsyncSendControlTransferCompleted
+{
+Params->IoStatus.Status, ItemNTSTATUS -- 10
+}
+#typev L2CAP.Transfer_c443 17 "%0 [%!FUNC!]Interrupt OUT transfer request completed with status %10!s!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_AsyncSendInterruptTransferCompleted
+{
+Params->IoStatus.Status, ItemNTSTATUS -- 10
+}
+#typev L2CAP.Transfer_c172 11 "%0 [%!FUNC!] ERROR:BthPS3_SendBrbAsync failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_ReadControlTransferAsync
+{
+status, ItemNTSTATUS -- 10
+}
+#typev L2CAP.Transfer_c243 12 "%0 [%!FUNC!] ERROR:BthPS3_SendBrbAsync failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_ReadInterruptTransferAsync
+{
+status, ItemNTSTATUS -- 10
+}
+#typev L2CAP.Transfer_c101 10 "%0 [%!FUNC!] ERROR:BthPS3_SendBrbAsync failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_SendControlTransferAsync
+{
+status, ItemNTSTATUS -- 10
+}
+#typev L2CAP.Transfer_c316 13 "%0 [%!FUNC!] ERROR:BthPS3_SendBrbAsync failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_SendInterruptTransferAsync
+{
+status, ItemNTSTATUS -- 10
+}

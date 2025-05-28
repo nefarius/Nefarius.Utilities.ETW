@@ -60,47 +60,10 @@ public sealed class TraceMessageFormat : IEquatable<TraceMessageFormat>, ICompar
             return messageGuidComparison;
         }
 
-        int providerComparison = string.Compare(Provider, other.Provider, StringComparison.InvariantCulture);
-        if (providerComparison != 0)
-        {
-            return providerComparison;
-        }
-
-        int fileNameComparison = string.Compare(FileName, other.FileName, StringComparison.InvariantCulture);
-        if (fileNameComparison != 0)
-        {
-            return fileNameComparison;
-        }
-
-        //int opcodeComparison = string.Compare(Opcode, other.Opcode, StringComparison.InvariantCulture);
-        //if (opcodeComparison != 0)
-        //{
-        //    return opcodeComparison;
-        //}
-
         int idComparison = Id.CompareTo(other.Id);
         if (idComparison != 0)
         {
             return idComparison;
-        }
-
-        int messageFormatComparison =
-            string.Compare(MessageFormat, other.MessageFormat, StringComparison.InvariantCulture);
-        if (messageFormatComparison != 0)
-        {
-            return messageFormatComparison;
-        }
-
-        int levelComparison = string.Compare(Level, other.Level, StringComparison.InvariantCulture);
-        if (levelComparison != 0)
-        {
-            return levelComparison;
-        }
-
-        int flagsComparison = string.Compare(Flags, other.Flags, StringComparison.InvariantCulture);
-        if (flagsComparison != 0)
-        {
-            return flagsComparison;
         }
 
         return string.Compare(Function, other.Function, StringComparison.InvariantCulture);
@@ -119,9 +82,6 @@ public sealed class TraceMessageFormat : IEquatable<TraceMessageFormat>, ICompar
         }
 
         return MessageGuid.Equals(other.MessageGuid) &&
-               string.Equals(Provider, other.Provider, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(FileName, other.FileName, StringComparison.OrdinalIgnoreCase) &&
-               //string.Equals(Opcode, other.Opcode, StringComparison.OrdinalIgnoreCase) &&
                Id == other.Id;
     }
 
@@ -134,9 +94,6 @@ public sealed class TraceMessageFormat : IEquatable<TraceMessageFormat>, ICompar
     {
         HashCode hashCode = new();
         hashCode.Add(MessageGuid);
-        hashCode.Add(Provider, StringComparer.OrdinalIgnoreCase);
-        hashCode.Add(FileName, StringComparer.OrdinalIgnoreCase);
-        //hashCode.Add(Opcode, StringComparer.OrdinalIgnoreCase);
         hashCode.Add(Id);
         return hashCode.ToHashCode();
     }

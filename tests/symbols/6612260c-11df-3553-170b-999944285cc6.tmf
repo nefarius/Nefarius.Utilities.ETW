@@ -1,0 +1,147 @@
+// PDB:  dshidmini.pdb
+// PDB:  Last Updated :2024-11-03:01:04:26:104 (UTC) [Tracepdb]
+6612260c-11df-3553-170b-999944285cc6 sys // SRC=DsUsb.c MJ= MN=
+#typev DsUsb_c673 43 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSUSB FUNC=DsUdb_D0Exit
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c665 42 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSUSB FUNC=DsUdb_D0Exit
+{
+}
+#typev DsUsb_c124 15 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSUSB FUNC=DsUsbConfigContReaderForInterruptEndPoint
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c119 14 "%0 [%!FUNC!] ERROR:WdfUsbTargetPipeConfigContinuousReader failed %10!x!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=DsUsbConfigContReaderForInterruptEndPoint
+{
+status, ItemLong -- 10
+}
+#typev DsUsb_c94 13 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSUSB FUNC=DsUsbConfigContReaderForInterruptEndPoint
+{
+}
+#typev DsUsb_c691 44 "%0 [%!FUNC!] ERROR:%!FUNC! called with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=DsUsbEvtUsbInterruptReadersFailed
+{
+Status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c655 41 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSUSB FUNC=DsUsb_D0Entry
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c645 40 "%0 [%!FUNC!] ERROR:DsUsb_Ds3Init failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=DsUsb_D0Entry
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c631 39 "%0 [%!FUNC!] ERROR:Failed to start interrupt read pipe %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=DsUsb_D0Entry
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c619 38 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSUSB FUNC=DsUsb_D0Entry
+{
+}
+#typev DsUsb_c609 37 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSUSB FUNC=DsUsb_PrepareHardware
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c425 31 "%0 [%!FUNC!] ERROR:Device is not configured properly %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=DsUsb_PrepareHardware
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c542 36 "%0 [%!FUNC!] ERROR:Setting DsUsb_Ds3RequestHostAddress failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=DsUsb_PrepareHardware
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c520 35 "%0 [%!FUNC!] ERROR:Setting DEVPKEY_Bluetooth_DeviceAddress failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=DsUsb_PrepareHardware
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c478 34 "%0 [%!FUNC!]Device address: %10!02X!:%11!02X!:%12!02X!:%13!02X!:%14!02X!:%15!02X!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DSUSB FUNC=DsUsb_PrepareHardware
+{
+pDevCtx->DeviceAddress.Address[0], ItemLong -- 10
+pDevCtx->DeviceAddress.Address[1], ItemLong -- 11
+pDevCtx->DeviceAddress.Address[2], ItemLong -- 12
+pDevCtx->DeviceAddress.Address[3], ItemLong -- 13
+pDevCtx->DeviceAddress.Address[4], ItemLong -- 14
+pDevCtx->DeviceAddress.Address[5], ItemLong -- 15
+}
+#typev DsUsb_c464 33 "%0 [%!FUNC!] ERROR:Requesting device address failed with %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=DsUsb_PrepareHardware
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c438 32 "%0 [%!FUNC!] ERROR:DsUsbConfigContReaderForInterruptEndPoint failed with %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=DsUsb_PrepareHardware
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c412 30 "%0 [%!FUNC!]InterruptWritePipe is 0x%10!p!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DSUSB FUNC=DsUsb_PrepareHardware
+{
+pipe, ItemPtr -- 10
+}
+#typev DsUsb_c404 29 "%0 [%!FUNC!]InterruptReadPipe is 0x%10!p!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DSUSB FUNC=DsUsb_PrepareHardware
+{
+pipe, ItemPtr -- 10
+}
+#typev DsUsb_c375 28 "%0 [%!FUNC!] ERROR:Setting DEVPKEY_Device_FriendlyName failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=DsUsb_PrepareHardware
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c335 27 "%0 [%!FUNC!]Requesting iProduct failed (status: 0x%10!x!), device might not support this string" //   LEVEL=TRACE_LEVEL_WARNING FLAGS=TRACE_DEVICE FUNC=DsUsb_PrepareHardware
+{
+status, ItemLong -- 10
+}
+#typev DsUsb_c312 26 "%0 [%!FUNC!] ERROR:WdfUsbTargetDeviceSelectConfig failed %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=DsUsb_PrepareHardware
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c300 25 "%0 [%!FUNC!][USB] PID: 0x%10!04X!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSUSB FUNC=DsUsb_PrepareHardware
+{
+pDevCtx->ProductId, ItemLong -- 10
+}
+#typev DsUsb_c298 24 "%0 [%!FUNC!][USB] VID: 0x%10!04X!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSUSB FUNC=DsUsb_PrepareHardware
+{
+pDevCtx->VendorId, ItemLong -- 10
+}
+#typev DsUsb_c279 23 "%0 [%!FUNC!] ERROR:WdfUsbTargetDeviceCreate failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=DsUsb_PrepareHardware
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c264 22 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSUSB FUNC=DsUsb_PrepareHardware
+{
+}
+#typev DsUsb_c713 45 "%0 [%!FUNC!]%!FUNC! completed with status %10!s!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSUSB FUNC=EvtUsbRequestCompletionRoutine
+{
+Params->IoStatus.Status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c78 12 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSUSB FUNC=USB_SendControlRequest
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c70 11 "%0 [%!FUNC!] ERROR:WdfUsbTargetDeviceSendControlTransferSynchronously failed with status %10!s! (%11!d!)" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=USB_SendControlRequest
+{
+status, ItemNTSTATUS -- 10
+bytesTransferred, ItemLong -- 11
+}
+#typev DsUsb_c26 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSUSB FUNC=USB_SendControlRequest
+{
+}
+#typev DsUsb_c246 21 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSUSB FUNC=USB_WriteInterruptOutSync
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c236 20 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSUSB FUNC=USB_WriteInterruptOutSync
+{
+}
+#typev DsUsb_c214 19 "%0 [%!FUNC!] ERROR:WdfRequestSend failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=USB_WriteInterruptPipeAsync
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c191 18 "%0 [%!FUNC!] ERROR:WdfUsbTargetPipeFormatRequestForWrite failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=USB_WriteInterruptPipeAsync
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c174 17 "%0 [%!FUNC!] ERROR:WdfMemoryCreate failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=USB_WriteInterruptPipeAsync
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsUsb_c154 16 "%0 [%!FUNC!] ERROR:WdfRequestCreate failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=USB_WriteInterruptPipeAsync
+{
+status, ItemNTSTATUS -- 10
+}

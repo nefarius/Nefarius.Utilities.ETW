@@ -30,3 +30,34 @@ status, ItemNTSTATUS -- 10
 #typev Bluetooth.Request_c55 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_SendBrbSynchronously
 {
 }
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+#typev Bluetooth.Request_c179 15 "%0 [%!FUNC!] ERROR:Request send failed for request 0x%10!p!, Brb 0x%11!p!, Status code %12!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_SendBrbAsync
+{
+Request, ItemPtr -- 10
+Brb, ItemPtr -- 11
+status, ItemNTSTATUS -- 12
+}
+#typev Bluetooth.Request_c151 14 "%0 [%!FUNC!] ERROR:Formatting request 0x%10!p! with Brb 0x%11!p! failed, Status code %12!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_SendBrbAsync
+{
+Request, ItemPtr -- 10
+Brb, ItemPtr -- 11
+status, ItemNTSTATUS -- 12
+}
+#typev Bluetooth.Request_c128 13 "%0 [%!FUNC!] ERROR:Creating preallocated memory for Brb 0x%10!p! failed, Request to be formatted 0x%11!p!, Status code %12!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_SendBrbAsync
+{
+Brb, ItemPtr -- 10
+Request, ItemPtr -- 11
+status, ItemNTSTATUS -- 12
+}
+#typev Bluetooth.Request_c107 12 "%0 [%!FUNC!] ERROR:BrbSize has invalid value: %10!I64d!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_SendBrbAsync
+{
+BrbSize, ItemLongLong -- 10
+}
+#typev Bluetooth.Request_c85 11 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_SendBrbSynchronously
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.Request_c55 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_SendBrbSynchronously
+{
+}

@@ -7,9 +7,11 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 /// </summary>
 /// <remarks>
 ///     Partial sources from
-///     <a href="https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-inputtype-complextype#remarks">here</a>
-///     and
-///     <a href="https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-outputtype-complextype#remarks">here</a>
+///     <li>
+///         <ul>https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-inputtype-complextype#remarks</ul>
+///         <ul>https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-outputtype-complextype#remarks</ul>
+///         <ul>https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-#return-codes</ul>
+///     </li>
 /// </remarks>
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
@@ -63,7 +65,12 @@ public enum ItemType
     /// <summary>
     ///     A GUID value that is formatted in the registry string form, {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}.
     /// </summary>
-    ItemGuid
+    ItemGuid,
+
+    /// <summary>
+    ///     Represents a Windows error code and displays the string associated with the error.
+    /// </summary>
+    ItemWINERROR
 }
 
 public readonly struct FunctionParameter

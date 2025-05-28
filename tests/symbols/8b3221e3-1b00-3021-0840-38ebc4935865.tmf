@@ -22,3 +22,26 @@ status, ItemNTSTATUS -- 10
 #typev Bluetooth.L2CAP_c111 13 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_UnregisterL2CAPServer
 {
 }
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+#typev Bluetooth.L2CAP_c97 12 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_RegisterL2CAPServer
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.L2CAP_c83 11 "%0 [%!FUNC!] ERROR:BRB_REGISTER_PSM failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_RegisterL2CAPServer
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.L2CAP_c56 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_RegisterL2CAPServer
+{
+}
+#typev Bluetooth.L2CAP_c153 15 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_UnregisterL2CAPServer
+{
+}
+#typev Bluetooth.L2CAP_c142 14 "%0 [%!FUNC!] ERROR:BRB_L2CA_UNREGISTER_SERVER failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_UnregisterL2CAPServer
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.L2CAP_c111 13 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_UnregisterL2CAPServer
+{
+}

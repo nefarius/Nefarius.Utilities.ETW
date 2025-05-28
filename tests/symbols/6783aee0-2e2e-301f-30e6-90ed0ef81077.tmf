@@ -1,0 +1,140 @@
+// PDB:  dshidmini.pdb
+// PDB:  Last Updated :2024-11-03:01:04:26:104 (UTC) [Tracepdb]
+6783aee0-2e2e-301f-30e6-90ed0ef81077 sys // SRC=DsHidMiniDrv.c MJ= MN=
+#typev DsHidMiniDrv_c333 21 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DMF_DsHidMini_ChildModulesAdd
+{
+}
+#typev DsHidMiniDrv_c267 20 "%0 [%!FUNC!] ERROR:WdfDeviceQueryPropertyEx failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSHIDMINIDRV FUNC=DMF_DsHidMini_ChildModulesAdd
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsHidMiniDrv_c242 19 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DMF_DsHidMini_ChildModulesAdd
+{
+}
+#typev DsHidMiniDrv_c84 12 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DMF_DsHidMini_Create
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsHidMiniDrv_c74 11 "%0 [%!FUNC!] ERROR:DMF_ModuleCreate failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSHIDMINIDRV FUNC=DMF_DsHidMini_Create
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsHidMiniDrv_c46 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DMF_DsHidMini_Create
+{
+}
+#typev DsHidMiniDrv_c485 25 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DMF_DsHidMini_Open
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsHidMiniDrv_c477 24 "%0 [%!FUNC!] ERROR:HID device configuration failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSHIDMINIDRV FUNC=DMF_DsHidMini_Open
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsHidMiniDrv_c439 23 "%0 [%!FUNC!] ERROR:Unknown HID Device Mode: 0x%10!02X!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSHIDMINIDRV FUNC=DMF_DsHidMini_Open
+{
+pDevCtx->Configuration.HidDeviceMode, ItemLong -- 10
+}
+#typev DsHidMiniDrv_c351 22 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DMF_DsHidMini_Open
+{
+}
+#typev DsHidMiniDrv_c576 30 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_ProcessHidInputReport
+{
+}
+#typev DsHidMiniDrv_c569 29 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_ProcessHidInputReport
+{
+}
+#typev DsHidMiniDrv_c1270 51 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsBth_HidControlWriteContinuousRequestCompleted
+{
+}
+#typev DsHidMiniDrv_c1268 50 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsBth_HidControlWriteContinuousRequestCompleted
+{
+}
+#typev DsHidMiniDrv_c1226 49 "%0 [%!FUNC!] ERROR:Sending disconnect request failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSHIDMINIDRV FUNC=DsBth_HidInterruptReadContinuousRequestCompleted
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsHidMiniDrv_c1214 48 "%0 [%!FUNC!]!! Idle timeout detected, sending disconnect request" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DSHIDMINIDRV FUNC=DsBth_HidInterruptReadContinuousRequestCompleted
+{
+}
+#typev DsHidMiniDrv_c1182 47 "%0 [%!FUNC!]!! Prevention time after releasing alt mode toggle combo has passed. Allowing combo again" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DSHIDMINIDRV FUNC=DsBth_HidInterruptReadContinuousRequestCompleted
+{
+}
+#typev DsHidMiniDrv_c1163 46 "%0 [%!FUNC!]!! Alternative rumble mode toggling prevented" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DSHIDMINIDRV FUNC=DsBth_HidInterruptReadContinuousRequestCompleted
+{
+}
+#typev DsHidMiniDrv_c1132 45 "%0 [%!FUNC!]!! Toggling alternative rumble mode" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DSHIDMINIDRV FUNC=DsBth_HidInterruptReadContinuousRequestCompleted
+{
+}
+#typev DsHidMiniDrv_c1110 44 "%0 [%!FUNC!]!! Alternative mode toggle combination detected" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DSHIDMINIDRV FUNC=DsBth_HidInterruptReadContinuousRequestCompleted
+{
+}
+#typev DsHidMiniDrv_c1074 43 "%0 [%!FUNC!] ERROR:Sending disconnect request failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSHIDMINIDRV FUNC=DsBth_HidInterruptReadContinuousRequestCompleted
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsHidMiniDrv_c1062 42 "%0 [%!FUNC!]!! Sending disconnect request" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DSHIDMINIDRV FUNC=DsBth_HidInterruptReadContinuousRequestCompleted
+{
+}
+#typev DsHidMiniDrv_c1041 41 "%0 [%!FUNC!]!! Quick disconnect combination detected" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DSHIDMINIDRV FUNC=DsBth_HidInterruptReadContinuousRequestCompleted
+{
+}
+#typev DsHidMiniDrv_c914 40 "%0 [%!FUNC!]Updating battery status to %10!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsBth_HidInterruptReadContinuousRequestCompleted
+{
+battery, ItemLong -- 10
+}
+#typev DsHidMiniDrv_c888 39 "%0 [%!FUNC!]Battery status changed to %10!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsBth_HidInterruptReadContinuousRequestCompleted
+{
+battery, ItemLong -- 10
+}
+#typev DsHidMiniDrv_c813 36 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsBth_HidInterruptReadContinuousRequestCompleted
+{
+}
+#typev DsHidMiniDrv_c137 14 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsHidMini_GetFeature
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsHidMiniDrv_c128 13 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsHidMini_GetFeature
+{
+}
+#typev DsHidMiniDrv_c550 28 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsHidMini_RetrieveNextInputReport
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsHidMiniDrv_c535 27 "%0 [%!FUNC!] ERROR:Unsupported HID device mode: 0x%10!04X!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSHIDMINIDRV FUNC=DsHidMini_RetrieveNextInputReport
+{
+pDevCtx->Configuration.HidDeviceMode, ItemLong -- 10
+}
+#typev DsHidMiniDrv_c511 26 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsHidMini_RetrieveNextInputReport
+{
+}
+#typev DsHidMiniDrv_c163 16 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsHidMini_SetFeature
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsHidMiniDrv_c154 15 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsHidMini_SetFeature
+{
+}
+#typev DsHidMiniDrv_c209 18 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsHidMini_WriteReport
+{
+status, ItemNTSTATUS -- 10
+}
+#typev DsHidMiniDrv_c200 17 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsHidMini_WriteReport
+{
+}
+#typev DsHidMiniDrv_c785 35 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsUsb_EvtUsbInterruptPipeReadComplete
+{
+}
+#typev DsHidMiniDrv_c622 34 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsUsb_EvtUsbInterruptPipeReadComplete
+{
+}
+#typev DsHidMiniDrv_c609 33 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsUsb_EvtUsbInterruptPipeReadComplete
+{
+}
+#typev DsHidMiniDrv_c601 32 "%0 [%!FUNC!]Received %10!I64d! but expected %11!I64d!" //   LEVEL=TRACE_LEVEL_WARNING FLAGS=TRACE_DSHIDMINIDRV FUNC=DsUsb_EvtUsbInterruptPipeReadComplete
+{
+NumBytesTransferred, ItemLongLong -- 10
+sizeof(DS3_RAW_INPUT_REPORT), ItemLongLong -- 11
+}
+#typev DsHidMiniDrv_c594 31 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DsUsb_EvtUsbInterruptPipeReadComplete
+{
+}

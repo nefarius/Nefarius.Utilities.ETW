@@ -117,3 +117,121 @@ status, ItemNTSTATUS -- 10
 {
 RemoteAddress, ItemLongLongXX -- 10
 }
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+#typev BusLogic_c682 26 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Create
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c369 16 "%0 [%!FUNC!] ERROR:RtlStringFromGUID failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Create
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c434 17 "%0 [%!FUNC!] ERROR:RtlUnicodeStringPrintf failed for hardwareId with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Create
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c639 25 "%0 [%!FUNC!] ERROR:WdfSpinLockCreate for HidInterruptChannel failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Create
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c615 24 "%0 [%!FUNC!] ERROR:WdfRequestCreate for HidInterruptChannel failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Create
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c595 23 "%0 [%!FUNC!] ERROR:WdfSpinLockCreate for HidControlChannel failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Create
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c571 22 "%0 [%!FUNC!] ERROR:WdfRequestCreate for HidControlChannel failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Create
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c551 21 "%0 [%!FUNC!] ERROR:WdfMemoryCreate failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Create
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c518 20 "%0 [%!FUNC!] ERROR:BthPS3_PDO_AssignSlot failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Create
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c501 19 "%0 [%!FUNC!] ERROR:WdfCollectionAdd for PDO device object failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Create
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c485 18 "%0 [%!FUNC!] ERROR:DMF_Pdo_DevicePlugEx failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Create
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c226 15 "%0 [%!FUNC!] ERROR:RtlStringCbPrintfW failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Create
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c207 14 "%0 [%!FUNC!] ERROR:RtlUnicodeStringPrintf failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Create
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c190 13 "%0 [%!FUNC!] ERROR:BthPS3_PDO_QuerySlot failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Create
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c117 12 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Create
+{
+}
+#typev BusLogic_c828 33 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Destroy
+{
+}
+#typev BusLogic_c797 32 "%0 [%!FUNC!] ERROR:DMF_Pdo_DeviceUnPlugEx failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Destroy
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c779 31 "%0 [%!FUNC!]Found desired connection item in connection list (serial: %10!d!)" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Destroy
+{
+serial, ItemLong -- 10
+}
+#typev BusLogic_c749 30 "%0 [%!FUNC!] --> Entry <PdoContext=0x%10!p!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_Destroy
+{
+PdoContext, ItemPtr -- 10
+}
+#typev BusLogic_c897 40 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtContextCleanup
+{
+}
+#typev BusLogic_c891 39 "%0 [%!FUNC!]Cleaning up context 0x%10!p! of device object 0x%11!p!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtContextCleanup
+{
+pPdoCtx, ItemPtr -- 10
+Object, ItemPtr -- 11
+}
+#typev BusLogic_c885 38 "%0 [%!FUNC!]HID Interrupt channel event signalled" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtContextCleanup
+{
+}
+#typev BusLogic_c877 37 "%0 [%!FUNC!] ERROR:HID Interrupt - KeWaitForSingleObject failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtContextCleanup
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c863 36 "%0 [%!FUNC!]HID Control channel event signalled" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtContextCleanup
+{
+}
+#typev BusLogic_c855 35 "%0 [%!FUNC!] ERROR:HID Control - KeWaitForSingleObject failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtContextCleanup
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c840 34 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtContextCleanup
+{
+}
+#typev BusLogic_c99 11 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtDmfModulesAdd
+{
+}
+#typev BusLogic_c68 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtDmfModulesAdd
+{
+}
+#typev BusLogic_c721 28 "%0 [%!FUNC!]Found desired connection item in connection list" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_RetrieveByBthAddr
+{
+}
+#typev BusLogic_c734 29 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_RetrieveByBthAddr
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic_c702 27 "%0 [%!FUNC!] --> Entry <RemoteAddress=%10!012I64X!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_RetrieveByBthAddr
+{
+RemoteAddress, ItemLongLongXX -- 10
+}

@@ -1,0 +1,104 @@
+// PDB:  dshidmini.pdb
+// PDB:  Last Updated :2024-11-03:01:04:26:104 (UTC) [Tracepdb]
+10ab5e95-3a19-3bea-8e73-829a95a5dd10 sys // SRC=Ds3.c MJ= MN=
+#typev Ds3_c403 29 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DS3 FUNC=DS3_GetActiveRadioAddress
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Ds3_c355 28 "%0 [%!FUNC!] ERROR:BluetoothGetRadioInfo failed with error %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DS3 FUNC=DS3_GetActiveRadioAddress
+{
+error, ItemWINERROR -- 10
+}
+#typev Ds3_c334 27 "%0 [%!FUNC!] ERROR:BluetoothFindFirstRadio failed with error %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DS3 FUNC=DS3_GetActiveRadioAddress
+{
+error, ItemWINERROR -- 10
+}
+#typev Ds3_c327 26 "%0 [%!FUNC!] WARNING:No active host radio found." //   LEVEL=TRACE_LEVEL_WARNING FLAGS=TRACE_DS3 FUNC=DS3_GetActiveRadioAddress
+{
+}
+#typev Ds3_c309 25 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DS3 FUNC=DS3_GetActiveRadioAddress
+{
+}
+#typev Ds3_c544 40 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DS3 FUNC=DsBth_Ds3SixaxisInit
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Ds3_c536 39 "%0 [%!FUNC!] ERROR:DMF_DefaultTarget_SendSynchronously failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DS3 FUNC=DsBth_Ds3SixaxisInit
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Ds3_c512 38 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DS3 FUNC=DsBth_Ds3SixaxisInit
+{
+}
+#typev Ds3_c178 16 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3Init
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Ds3_c161 15 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3Init
+{
+}
+#typev Ds3_c490 36 "%0 [%!FUNC!] ERROR:DsUsb_Ds3SendPairingRequest failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3PairToNewHost
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Ds3_c474 35 "%0 [%!FUNC!]Device's current host address equals desired new address, skipping" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3PairToNewHost
+{
+}
+#typev Ds3_c453 34 "%0 [%!FUNC!]Pairing device to user defined MAC address" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3PairToNewHost
+{
+}
+#typev Ds3_c440 33 "%0 [%!FUNC!] ERROR:Failed to get active radio host address" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3PairToNewHost
+{
+}
+#typev Ds3_c433 32 "%0 [%!FUNC!]Pairing device to active radio host address" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3PairToNewHost
+{
+}
+#typev Ds3_c502 37 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3PairToNewHost
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Ds3_c423 31 "%0 [%!FUNC!]Pairing mode set to disabled. Skipping pairing process" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3PairToNewHost
+{
+}
+#typev Ds3_c417 30 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3PairToNewHost
+{
+}
+#typev Ds3_c151 14 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3RequestHostAddress
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Ds3_c144 13 "%0 [%!FUNC!] ERROR:Setting DEVPKEY_BluetoothRadio_Address failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3RequestHostAddress
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Ds3_c114 12 "%0 [%!FUNC!] ERROR:Setting DEVPKEY_DsHidMini_RO_LastHostRequestStatus failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3RequestHostAddress
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Ds3_c83 11 "%0 [%!FUNC!] ERROR:Requesting host address failed with %10!s!. Setting device's context host address to 00:00:00:00:00:00" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3RequestHostAddress
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Ds3_c50 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3RequestHostAddress
+{
+}
+#typev Ds3_c287 24 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3SendPairingRequest
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Ds3_c279 23 "%0 [%!FUNC!] ERROR:Setting host address failed with %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3SendPairingRequest
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Ds3_c246 22 "%0 [%!FUNC!]Sending pairing request with new host address defined as %10!02X!:%11!02X!:%12!02X!:%13!02X!:%14!02X!:%15!02X!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3SendPairingRequest
+{
+NewHostAddress.Address[0], ItemLong -- 10
+NewHostAddress.Address[1], ItemLong -- 11
+NewHostAddress.Address[2], ItemLong -- 12
+NewHostAddress.Address[3], ItemLong -- 13
+NewHostAddress.Address[4], ItemLong -- 14
+NewHostAddress.Address[5], ItemLong -- 15
+}
+#typev Ds3_c244 21 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DS3 FUNC=DsUsb_Ds3SendPairingRequest
+{
+}

@@ -1,0 +1,76 @@
+// PDB:  dshidmini.pdb
+// PDB:  Last Updated :2024-11-03:01:04:26:104 (UTC) [Tracepdb]
+a718b009-3cf8-3c67-ce2e-0b7960a0e111 sys // SRC=HID.FeatureReport.c MJ= MN=
+#typev HID.FeatureReport_c166 14 "%0 [%!FUNC!]-- Packet->reportId: %10!d!, Packet->reportBufferLen: %11!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_GetFeature
+{
+Packet->reportId, ItemLong -- 10
+Packet->reportBufferLen, ItemLong -- 11
+}
+#typev HID.FeatureReport_c160 13 "%0 [%!FUNC!]%!FUNC! Not implemented" //   LEVEL=TRACE_LEVEL_WARNING FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_GetFeature
+{
+}
+#typev HID.FeatureReport_c174 15 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_GetFeature
+{
+status, ItemNTSTATUS -- 10
+}
+#typev HID.FeatureReport_c95 12 "%0 [%!FUNC!]!! PID_BLOCK_LOAD_REPORT_ID (EffectBlockIndex: %10!d!)" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_GetFeature
+{
+pBlockLoad->EffectBlockIndex, ItemLong -- 10
+}
+#typev HID.FeatureReport_c29 11 "%0 [%!FUNC!]!! PID_POOL_REPORT_ID" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_GetFeature
+{
+}
+#typev HID.FeatureReport_c16 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_GetFeature
+{
+}
+#typev HID.FeatureReport_c307 31 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_SetFeature
+{
+status, ItemNTSTATUS -- 10
+}
+#typev HID.FeatureReport_c272 24 "%0 [%!FUNC!]!! ET Sawtooth Down" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_SetFeature
+{
+}
+#typev HID.FeatureReport_c275 25 "%0 [%!FUNC!]!! ET Spring" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_SetFeature
+{
+}
+#typev HID.FeatureReport_c278 26 "%0 [%!FUNC!]!! ET Damper" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_SetFeature
+{
+}
+#typev HID.FeatureReport_c281 27 "%0 [%!FUNC!]!! ET Inertia" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_SetFeature
+{
+}
+#typev HID.FeatureReport_c284 28 "%0 [%!FUNC!]!! ET Friction" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_SetFeature
+{
+}
+#typev HID.FeatureReport_c269 23 "%0 [%!FUNC!]!! ET Sawtooth Up" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_SetFeature
+{
+}
+#typev HID.FeatureReport_c254 18 "%0 [%!FUNC!]!! ET Constant Force" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_SetFeature
+{
+}
+#typev HID.FeatureReport_c257 19 "%0 [%!FUNC!]!! ET Ramp" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_SetFeature
+{
+}
+#typev HID.FeatureReport_c260 20 "%0 [%!FUNC!]!! ET Square" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_SetFeature
+{
+}
+#typev HID.FeatureReport_c263 21 "%0 [%!FUNC!]!! ET Sine" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_SetFeature
+{
+}
+#typev HID.FeatureReport_c266 22 "%0 [%!FUNC!]!! ET Triangle" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_SetFeature
+{
+}
+#typev HID.FeatureReport_c206 17 "%0 [%!FUNC!]!! PID_CREATE_NEW_EFFECT_REPORT" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_SetFeature
+{
+}
+#typev HID.FeatureReport_c295 30 "%0 [%!FUNC!]-- Packet->reportId: %10!d!, Packet->reportBufferLen: %11!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_SetFeature
+{
+Packet->reportId, ItemLong -- 10
+Packet->reportBufferLen, ItemLong -- 11
+}
+#typev HID.FeatureReport_c292 29 "%0 [%!FUNC!]%!FUNC! Not implemented" //   LEVEL=TRACE_LEVEL_WARNING FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_SetFeature
+{
+}
+#typev HID.FeatureReport_c188 16 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_SetFeature
+{
+}

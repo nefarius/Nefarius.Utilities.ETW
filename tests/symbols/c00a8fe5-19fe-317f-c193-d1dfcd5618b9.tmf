@@ -13,3 +13,17 @@ c00a8fe5-19fe-317f-c193-d1dfcd5618b9 DmfKFramework // SRC=DmfLiveKernelDump.c MJ
 #typev DmfLiveKernelDump_c164 12 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ModuleLiveKernelDump_ModuleCollectionInitialize
 {
 }
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+#typev DmfLiveKernelDump_c130 11 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_LiveKernelDump_ModuleInitialize
+{
+}
+#typev DmfLiveKernelDump_c88 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_LiveKernelDump_ModuleInitialize
+{
+}
+#typev DmfLiveKernelDump_c206 13 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ModuleLiveKernelDump_ModuleCollectionInitialize
+{
+}
+#typev DmfLiveKernelDump_c164 12 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ModuleLiveKernelDump_ModuleCollectionInitialize
+{
+}

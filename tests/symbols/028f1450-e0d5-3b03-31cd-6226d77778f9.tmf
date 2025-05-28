@@ -56,3 +56,60 @@ remoteName, ItemString -- 11
 #typev L2CAP.Connect_c62 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteConnect
 {
 }
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+#typev L2CAP.Connect_c399 23 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteConnect
+{
+status, ItemNTSTATUS -- 10
+}
+#typev L2CAP.Connect_c380 22 "%0 [%!FUNC!] ERROR:BthPS3_SendBrbAsync failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteConnect
+{
+status, ItemNTSTATUS -- 10
+}
+#typev L2CAP.Connect_c105 12 "%0 [%!FUNC!] ERROR:BthPS3_GetDeviceName failed with status %10!s!, dropping connection" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteConnect
+{
+status, ItemNTSTATUS -- 10
+}
+#typev L2CAP.Connect_c244 20 "%0 [%!FUNC!]Filter disabled, re-enabling in %10!d! seconds" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteConnect
+{
+DevCtx->Settings.AutoEnableFilterDelay, ItemLong -- 10
+}
+#typev L2CAP.Connect_c232 19 "%0 [%!FUNC!]Filter disabled" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteConnect
+{
+}
+#typev L2CAP.Connect_c224 18 "%0 [%!FUNC!] ERROR:BthPS3PSM_DisablePatchSync failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteConnect
+{
+status, ItemNTSTATUS -- 10
+}
+#typev L2CAP.Connect_c206 17 "%0 [%!FUNC!]Device %10!012I64X! not identified or denied, dropping connection" //   LEVEL=TRACE_LEVEL_WARNING FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteConnect
+{
+ConnectParams->BtAddress, ItemLongLongXX -- 10
+}
+#typev L2CAP.Connect_c277 21 "%0 [%!FUNC!] ERROR:ClientConnections_CreateAndInsert failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteConnect
+{
+status, ItemNTSTATUS -- 10
+}
+#typev L2CAP.Connect_c188 16 "%0 [%!FUNC!]Device %10!012I64X! identified as WIRELESS compatible" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteConnect
+{
+ConnectParams->BtAddress, ItemLongLongXX -- 10
+}
+#typev L2CAP.Connect_c169 15 "%0 [%!FUNC!]Device %10!012I64X! identified as MOTION compatible" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteConnect
+{
+ConnectParams->BtAddress, ItemLongLongXX -- 10
+}
+#typev L2CAP.Connect_c150 14 "%0 [%!FUNC!]Device %10!012I64X! identified as NAVIGATION compatible" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteConnect
+{
+ConnectParams->BtAddress, ItemLongLongXX -- 10
+}
+#typev L2CAP.Connect_c131 13 "%0 [%!FUNC!]Device %10!012I64X! identified as SIXAXIS compatible" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteConnect
+{
+ConnectParams->BtAddress, ItemLongLongXX -- 10
+}
+#typev L2CAP.Connect_c94 11 "%0 [%!FUNC!]Device %10!012I64X! name: %11!s!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteConnect
+{
+ConnectParams->BtAddress, ItemLongLongXX -- 10
+remoteName, ItemString -- 11
+}
+#typev L2CAP.Connect_c62 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_L2CAP FUNC=L2CAP_PS3_HandleRemoteConnect
+{
+}

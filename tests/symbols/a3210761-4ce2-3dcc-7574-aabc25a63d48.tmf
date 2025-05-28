@@ -1,0 +1,206 @@
+// PDB:  dshidmini.pdb
+// PDB:  Last Updated :2024-11-03:01:04:26:104 (UTC) [Tracepdb]
+a3210761-4ce2-3dcc-7574-aabc25a63d48 sys // SRC=Device.c MJ= MN=
+#typev Device_c1325 65 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DSHM_EvtWdfIoQueueIoDeviceControl
+{
+}
+#typev Device_c1314 63 "%0 [%!FUNC!]IOCTL_HID_DEVICERESET_NOTIFICATION not supported" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DSHM_EvtWdfIoQueueIoDeviceControl
+{
+}
+#typev Device_c1321 64 "%0 [%!FUNC!]Unhandled I/O control code 0x%10!X!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DSHM_EvtWdfIoQueueIoDeviceControl
+{
+IoControlCode, ItemLong -- 10
+}
+#typev Device_c1309 62 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DSHM_EvtWdfIoQueueIoDeviceControl
+{
+}
+#typev Device_c1289 61 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DmfDeviceModulesAdd
+{
+}
+#typev Device_c1185 60 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DmfDeviceModulesAdd
+{
+}
+#typev Device_c915 47 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_HotReloadEventCallback
+{
+}
+#typev Device_c889 46 "%0 [%!FUNC!]Reloaded configuration" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_HotReloadEventCallback
+{
+}
+#typev Device_c882 45 "%0 [%!FUNC!]Reloading configuration" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_HotReloadEventCallback
+{
+}
+#typev Device_c868 44 "%0 [%!FUNC!]Couldn't acquire lock, exiting" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_HotReloadEventCallback
+{
+}
+#typev Device_c853 43 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_HotReloadEventCallback
+{
+}
+#typev Device_c797 42 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_InitContext
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c784 41 "%0 [%!FUNC!] ERROR:CreateEventA failed with error: %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=DsDevice_InitContext
+{
+GetLastError(), ItemWINERROR -- 10
+}
+#typev Device_c768 40 "%0 [%!FUNC!] ERROR:WdfMemoryCreate failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=DsDevice_InitContext
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c745 39 "%0 [%!FUNC!] ERROR:ConvertStringSecurityDescriptorToSecurityDescriptor failed with error: %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=DsDevice_InitContext
+{
+GetLastError(), ItemWINERROR -- 10
+}
+#typev Device_c718 38 "%0 [%!FUNC!] ERROR:InitializeSecurityDescriptor failed with error: %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=DsDevice_InitContext
+{
+GetLastError(), ItemWINERROR -- 10
+}
+#typev Device_c703 37 "%0 [%!FUNC!] ERROR:WdfTimerCreate failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=DsDevice_InitContext
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c676 36 "%0 [%!FUNC!] ERROR:WdfWaitLockCreate failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=DsDevice_InitContext
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c655 35 "%0 [%!FUNC!] ERROR:WdfWaitLockCreate failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=DsDevice_InitContext
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c634 34 "%0 [%!FUNC!] ERROR:WdfWaitLockCreate failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=DsDevice_InitContext
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c498 30 "%0 [%!FUNC!] ERROR:WdfMemoryCreate failed with %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=DsDevice_InitContext
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c601 33 "%0 [%!FUNC!] ERROR:WdfTimerCreate (PostStartupTasks) failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSBTH FUNC=DsDevice_InitContext
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c574 32 "%0 [%!FUNC!] ERROR:WdfTimerCreate (StartupDelay) failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSBTH FUNC=DsDevice_InitContext
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c535 31 "%0 [%!FUNC!] ERROR:WdfMemoryCreate failed with %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=DsDevice_InitContext
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c472 29 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_InitContext
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c452 28 "%0 [%!FUNC!]Claimed device slot: %10!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_InitContext
+{
+slotIndex, ItemLong -- 10
+}
+#typev Device_c438 27 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_InitContext
+{
+}
+#typev Device_c1159 59 "%0 [%!FUNC!] ERROR:OpenEventW failed with %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DSUSB FUNC=DsDevice_InvokeLocalBthDisconnect
+{
+error, ItemWINERROR -- 10
+}
+#typev Device_c1138 58 "%0 [%!FUNC!]Found existing event %10!s!, signalling disconnect" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSUSB FUNC=DsDevice_InvokeLocalBthDisconnect
+{
+dcEventName, ItemWString -- 10
+}
+#typev Device_c418 26 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_ReadProperties
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c398 25 "%0 [%!FUNC!][BTH] PID: 0x%10!04X!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_ReadProperties
+{
+pDevCtx->ProductId, ItemLong -- 10
+}
+#typev Device_c389 24 "%0 [%!FUNC!] ERROR:Requesting DEVPKEY_Bluetooth_DevicePID failed with %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=DsDevice_ReadProperties
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c376 23 "%0 [%!FUNC!][BTH] VID: 0x%10!04X!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_ReadProperties
+{
+pDevCtx->VendorId, ItemLong -- 10
+}
+#typev Device_c367 22 "%0 [%!FUNC!] ERROR:Requesting DEVPKEY_Bluetooth_DeviceVID failed with %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=DsDevice_ReadProperties
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c350 21 "%0 [%!FUNC!]Device address: %10!012I64X!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_ReadProperties
+{
+*(PULONGLONG)&pDevCtx->DeviceAddress, ItemLongLongXX -- 10
+}
+#typev Device_c319 20 "%0 [%!FUNC!] ERROR:Requesting DEVPKEY_Bluetooth_DeviceAddress failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=DsDevice_ReadProperties
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c278 19 "%0 [%!FUNC!] ERROR:WdfDeviceQueryProperty failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=DsDevice_ReadProperties
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c262 18 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_ReadProperties
+{
+}
+#typev Device_c1091 57 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_RegisterBthDisconnectListener
+{
+}
+#typev Device_c1084 56 "%0 [%!FUNC!] ERROR:Failed to register wait for disconnect event" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=DsDevice_RegisterBthDisconnectListener
+{
+}
+#typev Device_c1066 55 "%0 [%!FUNC!] ERROR:Failed to create disconnect event" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=DsDevice_RegisterBthDisconnectListener
+{
+}
+#typev Device_c1035 54 "%0 [%!FUNC!]Disconnect event name: %10!s!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_RegisterBthDisconnectListener
+{
+dcEventName, ItemWString -- 10
+}
+#typev Device_c1019 53 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_RegisterBthDisconnectListener
+{
+}
+#typev Device_c1008 52 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_RegisterHotReloadListener
+{
+}
+#typev Device_c999 51 "%0 [%!FUNC!] ERROR:RegisterWaitForSingleObject failed with error %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=DsDevice_RegisterHotReloadListener
+{
+error, ItemWINERROR -- 10
+}
+#typev Device_c978 50 "%0 [%!FUNC!] ERROR:FindFirstChangeNotificationA failed with error %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=DsDevice_RegisterHotReloadListener
+{
+error, ItemWINERROR -- 10
+}
+#typev Device_c961 49 "%0 [%!FUNC!] WARNING:Configuration file %10!s! not found, can't listen for changes" //   LEVEL=TRACE_LEVEL_WARNING FLAGS=TRACE_DEVICE FUNC=DsDevice_RegisterHotReloadListener
+{
+configPath, ItemString -- 10
+}
+#typev Device_c926 48 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsDevice_RegisterHotReloadListener
+{
+}
+#typev Device_c245 17 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsHidMini_DeviceCleanup
+{
+}
+#typev Device_c214 16 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=DsHidMini_DeviceCleanup
+{
+}
+#typev Device_c200 15 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=dshidminiEvtDeviceAdd
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c160 14 "%0 [%!FUNC!] ERROR:WdfDeviceCreateDeviceInterface failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=dshidminiEvtDeviceAdd
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c140 13 "%0 [%!FUNC!] ERROR:WdfIoQueueCreate failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=dshidminiEvtDeviceAdd
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c113 12 "%0 [%!FUNC!] ERROR:DsDevice_InitContext failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=dshidminiEvtDeviceAdd
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c88 11 "%0 [%!FUNC!] ERROR:WdfDeviceCreate failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DEVICE FUNC=dshidminiEvtDeviceAdd
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Device_c37 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DEVICE FUNC=dshidminiEvtDeviceAdd
+{
+}

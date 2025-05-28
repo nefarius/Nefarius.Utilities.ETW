@@ -65,3 +65,69 @@ status, ItemNTSTATUS -- 10
 #typev BusLogic.State_c355 21 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_SelfManagedIoInit
 {
 }
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+#typev BusLogic.State_c465 26 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_DisconnectRequestCompleted
+{
+}
+#typev BusLogic.State_c455 25 "%0 [%!FUNC!] --> Entry <status=%10!s!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_DisconnectRequestCompleted
+{
+Params->IoStatus.Status, ItemNTSTATUS -- 10
+}
+#typev BusLogic.State_c320 20 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtPostCreate
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic.State_c284 19 "%0 [%!FUNC!] ERROR:WdfDriverOpenParametersRegistryKey failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtPostCreate
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic.State_c264 18 "%0 [%!FUNC!] ERROR:WdfIoQueueCreate (HidControlReadRequests) failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtPostCreate
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic.State_c249 17 "%0 [%!FUNC!] ERROR:WdfIoQueueCreate (HidControlReadRequests) failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtPostCreate
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic.State_c234 16 "%0 [%!FUNC!] ERROR:WdfIoQueueCreate (HidControlReadRequests) failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtPostCreate
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic.State_c219 15 "%0 [%!FUNC!] ERROR:WdfIoQueueCreate (HidControlReadRequests) failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtPostCreate
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic.State_c185 14 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtPostCreate
+{
+}
+#typev BusLogic.State_c169 13 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtPreCreate
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic.State_c153 12 "%0 [%!FUNC!] ERROR:WdfDeviceInitAssignSDDLString failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtPreCreate
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic.State_c98 11 "%0 [%!FUNC!] ERROR:WdfDriverOpenParametersRegistryKey failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtPreCreate
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic.State_c54 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_EvtPreCreate
+{
+}
+#typev BusLogic.State_c436 24 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_SelfManagedIoInit
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic.State_c418 23 "%0 [%!FUNC!] ERROR:WdfDeviceAssignS0IdleSettings failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_SelfManagedIoInit
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic.State_c378 22 "%0 [%!FUNC!] ERROR:WdfDriverOpenParametersRegistryKey failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_SelfManagedIoInit
+{
+status, ItemNTSTATUS -- 10
+}
+#typev BusLogic.State_c355 21 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BUSLOGIC FUNC=BthPS3_PDO_SelfManagedIoInit
+{
+}

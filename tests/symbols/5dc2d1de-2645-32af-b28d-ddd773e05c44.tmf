@@ -1,0 +1,438 @@
+// PDB:  dshidmini.pdb
+// PDB:  Last Updated :2024-11-03:01:04:26:104 (UTC) [Tracepdb]
+5dc2d1de-2645-32af-b28d-ddd773e05c44 DmfUModules.Library // SRC=Dmf_ContinuousRequestTarget.c MJ= MN=
+#typev Dmf_ContinuousRequestTarget_c568 17 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CompletionParamsInputBufferAndOutputBufferGet
+{
+}
+#typev Dmf_ContinuousRequestTarget_c889 27 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CompletionRoutine
+{
+}
+#typev Dmf_ContinuousRequestTarget_c882 26 "%0 [%!FUNC!]Request=0x%10!p! [Completion Request]" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CompletionRoutine
+{
+Request, ItemPtr -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c874 25 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CompletionRoutine
+{
+}
+#typev Dmf_ContinuousRequestTarget_c1006 33 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CompletionRoutinePassive
+{
+}
+#typev Dmf_ContinuousRequestTarget_c1000 32 "%0 [%!FUNC!]Request=0x%10!p! [Enqueue Completion]" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CompletionRoutinePassive
+{
+Request, ItemPtr -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c985 31 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CompletionRoutinePassive
+{
+}
+#typev Dmf_ContinuousRequestTarget_c1069 36 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CompletionRoutinePassiveReuse
+{
+}
+#typev Dmf_ContinuousRequestTarget_c1063 35 "%0 [%!FUNC!]Request=0x%10!p! [Enqueue Completion]" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CompletionRoutinePassiveReuse
+{
+Request, ItemPtr -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1048 34 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CompletionRoutinePassiveReuse
+{
+}
+#typev Dmf_ContinuousRequestTarget_c943 30 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CompletionRoutineReuse
+{
+}
+#typev Dmf_ContinuousRequestTarget_c936 29 "%0 [%!FUNC!]Request=0x%10!p! [Completion Request]" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CompletionRoutineReuse
+{
+Request, ItemPtr -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c928 28 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CompletionRoutineReuse
+{
+}
+#typev Dmf_ContinuousRequestTarget_c1616 61 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CreateBuffersAndFormatRequestForRequestType
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1593 60 "%0 [%!FUNC!]ContinuousRequestTarget_FormatRequestForRequestType fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CreateBuffersAndFormatRequestForRequestType
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1580 59 "%0 [%!FUNC!]DMF_BufferPool_GetWithMemory fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CreateBuffersAndFormatRequestForRequestType
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1553 58 "%0 [%!FUNC!]DMF_BufferPool_GetWithMemory fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CreateBuffersAndFormatRequestForRequestType
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1531 57 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_CreateBuffersAndFormatRequestForRequestType
+{
+}
+#typev Dmf_ContinuousRequestTarget_c1490 56 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_FormatRequestForRequestType
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1457 53 "%0 [%!FUNC!]WdfIoTargetFormatRequestForIoctl fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_FormatRequestForRequestType
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1440 52 "%0 [%!FUNC!]WdfIoTargetFormatRequestForRead fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_FormatRequestForRequestType
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1426 51 "%0 [%!FUNC!]WdfIoTargetFormatRequestForWrite fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_FormatRequestForRequestType
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1483 55 "%0 [%!FUNC!]Invalid RequestType:%10!d! fails: ntStatus=%11!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_FormatRequestForRequestType
+{
+RequestType, ItemLong -- 10
+ntStatus, ItemNTSTATUS -- 11
+}
+#typev Dmf_ContinuousRequestTarget_c1408 50 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_FormatRequestForRequestType
+{
+}
+#typev Dmf_ContinuousRequestTarget_c229 13 "%0 [%!FUNC!]WdfCollectionAdd fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_PendingCollectionListAdd
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c437 14 "%0 [%!FUNC!]Attempt to reuse sent request: request=0x%10!p!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_PendingCollectionReuseListSearch
+{
+currentRequestFromList, ItemPtr -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c797 22 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_ProcessAsynchronousRequestSingle
+{
+}
+#typev Dmf_ContinuousRequestTarget_c789 21 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_ProcessAsynchronousRequestSingle
+{
+}
+#typev Dmf_ContinuousRequestTarget_c835 24 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_ProcessAsynchronousRequestSingleReuse
+{
+}
+#typev Dmf_ContinuousRequestTarget_c827 23 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_ProcessAsynchronousRequestSingleReuse
+{
+}
+#typev Dmf_ContinuousRequestTarget_c759 20 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_ProcessAsynchronousRequestSingleRoot
+{
+}
+#typev Dmf_ContinuousRequestTarget_c699 19 "%0 [%!FUNC!]WdfRequestGetStatus Request=0x%10!p! fails: ntStatus=%11!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_ProcessAsynchronousRequestSingleRoot
+{
+Request, ItemPtr -- 10
+ntStatus, ItemNTSTATUS -- 11
+}
+#typev Dmf_ContinuousRequestTarget_c682 18 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_ProcessAsynchronousRequestSingleRoot
+{
+}
+#typev Dmf_ContinuousRequestTarget_c1272 46 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_ProcessAsynchronousRequestStream
+{
+}
+#typev Dmf_ContinuousRequestTarget_c1238 43 "%0 [%!FUNC!]ContinuousRequestTarget_StreamRequestSend success: ntStatus=%10!s! Request=0x%11!p!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_ProcessAsynchronousRequestStream
+{
+ntStatus, ItemNTSTATUS -- 10
+Request, ItemPtr -- 11
+}
+#typev Dmf_ContinuousRequestTarget_c1234 42 "%0 [%!FUNC!]ContinuousRequestTarget_StreamRequestSend fails: ntStatus=%10!s! Request=0x%11!p!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_ProcessAsynchronousRequestStream
+{
+ntStatus, ItemNTSTATUS -- 10
+Request, ItemPtr -- 11
+}
+#typev Dmf_ContinuousRequestTarget_c1228 41 "%0 [%!FUNC!]Request=0x%10!p! Send again" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_ProcessAsynchronousRequestStream
+{
+Request, ItemPtr -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1244 44 "%0 [%!FUNC!]Cancel due to callback: ntStatus=%10!s! Request=0x%11!p!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_ProcessAsynchronousRequestStream
+{
+ntStatus, ItemNTSTATUS -- 10
+Request, ItemPtr -- 11
+}
+#typev Dmf_ContinuousRequestTarget_c1158 40 "%0 [%!FUNC!]Request=0x%10!p! [Not Stopped]" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_ProcessAsynchronousRequestStream
+{
+Request, ItemPtr -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1153 39 "%0 [%!FUNC!]Request=0x%10!p! [STOPPED]" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_ProcessAsynchronousRequestStream
+{
+Request, ItemPtr -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1127 38 "%0 [%!FUNC!]WdfRequestGetStatus Request=0x%10!p! completes: ntStatus=%11!s!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_ProcessAsynchronousRequestStream
+{
+Request, ItemPtr -- 10
+ntStatus, ItemNTSTATUS -- 11
+}
+#typev Dmf_ContinuousRequestTarget_c1118 37 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_ProcessAsynchronousRequestStream
+{
+}
+#typev Dmf_ContinuousRequestTarget_c2507 89 "%0 [%!FUNC!]Request=0x%10!p! [Queued Callback]" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_QueuedWorkitemCallbackStream
+{
+workitemContext->Request, ItemPtr -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2371 87 "%0 [%!FUNC!]WdfRequestSend completed with ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestCreateAndSend
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2366 86 "%0 [%!FUNC!]WdfRequestGetStatus returned ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestCreateAndSend
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2344 85 "%0 [%!FUNC!]WdfRequestAllocateTimer fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestCreateAndSend
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2332 84 "%0 [%!FUNC!]RequestTarget_PendingCollectionListAdd fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestCreateAndSend
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2285 83 "%0 [%!FUNC!]DMF_BufferPool_Get fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestCreateAndSend
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2261 82 "%0 [%!FUNC!]ContinuousRequestTarget_FormatRequestForRequestType fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestCreateAndSend
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2248 81 "%0 [%!FUNC!]WdfMemoryCreate for position fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestCreateAndSend
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2415 88 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestCreateAndSend
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2229 80 "%0 [%!FUNC!]WdfMemoryCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestCreateAndSend
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2208 79 "%0 [%!FUNC!]WdfRequestCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestCreateAndSend
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2182 78 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestCreateAndSend
+{
+}
+#typev Dmf_ContinuousRequestTarget_c2109 77 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestSendReuse
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2064 76 "%0 [%!FUNC!]WdfRequestSend ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestSendReuse
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2059 75 "%0 [%!FUNC!]WdfRequestGetStatus fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestSendReuse
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2032 74 "%0 [%!FUNC!]WdfRequestAllocateTimer fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestSendReuse
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2020 73 "%0 [%!FUNC!]ContinuousRequestTarget_PendingCollectionListAdd fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestSendReuse
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1989 72 "%0 [%!FUNC!]DMF_BufferPool_Get fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestSendReuse
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1947 71 "%0 [%!FUNC!]ContinuousRequestTarget_FormatRequestForRequestType fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestSendReuse
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1934 70 "%0 [%!FUNC!]WdfMemoryCreatePreallocated fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestSendReuse
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1916 69 "%0 [%!FUNC!]WdfMemoryCreatePreallocated fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestSendReuse
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1899 68 "%0 [%!FUNC!]WdfRequestReuse fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestSendReuse
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1884 67 "%0 [%!FUNC!]ContinuousRequestTarget_PendingCollectionReuseListSearch fails" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestSendReuse
+{
+}
+#typev Dmf_ContinuousRequestTarget_c1854 66 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestSendReuse
+{
+}
+#typev Dmf_ContinuousRequestTarget_c2590 96 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestsCancel
+{
+}
+#typev Dmf_ContinuousRequestTarget_c2578 94 "%0 [%!FUNC!]Cancel Pending Requests: END" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestsCancel
+{
+}
+#typev Dmf_ContinuousRequestTarget_c2575 93 "%0 [%!FUNC!]WdfRequestCancelSentRequest Request[%10!d!]=0x%11!p!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestsCancel
+{
+requestIndex, ItemLong -- 10
+request, ItemPtr -- 11
+}
+#typev Dmf_ContinuousRequestTarget_c2570 92 "%0 [%!FUNC!]Cancel Pending Requests: START requestsToCancel=%10!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestsCancel
+{
+requestsToCancel, ItemLong -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2541 90 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_RequestsCancel
+{
+}
+#typev Dmf_ContinuousRequestTarget_c2670 102 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_StopAndWait
+{
+}
+#typev Dmf_ContinuousRequestTarget_c2668 101 "%0 [%!FUNC!]Rundown Completed" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_StopAndWait
+{
+}
+#typev Dmf_ContinuousRequestTarget_c2661 100 "%0 [%!FUNC!]WdfRequestCancelSentRequest transientRequest=0x%10!p!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_StopAndWait
+{
+transientRequest, ItemPtr -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2628 98 "%0 [%!FUNC!]Wait for in-flight callback" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_StopAndWait
+{
+}
+#typev Dmf_ContinuousRequestTarget_c2617 97 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_StopAndWait
+{
+}
+#typev Dmf_ContinuousRequestTarget_c1319 48 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_StreamCompletionRoutine
+{
+}
+#typev Dmf_ContinuousRequestTarget_c1311 47 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_StreamCompletionRoutine
+{
+}
+#typev Dmf_ContinuousRequestTarget_c1360 49 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_StreamCompletionRoutinePassive
+{
+}
+#typev Dmf_ContinuousRequestTarget_c1779 65 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_StreamRequestSend
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1752 64 "%0 [%!FUNC!]ContinuousRequestTarget_CreateBuffersAndFormatRequestForRequestType fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_StreamRequestSend
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1707 63 "%0 [%!FUNC!]WdfRequestSend fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_StreamRequestSend
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c1650 62 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=ContinuousRequestTarget_StreamRequestSend
+{
+}
+#typev Dmf_ContinuousRequestTarget_c2987 108 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_ChildModulesAdd
+{
+}
+#typev Dmf_ContinuousRequestTarget_c2854 107 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_ChildModulesAdd
+{
+}
+#typev Dmf_ContinuousRequestTarget_c3249 115 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_Close
+{
+}
+#typev Dmf_ContinuousRequestTarget_c3244 114 "%0 [%!FUNC!]No outstanding PendingReuseRequests." //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_Close
+{
+}
+#typev Dmf_ContinuousRequestTarget_c3240 113 "%0 [%!FUNC!]Wait for outstanding %10!d! PendingReuseRequests DmfModule=0x%11!p!..." //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_Close
+{
+outstandingRequests, ItemLong -- 10
+DmfModule, ItemPtr -- 11
+}
+#typev Dmf_ContinuousRequestTarget_c3189 112 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_Close
+{
+}
+#typev Dmf_ContinuousRequestTarget_c2748 104 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_ModuleD0Entry
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2710 103 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_ModuleD0Entry
+{
+}
+#typev Dmf_ContinuousRequestTarget_c2806 106 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_ModuleD0Exit
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c2785 105 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_ModuleD0Exit
+{
+}
+#typev Dmf_ContinuousRequestTarget_c3114 110 "%0 [%!FUNC!]WdfRequestCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_Open
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c3155 111 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_Open
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c3024 109 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_Open
+{
+}
+#typev Dmf_ContinuousRequestTarget_c3419 121 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_Cancel
+{
+}
+#typev Dmf_ContinuousRequestTarget_c3331 118 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_Create
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c3328 117 "%0 [%!FUNC!]DMF_ModuleCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_Create
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c3295 116 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_Create
+{
+}
+#typev Dmf_ContinuousRequestTarget_c3498 123 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_IoTargetClear
+{
+}
+#typev Dmf_ContinuousRequestTarget_c3477 122 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_IoTargetClear
+{
+}
+#typev Dmf_ContinuousRequestTarget_c3549 125 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_IoTargetSet
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c3528 124 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_IoTargetSet
+{
+}
+#typev Dmf_ContinuousRequestTarget_c3651 129 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_ReuseCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c3627 128 "%0 [%!FUNC!]ContinuousRequestTarget_PendingCollectionListAdd fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_ReuseCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c3611 127 "%0 [%!FUNC!]WdfRequestCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_ReuseCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c3584 126 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_ReuseCreate
+{
+}
+#typev Dmf_ContinuousRequestTarget_c3711 131 "%0 [%!FUNC!] <-- Exit <returnValue=%10!d!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_ReuseDelete
+{
+returnValue, ItemLong -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c3685 130 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_ReuseDelete
+{
+}
+#typev Dmf_ContinuousRequestTarget_c3803 133 "%0 [%!FUNC!]ContinuousRequestTarget_RequestSendReuse fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_ReuseSend
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c3765 132 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_ReuseSend
+{
+}
+#typev Dmf_ContinuousRequestTarget_c3988 137 "%0 [%!FUNC!]ContinuousRequestTarget_RequestCreateAndSend fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_SendEx
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c3951 136 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_SendEx
+{
+}
+#typev Dmf_ContinuousRequestTarget_c4065 139 "%0 [%!FUNC!]ContinuousRequestTarget_RequestCreateAndSend fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_SendSynchronously
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c4038 138 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_SendSynchronously
+{
+}
+#typev Dmf_ContinuousRequestTarget_c4176 141 "%0 [%!FUNC!]ContinuousRequestTarget_StreamRequestSend fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_Start
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c4102 140 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_Start
+{
+}
+#typev Dmf_ContinuousRequestTarget_c4236 143 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_StopAndWait
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev Dmf_ContinuousRequestTarget_c4214 142 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ContinuousRequestTarget_StopAndWait
+{
+}
