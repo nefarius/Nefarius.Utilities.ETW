@@ -30,13 +30,13 @@ public class EtlParserBenchmarks
     }
 
     [Benchmark]
-    public bool BthPs3EtlTraceDecodingTestBenchmark()
+    public bool BthPs3EtlTraceDecodingBenchmark()
     {
         return Shared.BthPs3EtlTraceDecoding();
     }
 
     [Benchmark]
-    public bool DsHidMiniEtlTraceDecodingTestBenchmark()
+    public bool DsHidMiniEtlTraceDecodingBenchmark()
     {
         return Shared.DsHidMiniEtlTraceDecoding();
     }
