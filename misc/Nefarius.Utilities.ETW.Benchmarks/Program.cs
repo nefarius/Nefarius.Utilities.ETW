@@ -17,16 +17,28 @@ public class EtlParserBenchmarks
     {
     }
 
-    /*[Benchmark]
+    [Benchmark]
     public IReadOnlyList<TraceMessageFormat> TmfFileParserBenchmark()
     {
         return Shared.ExtractFromFormatFiles();
-    }*/
+    }
 
     [Benchmark]
     public ReadOnlyCollection<TraceMessageFormat> PdbFileParserBenchmark()
     {
         return Shared.ExtractFromSymbolFiles();
+    }
+
+    [Benchmark]
+    public bool BthPs3EtlTraceDecodingTestBenchmark()
+    {
+        return Shared.BthPs3EtlTraceDecoding();
+    }
+
+    [Benchmark]
+    public bool DsHidMiniEtlTraceDecodingTestBenchmark()
+    {
+        return Shared.DsHidMiniEtlTraceDecoding();
     }
 }
 
