@@ -18,7 +18,7 @@
         <MinVerTagPrefix>v</MinVerTagPrefix>
     </PropertyGroup>
 
-    <Import Project="$(SolutionDir)CommonProjectProperties.targets" />
+    <Import Project="$(PrijectDir)..\CommonProjectProperties.targets" />
 
     <ItemGroup>
         <PackageReference Include="FastMember" Version="1.5.0" />

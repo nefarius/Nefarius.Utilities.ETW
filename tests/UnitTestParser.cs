@@ -34,7 +34,7 @@ public class Tests
     [Test]
     public void TmfFileParserTest()
     {
-        IReadOnlyList<TraceMessageFormat> result = ExtractFromFormatFiles();
+        IReadOnlyList<TraceMessageFormat> result = Shared.ExtractFromFormatFiles();
 
         TraceMessageFormat sample = result.Single(format => format.Opcode.Equals("Bluetooth_Context_c149"));
 
@@ -51,7 +51,7 @@ public class Tests
     [Test]
     public void PdbFileParserTest()
     {
-        ReadOnlyCollection<TraceMessageFormat> result = ExtractFromSymbolFiles();
+        ReadOnlyCollection<TraceMessageFormat> result = Shared.ExtractFromSymbolFiles();
 
         TraceMessageFormat sample = result.Single(format => format.Opcode.Equals("Bluetooth_Context_c149"));
 
@@ -65,8 +65,8 @@ public class Tests
     [Test]
     public void PlausibilityTest()
     {
-        IReadOnlyList<TraceMessageFormat> lhs = ExtractFromFormatFiles();
-        ReadOnlyCollection<TraceMessageFormat> rhs = ExtractFromSymbolFiles();
+        IReadOnlyList<TraceMessageFormat> lhs = Shared.ExtractFromFormatFiles();
+        ReadOnlyCollection<TraceMessageFormat> rhs = Shared.ExtractFromSymbolFiles();
 
         List<string> formats = rhs.Select(s => s.MessageFormat).ToList();
         List<ItemType> types = rhs
@@ -90,25 +90,6 @@ public class Tests
         Assert.That(lhs, Is.EquivalentTo(rhs));
     }
 
-    private static ReadOnlyCollection<TraceMessageFormat> ExtractFromFormatFiles()
-    {
-        return TmfFilesDirectoryDecodingContextType
-            .CreateFrom(@".\symbols")
-            .SelectMany(item => item.TraceMessageFormats)
-            .Distinct()
-            .ToList()
-            .AsReadOnly();
-    }
-
-    private static ReadOnlyCollection<TraceMessageFormat> ExtractFromSymbolFiles()
-    {
-        return PdbFileDecodingContextType
-            .CreateFrom(@".\symbols\BthPS3.pdb", @".\symbols\BthPS3PSM.pdb")
-            .SelectMany(pdb => pdb.TraceMessageFormats)
-            .Distinct()
-            .ToList()
-            .AsReadOnly();
-    }
 
     /// <summary>
     ///     Decodes a sample .etl file with TMFs from PDBs.
