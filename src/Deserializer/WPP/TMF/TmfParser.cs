@@ -37,7 +37,7 @@ public sealed partial class TmfParser
     /// </summary>
     /// <param name="path">The directory to search in.</param>
     /// <returns>A collection of extracted <see cref="TraceMessageFormat" /> entries.</returns>
-    public IReadOnlyList<TraceMessageFormat> ParseDirectory(string path)
+    public IEnumerable<TraceMessageFormat> ParseDirectory(string path)
     {
         List<TraceMessageFormat> messages = [];
 
@@ -48,7 +48,7 @@ public sealed partial class TmfParser
             messages.AddRange(ParseFile(fs));
         }
 
-        return messages.Distinct().ToList().AsReadOnly();
+        return messages.Distinct();
     }
 
     /// <summary>

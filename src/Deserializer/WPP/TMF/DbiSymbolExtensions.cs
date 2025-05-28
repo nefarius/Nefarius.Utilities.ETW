@@ -9,7 +9,7 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 internal static class DbiSymbolExtensions
 {
     public static IEnumerable<SymProc32AnnotationPair> ExtractTmfAnnotations(
-        this List<MsPdb.DbiSymbol> symbols
+        this IReadOnlyList<MsPdb.DbiSymbol> symbols
     )
     {
         for (int i = 0; i < symbols.Count;)

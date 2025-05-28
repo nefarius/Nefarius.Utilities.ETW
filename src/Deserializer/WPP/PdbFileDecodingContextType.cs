@@ -32,12 +32,9 @@ public sealed class PdbFileDecodingContextType()
             .ToList()
             .ExtractTmfAnnotations();
 
-        List<TraceMessageFormat> result = parser
+        TraceMessageFormats = parser
             .ExtractTraceMessageFormats(annotations)
-            .Distinct()
-            .ToList();
-
-        TraceMessageFormats = result.AsReadOnly();
+            .Distinct();
     }
 
     /// <summary>
