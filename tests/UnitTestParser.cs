@@ -95,7 +95,7 @@ public class Tests
     ///     Decodes a sample .etl file with TMFs from PDBs.
     /// </summary>
     [Test]
-    public void WppTraceDecodingTest()
+    public void BthPs3EtlTraceDecodingTest()
     {
         const string etwFilePath = @".\traces\BthPS3_0.etl";
 
@@ -119,6 +119,33 @@ public class Tests
         ms.Seek(0, SeekOrigin.Begin);
 
         using FileStream outFile = File.OpenWrite("BthPS3_0.json");
+        ms.CopyTo(outFile);
+
+        Assert.Pass();
+    }
+
+    [Test]
+    public void DsHidMiniEtlTraceDecodingTest()
+    {
+        const string etwFilePath = @".\traces\DsHidMini.etl";
+
+        JsonWriterOptions options = new() { Indented = true };
+
+        using MemoryStream ms = new();
+        using Utf8JsonWriter jsonWriter = new(ms, options);
+        DecodingContext decodingContext = new(new PdbFileDecodingContextType(@".\symbols\DsHidMini.pdb"));
+
+        if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
+            {
+                converterOptions.WppDecodingContext = decodingContext;
+            }))
+        {
+            Assert.Fail();
+        }
+
+        ms.Seek(0, SeekOrigin.Begin);
+
+        using FileStream outFile = File.OpenWrite("DsHidMini.json");
         ms.CopyTo(outFile);
 
         Assert.Pass();

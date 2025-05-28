@@ -5,6 +5,9 @@ using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
 namespace Nefarius.Utilities.ETW.Tests;
 
+/// <summary>
+///     Code shared between tests and benchmark projects.
+/// </summary>
 public static class Shared
 {
     public static ReadOnlyCollection<TraceMessageFormat> ExtractFromFormatFiles()
