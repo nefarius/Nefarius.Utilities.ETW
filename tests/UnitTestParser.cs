@@ -116,7 +116,7 @@ public class Tests
     [Test]
     public void WppTraceDecodingTest()
     {
-        string etwFilePath = @".\traces\BthPS3_0.etl";
+        const string etwFilePath = @".\traces\BthPS3_0.etl";
 
         JsonWriterOptions options = new() { Indented = true };
 
