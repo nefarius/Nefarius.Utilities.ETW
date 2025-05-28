@@ -59,6 +59,10 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                 ItemType.ItemGuid => eventRecordReader.ReadGuid(),
                 // unsigned 32-bit integer, DWORD, Windows Error Code
                 ItemType.ItemWINERROR => eventRecordReader.ReadUInt32(),
+                // An IEEE 8-byte floating-point number
+                ItemType.ItemDouble => eventRecordReader.ReadDouble(),
+                // An unsigned 64-bit integer
+                ItemType.ItemULongLong => eventRecordReader.ReadUInt64(),
                 // should never happen, make some noise if it does
                 _ => throw new NotImplementedException($"Type of item {parameter.Type} not implemented.")
             };
