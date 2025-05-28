@@ -104,7 +104,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                             uint ntStatus = (uint)pair.Value;
                             return NtStatus.Values.TryGetValue(ntStatus, out string? status)
                                 ? $"{status} (0x{ntStatus:X8})"
-                                : $"<unknown NTSTATUS value> (0x{ntStatus:X8})";
+                                : $"Unknown NTSTATUS Error code: 0x{ntStatus:X8}";
                         }
                         
                         // handle WINERROR translation
