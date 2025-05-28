@@ -8,7 +8,7 @@ namespace Nefarius.Utilities.ETW.Tests;
 
 public class Tests
 {
-    private const int ExpectedTypesCount = 1253;
+    private const int ExpectedTypesCount = 2610;
 
     private static readonly TraceMessageFormat ExpectedSampleType = new()
     {

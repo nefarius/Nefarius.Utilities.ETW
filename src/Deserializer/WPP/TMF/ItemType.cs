@@ -80,5 +80,8 @@ public enum ItemType
     /// <summary>
     ///     An IEEE 8-byte floating-point number.
     /// </summary>
-    ItemDouble
+    ItemDouble,
+    
+    // TODO: implement me!
+    ItemWString
 }

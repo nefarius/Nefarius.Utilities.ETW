@@ -20,7 +20,11 @@ public static class Shared
     public static ReadOnlyCollection<TraceMessageFormat> ExtractFromSymbolFiles()
     {
         return PdbFileDecodingContextType
-            .CreateFrom(@".\symbols\BthPS3.pdb", @".\symbols\BthPS3PSM.pdb")
+            .CreateFrom(
+                @".\symbols\BthPS3.pdb",
+                @".\symbols\BthPS3PSM.pdb",
+                @".\symbols\DsHidMini.pdb"
+                )
             .SelectMany(pdb => pdb.TraceMessageFormats)
             .Distinct()
             .ToList()
