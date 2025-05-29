@@ -146,6 +146,35 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
         }
     }
 
+    private string? ReadUnicodeStringProperty(PROPERTY_DATA_DESCRIPTOR* descriptor, uint size)
+    {
+        byte* propertyBuffer = (byte*)Marshal.AllocHGlobal((int)size);
+
+        try
+        {
+            WIN32_ERROR getPrimPropRet = (WIN32_ERROR)PInvoke.TdhGetProperty(
+                eventRecordReader.NativeEventRecord,
+                0,
+                null,
+                1,
+                descriptor,
+                size,
+                propertyBuffer
+            );
+
+            if (getPrimPropRet != WIN32_ERROR.ERROR_SUCCESS)
+            {
+                throw new TdhGetPropertyException(getPrimPropRet);
+            }
+            
+            return Marshal.PtrToStringUni((IntPtr)propertyBuffer);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal((IntPtr)propertyBuffer);
+        }
+    }
+    
     /// <summary>
     ///     Decodes well-known WPP properties from a given <see cref="EVENT_RECORD" />.
     /// </summary>
@@ -246,9 +275,8 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                         // TODO: can there be more than these?
                         // see: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-#software-tracing
                         //.Replace("%!FUNC!", format.Function),
-                        // TODO: can those ever come populated?
-                        nameof(ComponentName) => "",
-                        nameof(SubComponentName) => "",
+                        nameof(ComponentName) => ReadUnicodeStringProperty(&propertyDescriptor, propSize),
+                        nameof(SubComponentName) => ReadUnicodeStringProperty(&propertyDescriptor, propSize),
                         _ => value
                     };
                 }
@@ -279,7 +307,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
 
                 if (getPrimPropRet != WIN32_ERROR.ERROR_SUCCESS)
                 {
-                    throw new TdhGetPropertyException(infoRet);
+                    throw new TdhGetPropertyException(getPrimPropRet);
                 }
 
                 // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
