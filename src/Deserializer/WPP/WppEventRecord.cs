@@ -277,7 +277,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                         //.Replace("%!FUNC!", format.Function),
                         nameof(ComponentName) => ReadUnicodeStringProperty(&propertyDescriptor, propSize),
                         nameof(SubComponentName) => ReadUnicodeStringProperty(&propertyDescriptor, propSize),
-                        _ => throw new NotImplementedException($"Unknown property name {propertyName} encountered.")
+                        _ => throw new NotImplementedException($"Unknown property \"{propertyName}\" encountered.")
                     };
                 }
 
