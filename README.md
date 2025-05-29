@@ -23,7 +23,9 @@ contributors.*
 
 ## Known limitations
 
-- Currently relies on Windows-only APIs so no support for other platforms 🪟
+- Currently relies on **Windows-only** APIs so no support for other platforms
+- Not all WPP extended format specification strings are implemented
+- Not all TMF item types are implemented
 
 ## Documentation
 
