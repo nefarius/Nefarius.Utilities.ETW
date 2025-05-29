@@ -66,37 +66,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                 {
                     // value results in a string
                     case "s":
-                        // handle "enum" values like %irql%
-                        if (pair.Parameter is { Type: ItemType.ItemListByte, ListItems: not null })
-                        {
-                            return pair.Parameter.ListItems[(byte)pair.Value];
-                        }
-
-                        // handle NTSTATUS translation
-                        if (pair.Parameter.Type == ItemType.ItemNTSTATUS)
-                        {
-                            uint ntStatus = (uint)pair.Value;
-                            return NtStatus.Values.TryGetValue(ntStatus, out string? status)
-                                ? $"{status} (0x{ntStatus:X8})"
-                                : $"Unknown NTSTATUS Error code: 0x{ntStatus:X8}";
-                        }
-
-                        // handle WINERROR translation
-                        if (pair.Parameter.Type == ItemType.ItemWINERROR)
-                        {
-                            uint error = (uint)pair.Value;
-                            return new Win32Exception((int)error).Message;
-                        }
-
-                        // handle HRESULT translation
-                        if (pair.Parameter.Type == ItemType.ItemHRESULT)
-                        {
-                            uint hr = (uint)pair.Value;
-                            return Marshal.GetExceptionForHR((int)hr)?.Message ??
-                                   $"Unknown HRESULT Error code: 0x{hr:X8}";
-                        }
-
-                        return pair.Value.ToString() ?? throw new InvalidOperationException("Unexpected null value.");
+                        return ItemToString(pair);
                     // pointer values
                     case "p":
                         return pair.Value switch
@@ -137,6 +107,42 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
         });
 
         return formatted;
+    }
+
+    private static string ItemToString(FunctionParameterValuePair pair)
+    {
+        // handle "enum" values like %irql%
+        if (pair.Parameter is { Type: ItemType.ItemListByte, ListItems: not null })
+        {
+            return pair.Parameter.ListItems[(byte)pair.Value];
+        }
+
+        switch (pair.Parameter.Type)
+        {
+            // handle NTSTATUS translation
+            case ItemType.ItemNTSTATUS:
+                {
+                    uint ntStatus = (uint)pair.Value;
+                    return NtStatus.Values.TryGetValue(ntStatus, out string? status)
+                        ? $"{status} (0x{ntStatus:X8})"
+                        : $"Unknown NTSTATUS Error code: 0x{ntStatus:X8}";
+                }
+            // handle WINERROR translation
+            case ItemType.ItemWINERROR:
+                {
+                    uint error = (uint)pair.Value;
+                    return new Win32Exception((int)error).Message;
+                }
+            // handle HRESULT translation
+            case ItemType.ItemHRESULT:
+                {
+                    uint hr = (uint)pair.Value;
+                    return Marshal.GetExceptionForHR((int)hr)?.Message ??
+                           $"Unknown HRESULT Error code: 0x{hr:X8}";
+                }
+            default:
+                return pair.Value.ToString() ?? throw new InvalidOperationException("Unexpected null value.");
+        }
     }
 
     /// <summary>
