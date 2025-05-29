@@ -25,6 +25,7 @@ contributors.*
 
 - Currently relies on **Windows-only** APIs so no support for other platforms
 - Not all WPP extended format specification strings are implemented
+- User prefixes are currently not implemented
 
 ## Documentation
 
