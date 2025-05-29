@@ -117,6 +117,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
             return pair.Parameter.ListItems[(byte)pair.Value];
         }
 
+        // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
         switch (pair.Parameter.Type)
         {
             // handle NTSTATUS translation
