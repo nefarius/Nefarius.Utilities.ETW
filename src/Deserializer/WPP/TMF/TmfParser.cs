@@ -10,34 +10,34 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 ///     Trace Message Format parsing utilities.
 /// </summary>
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
-public sealed partial class TmfParser
+public static partial class TmfParser
 {
     [GeneratedRegex(
         @"(\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\}{0,1}) ([a-zA-Z0-9_\.]*)")]
-    private partial Regex HeaderRegex();
+    private static partial Regex HeaderRegex();
 
     [GeneratedRegex(@"\/\/ SRC=([\w\-. ]+) MJ=")]
-    private partial Regex FileNameRegex();
+    private static partial Regex FileNameRegex();
 
     [GeneratedRegex(@"^\/\/.*$")]
-    private partial Regex CommentRegex();
+    private static partial Regex CommentRegex();
 
     [GeneratedRegex(
         @"^#typev ([a-zA-Z0-9_\.]*) (\d*) ""(.*)"" \/\/ *LEVEL=([a-zA-Z0-9_]*) FLAGS=([a-zA-Z0-9_]*)(?: FUNC=([a-zA-Z0-9_]*))?")]
-    private partial Regex TypeDefinitionRegex();
+    private static partial Regex TypeDefinitionRegex();
 
     [GeneratedRegex(@"^\}$")]
-    private partial Regex ParamsEndRegex();
+    private static partial Regex ParamsEndRegex();
 
     [GeneratedRegex(@"^([ -~]*), ([a-zA-Z0-9]*) *(?:\(([^)]*)\))? \-\- (\d*) *$")]
-    private partial Regex ParameterBodyRegex();
+    private static partial Regex ParameterBodyRegex();
 
     /// <summary>
     ///     Processes a given directory of <c>.TMF</c> files and parses them.
     /// </summary>
     /// <param name="path">The directory to search in.</param>
     /// <returns>A collection of extracted <see cref="TraceMessageFormat" /> entries.</returns>
-    public IEnumerable<TraceMessageFormat> ParseDirectory(string path)
+    public static IEnumerable<TraceMessageFormat> ParseDirectory(string path)
     {
         List<TraceMessageFormat> messages = [];
 
@@ -58,7 +58,7 @@ public sealed partial class TmfParser
     /// <param name="functionName">Optional function name to provide if missing from the <paramref name="reader" /> content.</param>
     /// <param name="throwOnError">True to throw exception if a required field is missing, false to silently ignore.</param>
     /// <returns>A collection of extracted <see cref="TraceMessageFormat" /> entries.</returns>
-    private ReadOnlyCollection<TraceMessageFormat> ParseFile(TextReader reader, string? functionName = null,
+    private static ReadOnlyCollection<TraceMessageFormat> ParseFile(TextReader reader, string? functionName = null,
         bool throwOnError = false)
     {
         List<TraceMessageFormat> messages = [];
@@ -185,11 +185,12 @@ public sealed partial class TmfParser
     }
 
     /// <summary>
-    ///     Converts a collection of <see cref="SymProc32AnnotationPair"/> into <see cref="TraceMessageFormat"/>s.
+    ///     Converts a collection of <see cref="SymProc32AnnotationPair" /> into <see cref="TraceMessageFormat" />s.
     /// </summary>
-    /// <param name="pairs">The source <see cref="SymProc32AnnotationPair"/>s to convert.</param>
-    /// <returns>A collection of extracted <see cref="TraceMessageFormat"/>s.</returns>
-    internal IEnumerable<TraceMessageFormat> ExtractTraceMessageFormats(IEnumerable<SymProc32AnnotationPair> pairs)
+    /// <param name="pairs">The source <see cref="SymProc32AnnotationPair" />s to convert.</param>
+    /// <returns>A collection of extracted <see cref="TraceMessageFormat" />s.</returns>
+    internal static IEnumerable<TraceMessageFormat> ExtractTraceMessageFormats(
+        IEnumerable<SymProc32AnnotationPair> pairs)
     {
         foreach ((MsPdb.SymProc32 proc, List<MsPdb.SymAnnotation> annotations) in pairs)
         {

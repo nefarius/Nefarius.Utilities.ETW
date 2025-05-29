@@ -21,8 +21,6 @@ public sealed class PdbFileDecodingContextType()
     {
         ArgumentException.ThrowIfNullOrEmpty(path);
 
-        TmfParser parser = new();
-
         using KaitaiStream stream = new(File.OpenRead(path));
         MsPdb pdb = new(stream);
 
@@ -32,7 +30,7 @@ public sealed class PdbFileDecodingContextType()
             .ToList()
             .ExtractTmfAnnotations();
 
-        TraceMessageFormats = parser
+        TraceMessageFormats = TmfParser
             .ExtractTraceMessageFormats(annotations)
             .Distinct();
     }

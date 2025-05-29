@@ -19,9 +19,7 @@ public sealed class TmfFilesDirectoryDecodingContextType()
     {
         ArgumentException.ThrowIfNullOrEmpty(path);
 
-        TmfParser tmfParser = new();
-
-        TraceMessageFormats = tmfParser
+        TraceMessageFormats = TmfParser
             .ParseDirectory(path)
             .Distinct();
     }
