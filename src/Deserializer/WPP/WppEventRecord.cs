@@ -225,6 +225,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                                 // TODO: what even is this one?
                                 // Not listed here: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/trace-message-prefix
                                 // I guess it is %!STDPREFIX!
+                                // more info: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/how-do-i-add-a-prefix-and-suffix-to-a-trace-message-#configuration-block-syntax
                                 .Replace("%0 ", string.Empty)
                                 // TODO: can there be more than these?
                                 // see: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-#software-tracing
