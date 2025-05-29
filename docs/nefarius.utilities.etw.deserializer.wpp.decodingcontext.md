@@ -5,11 +5,10 @@ Namespace: Nefarius.Utilities.ETW.Deserializer.WPP
 WPP decoding context used to extract TMF information from resources like `.PDB` or `.TMF` files.
 
 ```csharp
-public sealed class DecodingContext : System.IDisposable
+public sealed class DecodingContext
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md)<br>
-Implements [IDisposable](https://docs.microsoft.com/en-us/dotnet/api/system.idisposable)
+Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md)
 
 ## Constructors
 
@@ -26,18 +25,7 @@ public DecodingContext(IList<DecodingContextType> decodingTypes)
 `decodingTypes` [IList&lt;DecodingContextType&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ilist-1)<br>
 One or more [DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md)s to look up decoding information in.
 
-#### Exceptions
-
-[Win32Exception](https://docs.microsoft.com/en-us/dotnet/api/system.componentmodel.win32exception)<br>
-One or more TDH API calls failed.
-
 ## Methods
-
-### <a id="methods-dispose"/>**Dispose()**
-
-```csharp
-public void Dispose()
-```
 
 ### <a id="methods-extendwith"/>**ExtendWith(IList&lt;DecodingContextType&gt;)**
 
@@ -58,8 +46,18 @@ One or more [DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.deco
 
 The extended [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md) instance.
 
-### <a id="methods-finalize"/>**Finalize()**
+### <a id="methods-gettracemessageformatfor"/>**GetTraceMessageFormatFor(Nullable&lt;Guid&gt;, Int32)**
 
 ```csharp
-protected void Finalize()
+internal TraceMessageFormat GetTraceMessageFormatFor(Nullable<Guid> messageGuid, int id)
 ```
+
+#### Parameters
+
+`messageGuid` [Nullable&lt;Guid&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.nullable-1)<br>
+
+`id` [Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)<br>
+
+#### Returns
+
+[TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md)
