@@ -1,5 +1,4 @@
 ﻿using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 
 using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
@@ -20,7 +19,6 @@ public sealed class DecodingContext
     ///     New decoding context instance.
     /// </summary>
     /// <param name="decodingTypes">One or more <see cref="DecodingContextType" />s to look up decoding information in.</param>
-    /// <exception cref="Win32Exception">One or more TDH API calls failed.</exception>
     public DecodingContext(params IList<DecodingContextType> decodingTypes)
     {
         ArgumentNullException.ThrowIfNull(decodingTypes);
