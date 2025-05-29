@@ -309,7 +309,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                         value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(FILETIME));
                         break;
                     default:
-                        throw new InvalidCastException();
+                        throw new NotImplementedException($"Property type {propertyType} not implemented.");
                 }
 
                 if (value is not null)
