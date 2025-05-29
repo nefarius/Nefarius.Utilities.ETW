@@ -222,6 +222,8 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                         nameof(FunctionName) => format.Function,
                         nameof(FormattedString) =>
                             BuildFormattedString(format)
+                                // TODO: what even is this one?
+                                // Not listed here: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/trace-message-prefix
                                 .Replace("%0 ", string.Empty)
                                 // TODO: can there be more than these?
                                 // see: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-#software-tracing
