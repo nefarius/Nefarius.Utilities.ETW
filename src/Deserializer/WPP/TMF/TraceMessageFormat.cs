@@ -111,4 +111,10 @@ public sealed class TraceMessageFormat : IEquatable<TraceMessageFormat>, ICompar
     public IReadOnlyList<FunctionParameter> FunctionParameters { get; set; } = new List<FunctionParameter>();
 
     #endregion
+    
+    #region Useful meta properties
+
+    public string? OriginalSymbolFileName { get; init; }
+    
+    #endregion
 }

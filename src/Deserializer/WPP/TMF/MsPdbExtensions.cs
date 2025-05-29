@@ -8,7 +8,7 @@ internal static class MsPdbExtensions
     ///     Grabs the original file name from the PDB stream.
     /// </summary>
     /// <returns>The PDB name or null if not found.</returns>
-    private static string? GetOriginalPdbName(this MsPdb pdb)
+    public static string? GetOriginalPdbName(this MsPdb pdb)
     {
         MsPdb.UModuleInfo? pdbModule = pdb.DbiStream.ModulesList.Items
             .FirstOrDefault(info => info.Module.EcInfo.PdbFilenameIndex != 0);

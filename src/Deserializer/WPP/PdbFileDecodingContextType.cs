@@ -23,6 +23,7 @@ public sealed class PdbFileDecodingContextType()
 
         using KaitaiStream stream = new(File.OpenRead(path));
         MsPdb pdb = new(stream);
+        string? originalName = pdb.GetOriginalPdbName();
 
         IEnumerable<SymProc32AnnotationPair> annotations = pdb
             .DbiStream.ModulesList.Items
@@ -31,7 +32,7 @@ public sealed class PdbFileDecodingContextType()
             .ExtractTmfAnnotations();
 
         TraceMessageFormats = TmfParser
-            .ExtractTraceMessageFormats(annotations)
+            .ExtractTraceMessageFormats(annotations, originalName)
             .Distinct();
     }
 

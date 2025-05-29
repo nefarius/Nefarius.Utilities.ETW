@@ -45,7 +45,7 @@ public static partial class TmfParser
         {
             using StreamReader fs = File.OpenText(filePath);
 
-            messages.AddRange(ParseFile(fs));
+            messages.AddRange(ParseFile(fs, originalSymbolFileName: Path.GetFileName(filePath)));
         }
 
         return messages.Distinct();
@@ -56,10 +56,11 @@ public static partial class TmfParser
     /// </summary>
     /// <param name="reader">Source file stream.</param>
     /// <param name="functionName">Optional function name to provide if missing from the <paramref name="reader" /> content.</param>
+    /// <param name="originalSymbolFileName">Optional source file name the data was extracted from.</param>
     /// <param name="throwOnError">True to throw exception if a required field is missing, false to silently ignore.</param>
     /// <returns>A collection of extracted <see cref="TraceMessageFormat" /> entries.</returns>
     private static ReadOnlyCollection<TraceMessageFormat> ParseFile(TextReader reader, string? functionName = null,
-        bool throwOnError = false)
+        string? originalSymbolFileName = null, bool throwOnError = false)
     {
         List<TraceMessageFormat> messages = [];
 
@@ -134,7 +135,8 @@ public static partial class TmfParser
                 MessageFormat = messageFormat,
                 Level = level,
                 Flags = flags,
-                Function = function
+                Function = function,
+                OriginalSymbolFileName = originalSymbolFileName
             };
 
             string? paramsBegin = reader.ReadLine();
@@ -188,9 +190,10 @@ public static partial class TmfParser
     ///     Converts a collection of <see cref="SymProc32AnnotationPair" /> into <see cref="TraceMessageFormat" />s.
     /// </summary>
     /// <param name="pairs">The source <see cref="SymProc32AnnotationPair" />s to convert.</param>
+    /// <param name="originalSymbolFileName">Optional source file name the data was extracted from.</param>
     /// <returns>A collection of extracted <see cref="TraceMessageFormat" />s.</returns>
     internal static IEnumerable<TraceMessageFormat> ExtractTraceMessageFormats(
-        IEnumerable<SymProc32AnnotationPair> pairs)
+        IEnumerable<SymProc32AnnotationPair> pairs, string? originalSymbolFileName = null)
     {
         foreach ((MsPdb.SymProc32 proc, List<MsPdb.SymAnnotation> annotations) in pairs)
         {
@@ -198,7 +201,7 @@ public static partial class TmfParser
                          string.Join(Environment.NewLine, annotation.Strings.Skip(1))))
             {
                 using StringReader sr = new(block);
-                ReadOnlyCollection<TraceMessageFormat> results = ParseFile(sr, proc.Name.Value);
+                ReadOnlyCollection<TraceMessageFormat> results = ParseFile(sr, proc.Name.Value, originalSymbolFileName);
                 if (results.Count != 0)
                 {
                     yield return results[0];
