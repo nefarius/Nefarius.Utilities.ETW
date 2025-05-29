@@ -5,26 +5,6 @@
 /// </summary>
 public sealed class TraceMessageFormat : IEquatable<TraceMessageFormat>, IComparable<TraceMessageFormat>, IComparable
 {
-    public Guid MessageGuid { get; init; }
-
-    public required string Provider { get; init; }
-
-    public required string FileName { get; init; }
-
-    public required string Opcode { get; init; }
-
-    public int Id { get; init; }
-
-    public required string MessageFormat { get; init; }
-
-    public required string Level { get; init; }
-
-    public required string Flags { get; init; }
-
-    public required string Function { get; init; }
-
-    public IReadOnlyList<FunctionParameter> FunctionParameters { get; set; } = new List<FunctionParameter>();
-
     public int CompareTo(object? obj)
     {
         if (obj is null)
@@ -107,4 +87,28 @@ public sealed class TraceMessageFormat : IEquatable<TraceMessageFormat>, ICompar
     {
         return !Equals(left, right);
     }
+
+    #region Base TMF essential properties
+
+    public Guid MessageGuid { get; init; }
+
+    public required string Provider { get; init; }
+
+    public required string FileName { get; init; }
+
+    public required string Opcode { get; init; }
+
+    public int Id { get; init; }
+
+    public required string MessageFormat { get; init; }
+
+    public required string Level { get; init; }
+
+    public required string Flags { get; init; }
+
+    public required string Function { get; init; }
+
+    public IReadOnlyList<FunctionParameter> FunctionParameters { get; set; } = new List<FunctionParameter>();
+
+    #endregion
 }
