@@ -25,7 +25,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
     /// </summary>
     private ushort GuidTypeNameFormatId => eventRecordReader.NativeEventRecord->EventHeader.EventDescriptor.Id;
 
-    private string BuildFormattedString(TraceMessageFormat format)
+    private string SubstituteFunctionParameters(TraceMessageFormat format)
     {
         // no parameters means it's basically a verbatim message string
         if (!format.FunctionParameters.Any())
@@ -86,6 +86,14 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                         {
                             uint error = (uint)pair.Value;
                             return new Win32Exception((int)error).Message;
+                        }
+
+                        // handle HRESULT translation
+                        if (pair.Parameter.Type == ItemType.ItemHRESULT)
+                        {
+                            uint hr = (uint)pair.Value;
+                            return Marshal.GetExceptionForHR((int)hr)?.Message ??
+                                   $"Unknown HRESULT Error code: 0x{hr:X8}";
                         }
 
                         return pair.Value.ToString() ?? throw new InvalidOperationException("Unexpected null value.");
@@ -220,15 +228,15 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                         nameof(FlagsName) => format.Flags,
                         nameof(LevelName) => format.Level,
                         nameof(FunctionName) => format.Function,
-                        nameof(FormattedString) => BuildFormattedString(format),
-                                // TODO: what even is this one?
-                                // Not listed here: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/trace-message-prefix
-                                // I guess it is %!STDPREFIX!
-                                // more info: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/how-do-i-add-a-prefix-and-suffix-to-a-trace-message-#configuration-block-syntax
-                                //.Replace("%0 ", string.Empty)
-                                // TODO: can there be more than these?
-                                // see: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-#software-tracing
-                                //.Replace("%!FUNC!", format.Function),
+                        nameof(FormattedString) => SubstituteFunctionParameters(format),
+                        // TODO: what even is this one?
+                        // Not listed here: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/trace-message-prefix
+                        // I guess it is %!STDPREFIX!
+                        // more info: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/how-do-i-add-a-prefix-and-suffix-to-a-trace-message-#configuration-block-syntax
+                        //.Replace("%0 ", string.Empty)
+                        // TODO: can there be more than these?
+                        // see: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-#software-tracing
+                        //.Replace("%!FUNC!", format.Function),
                         // TODO: can those ever come populated?
                         nameof(ComponentName) => "",
                         nameof(SubComponentName) => "",
