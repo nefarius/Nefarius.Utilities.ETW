@@ -22,7 +22,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{D7BDD91D
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nefarius.Utilities.ETW.Tests", "tests\Nefarius.Utilities.ETW.Tests.csproj", "{921BC504-4099-44A6-B1C1-849717491ACA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nefarius.Utilities.ETW.Benchmarks", "misc\Nefarius.Utilities.ETW.Benchmarks\Nefarius.Utilities.ETW.Benchmarks.csproj", "{C53933F7-7AA7-4FB1-9CBB-13BFFD56B0B0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nefarius.Utilities.ETW.Benchmarks", "benchmarks\Nefarius.Utilities.ETW.Benchmarks.csproj", "{C53933F7-7AA7-4FB1-9CBB-13BFFD56B0B0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
