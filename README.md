@@ -42,3 +42,4 @@ contributors.*
 - [Learn / Windows / Windows Drivers / What are the WPP extended format specification strings](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-#software-tracing)
 - [kaitai-pdb](https://github.com/smx-smx/kaitai-pdb)
 - [MinVer](https://github.com/adamralph/minver)
+- [Fast access to .net fields/properties](https://github.com/mgravell/fast-member)
