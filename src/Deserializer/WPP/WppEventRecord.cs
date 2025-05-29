@@ -166,7 +166,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
             {
                 throw new TdhGetPropertyException(getPrimPropRet);
             }
-            
+
             return Marshal.PtrToStringUni((IntPtr)propertyBuffer);
         }
         finally
@@ -174,7 +174,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
             Marshal.FreeHGlobal((IntPtr)propertyBuffer);
         }
     }
-    
+
     /// <summary>
     ///     Decodes well-known WPP properties from a given <see cref="EVENT_RECORD" />.
     /// </summary>
