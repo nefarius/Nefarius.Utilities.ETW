@@ -152,7 +152,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
 
         try
         {
-            WIN32_ERROR getPrimPropRet = (WIN32_ERROR)PInvoke.TdhGetProperty(
+            WIN32_ERROR ret = (WIN32_ERROR)PInvoke.TdhGetProperty(
                 eventRecordReader.NativeEventRecord,
                 0,
                 null,
@@ -162,9 +162,9 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                 propertyBuffer
             );
 
-            if (getPrimPropRet != WIN32_ERROR.ERROR_SUCCESS)
+            if (ret != WIN32_ERROR.ERROR_SUCCESS)
             {
-                throw new TdhGetPropertyException(getPrimPropRet);
+                throw new TdhGetPropertyException(ret);
             }
 
             return Marshal.PtrToStringUni((IntPtr)propertyBuffer);
