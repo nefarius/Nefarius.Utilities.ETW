@@ -90,7 +90,7 @@ public sealed class TraceMessageFormat : IEquatable<TraceMessageFormat>, ICompar
 
     #region Base TMF essential properties
 
-    public Guid MessageGuid { get; init; }
+    public required Guid MessageGuid { get; init; }
 
     public required string Provider { get; init; }
 
@@ -98,7 +98,7 @@ public sealed class TraceMessageFormat : IEquatable<TraceMessageFormat>, ICompar
 
     public required string Opcode { get; init; }
 
-    public int Id { get; init; }
+    public required int Id { get; init; }
 
     public required string MessageFormat { get; init; }
 
