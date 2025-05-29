@@ -70,21 +70,12 @@ public enum ItemType
     #endregion
 
     #region Complex types
-
-    /// <summary>
-    ///     A string of 8-bit characters. By default or when used with the xs:string output type, the string is assumed to have
-    ///     been encoded using the event provider s ANSI code page. When used with the win:Xml, win:Json, or win:Utf8 output
-    ///     types, the string is assumed to have been encoded using UTF-8.
-    /// </summary>
+    
     ItemString,
     ItemRString,
     ItemRWString,
     ItemWString,
     ItemPString,
-
-    /// <summary>
-    ///     A string of 16-bit characters. By default, assumed to have been encoded using UTF-16LE.
-    /// </summary>
     ItemPWString,
 
     ItemSid,

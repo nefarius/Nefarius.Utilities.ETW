@@ -21,7 +21,7 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader)
 {
     /// <summary>
-    ///     Equivalent to <see cref="TraceMessageFormat.Id"/>.
+    ///     Equivalent to <see cref="TraceMessageFormat.Id" />.
     /// </summary>
     private ushort GuidTypeNameFormatId => eventRecordReader.NativeEventRecord->EventHeader.EventDescriptor.Id;
 
@@ -37,35 +37,9 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
 
         foreach (FunctionParameter parameter in format.FunctionParameters)
         {
-            object value = parameter.Type switch
-            {
-                // this is basically an uint8_t enum value
-                ItemType.ItemListByte => eventRecordReader.ReadUInt8(),
-                // signed 32-bit integer, LONG
-                ItemType.ItemLong => eventRecordReader.ReadInt32(),
-                // signed 64-bit integer, LONGLONG
-                ItemType.ItemLongLong => eventRecordReader.ReadUInt64(),
-                // signed 64-bit integer, LONGLONG, to be represented as hexadecimal
-                ItemType.ItemLongLongXX => eventRecordReader.ReadUInt64(),
-                // unsigned 32-bit integer, DWORD, NTSTATUS code
-                ItemType.ItemNTSTATUS => eventRecordReader.ReadUInt32(),
-                // wchar_t strings are length prefixed (uint16_t) and not NULL terminated
-                ItemType.ItemPWString => eventRecordReader.ReadCountedString(),
-                // pointer value, unsigned 64-bit integer, LPVOID
-                ItemType.ItemPtr => eventRecordReader.ReadPointer(),
-                // char strings are NULL terminated
-                ItemType.ItemString => eventRecordReader.ReadAnsiString(),
-                // a GUID
-                ItemType.ItemGuid => eventRecordReader.ReadGuid(),
-                // unsigned 32-bit integer, DWORD, Windows Error Code
-                ItemType.ItemWINERROR => eventRecordReader.ReadUInt32(),
-                // An IEEE 8-byte floating-point number
-                ItemType.ItemDouble => eventRecordReader.ReadDouble(),
-                // An unsigned 64-bit integer
-                ItemType.ItemULongLong => eventRecordReader.ReadUInt64(),
-                // should never happen, make some noise if it does
-                _ => throw new NotImplementedException($"Type of item {parameter.Type} not implemented.")
-            };
+            object value = ItemReader.Readers.TryGetValue(parameter.Type, out Func<EventRecordReader, object>? reader)
+                ? reader(eventRecordReader)
+                : throw new NotImplementedException($"Type of item {parameter.Type} not implemented.");
 
             indexedParameterValues.Add(parameter.Index, new FunctionParameterValuePair(parameter, value));
         }
@@ -106,7 +80,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                                 ? $"{status} (0x{ntStatus:X8})"
                                 : $"Unknown NTSTATUS Error code: 0x{ntStatus:X8}";
                         }
-                        
+
                         // handle WINERROR translation
                         if (pair.Parameter.Type == ItemType.ItemWINERROR)
                         {
@@ -133,7 +107,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                             {
                                 return string.Format($"{{0:{formatSpec}}}", pair.Value);
                             }
-                            
+
                             string pad = numberMatch.Groups["pad"].Success ? "0" : "";
                             string width = numberMatch.Groups["width"].Value;
                             string specifier = numberMatch.Groups["specifier"].Value.ToUpperInvariant();
