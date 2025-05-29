@@ -146,10 +146,12 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
     }
 
     /// <summary>
-    ///     Decodes well-known properties from a given <see cref="EVENT_RECORD" />.
+    ///     Decodes well-known WPP properties from a given <see cref="EVENT_RECORD" />.
     /// </summary>
     /// <param name="decodingContext">The <see cref="DecodingContext" /> to use.</param>
-    /// <exception cref="Win32Exception">A TDH API call failed.</exception>
+    /// <exception cref="TdhGetEventInformationException">Failed to get event information.</exception>
+    /// <exception cref="TdhGetPropertySizeException">Failed to query property size.</exception>
+    /// <exception cref="TdhGetPropertyException">Failed to get property content.</exception>
     public void Decode(DecodingContext decodingContext)
     {
         ObjectAccessor? self = ObjectAccessor.Create(this, true);
