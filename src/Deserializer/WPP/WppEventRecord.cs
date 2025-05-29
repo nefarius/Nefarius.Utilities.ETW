@@ -220,16 +220,15 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                         nameof(FlagsName) => format.Flags,
                         nameof(LevelName) => format.Level,
                         nameof(FunctionName) => format.Function,
-                        nameof(FormattedString) =>
-                            BuildFormattedString(format)
+                        nameof(FormattedString) => BuildFormattedString(format),
                                 // TODO: what even is this one?
                                 // Not listed here: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/trace-message-prefix
                                 // I guess it is %!STDPREFIX!
                                 // more info: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/how-do-i-add-a-prefix-and-suffix-to-a-trace-message-#configuration-block-syntax
-                                .Replace("%0 ", string.Empty)
+                                //.Replace("%0 ", string.Empty)
                                 // TODO: can there be more than these?
                                 // see: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-#software-tracing
-                                .Replace("%!FUNC!", format.Function),
+                                //.Replace("%!FUNC!", format.Function),
                         // TODO: can those ever come populated?
                         nameof(ComponentName) => "",
                         nameof(SubComponentName) => "",
