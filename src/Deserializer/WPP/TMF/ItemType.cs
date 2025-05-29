@@ -6,11 +6,12 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 ///     Possible trace message parameter types.
 /// </summary>
 /// <remarks>
-///     Partial sources from
+///     Sourced from
 ///     <li>
 ///         <ul>https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-inputtype-complextype#remarks</ul>
 ///         <ul>https://learn.microsoft.com/en-us/windows/win32/wes/eventmanifestschema-outputtype-complextype#remarks</ul>
 ///         <ul>https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-#return-codes</ul>
+///         <ul>C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\WppConfig\Rev1\defaultwpp.ini</ul>
 ///     </li>
 /// </remarks>
 [SuppressMessage("ReSharper", "InconsistentNaming")]
@@ -31,7 +32,7 @@ public enum ItemType
     ///     A 64-Bit (signed) integer.
     /// </summary>
     ItemLongLong,
-    
+
     /// <summary>
     ///     An unsigned 64-bit integer.
     /// </summary>
@@ -76,12 +77,12 @@ public enum ItemType
     ///     Represents a Windows error code and displays the string associated with the error.
     /// </summary>
     ItemWINERROR,
-    
+
     /// <summary>
     ///     An IEEE 8-byte floating-point number.
     /// </summary>
     ItemDouble,
-    
+
     // TODO: implement me!
     ItemWString
 }
