@@ -40,3 +40,5 @@ contributors.*
 - [`enum _TDH_CONTEXT_TYPE`](https://github.com/cheolw00myung/cross-compile_for_Windows/blob/08935f0864f497ee7fc6f13aba1b598701a04be1/SDK10/include/um/tdh.h#L798-L816)
 - [Learn / Windows / Windows Drivers / How do I add a prefix and suffix to a trace message?](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/how-do-i-add-a-prefix-and-suffix-to-a-trace-message-#configuration-block-syntax)
 - [Learn / Windows / Windows Drivers / What are the WPP extended format specification strings](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-#software-tracing)
+- [kaitai-pdb](https://github.com/smx-smx/kaitai-pdb)
+- [MinVer](https://github.com/adamralph/minver)
