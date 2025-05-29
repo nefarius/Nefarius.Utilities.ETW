@@ -137,8 +137,8 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
             // handle HRESULT translation
             case ItemType.ItemHRESULT:
                 {
-                    uint hr = (uint)pair.Value;
-                    return Marshal.GetExceptionForHR((int)hr)?.Message ??
+                    int hr = (int)pair.Value;
+                    return Marshal.GetExceptionForHR(hr)?.Message ??
                            $"Unknown HRESULT Error code: 0x{hr:X8}";
                 }
             default:
