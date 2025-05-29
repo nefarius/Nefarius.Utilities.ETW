@@ -208,7 +208,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
 
             object? value = null;
 
-            // we need to decode those with a WPP-specific API
+            // we need to decode those using available TMF objects
             if (propertyType == _TDH_IN_TYPE.TDH_INTYPE_UNICODESTRING)
             {
                 if (format is not null)
