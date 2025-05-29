@@ -18,10 +18,20 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
 public enum ItemType
 {
+    #region basic arithmetic types
+
+    ItemLongLongX,
+
     /// <summary>
-    ///     A list of one or more zero-indexed array items.
+    ///     A hexadecimal number that is preceded by "0x". The formatted value is not padded with leading zeros.
     /// </summary>
-    ItemListByte,
+    ItemLongLongXX,
+
+    ItemLongLongO,
+
+    ItemChar,
+    ItemUChar,
+    ItemShort,
 
     /// <summary>
     ///     A 32-Bit (signed) integer.
@@ -29,7 +39,7 @@ public enum ItemType
     ItemLong,
 
     /// <summary>
-    ///     A 64-Bit (signed) integer.
+    ///     A signed 64-bit integer.
     /// </summary>
     ItemLongLong,
 
@@ -39,9 +49,60 @@ public enum ItemType
     ItemULongLong,
 
     /// <summary>
-    ///     A hexadecimal number that is preceded by "0x". The formatted value is not padded with leading zeros.
+    ///     An IEEE 8-byte floating-point number.
     /// </summary>
-    ItemLongLongXX,
+    ItemDouble,
+
+    #endregion
+
+    #region arch dependent types
+
+    /// <summary>
+    ///     An unsigned 32-bit or 64-bit pointer value. The size depends on the architecture of the computer logging the event.
+    /// </summary>
+    ItemPtr,
+
+    /// <summary>
+    ///     A GUID value that is formatted in the registry string form, {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}.
+    /// </summary>
+    ItemGuid,
+
+    #endregion
+
+    #region Complex types
+
+    /// <summary>
+    ///     A string of 8-bit characters. By default or when used with the xs:string output type, the string is assumed to have
+    ///     been encoded using the event provider s ANSI code page. When used with the win:Xml, win:Json, or win:Utf8 output
+    ///     types, the string is assumed to have been encoded using UTF-8.
+    /// </summary>
+    ItemString,
+    ItemRString,
+    ItemRWString,
+    ItemWString,
+    ItemPString,
+
+    /// <summary>
+    ///     A string of 16-bit characters. By default, assumed to have been encoded using UTF-16LE.
+    /// </summary>
+    ItemPWString,
+
+    ItemSid,
+    
+    ItemHexDump,
+
+    #endregion
+
+    #region enumeration types
+
+    /// <summary>
+    ///     A list of one or more zero-indexed array items.
+    /// </summary>
+    ItemListByte,
+
+    #endregion
+
+    #region special formats
 
     /// <summary>
     ///     An NTSTATUS error code. This type is valid for the UInt32 input type. The service retrieves and renders the message
@@ -52,37 +113,11 @@ public enum ItemType
     ItemNTSTATUS,
 
     /// <summary>
-    ///     A string of 16-bit characters. By default, assumed to have been encoded using UTF-16LE.
-    /// </summary>
-    ItemPWString,
-
-    /// <summary>
-    ///     An unsigned 32-bit or 64-bit pointer value. The size depends on the architecture of the computer logging the event.
-    /// </summary>
-    ItemPtr,
-
-    /// <summary>
-    ///     A string of 8-bit characters. By default or when used with the xs:string output type, the string is assumed to have
-    ///     been encoded using the event provider s ANSI code page. When used with the win:Xml, win:Json, or win:Utf8 output
-    ///     types, the string is assumed to have been encoded using UTF-8.
-    /// </summary>
-    ItemString,
-
-    /// <summary>
-    ///     A GUID value that is formatted in the registry string form, {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}.
-    /// </summary>
-    ItemGuid,
-
-    /// <summary>
     ///     Represents a Windows error code and displays the string associated with the error.
     /// </summary>
     ItemWINERROR,
+    
+    ItemHRESULT
 
-    /// <summary>
-    ///     An IEEE 8-byte floating-point number.
-    /// </summary>
-    ItemDouble,
-
-    // TODO: implement me!
-    ItemWString
+    #endregion
 }
