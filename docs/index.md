@@ -12,13 +12,23 @@
 
 - [DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md)
 
-- [PdbFilesDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.pdbfilesdecodingcontexttype.md)
+- [PdbFileDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.pdbfiledecodingcontexttype.md)
 
 - [PdbMetaData](./nefarius.utilities.etw.deserializer.wpp.pdbmetadata.md)
 
 - [TmfFileDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.tmffiledecodingcontexttype.md)
 
-- [TmfFilesDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.tmffilesdecodingcontexttype.md)
+- [TmfFilesDirectoryDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.tmffilesdirectorydecodingcontexttype.md)
+
+## Namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF
+
+- [FunctionParameter](./nefarius.utilities.etw.deserializer.wpp.tmf.functionparameter.md)
+
+- [ItemType](./nefarius.utilities.etw.deserializer.wpp.tmf.itemtype.md)
+
+- [TmfParser](./nefarius.utilities.etw.deserializer.wpp.tmf.tmfparser.md)
+
+- [TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md)
 
 ## Namespace Nefarius.Utilities.ETW.Exceptions
 
@@ -29,3 +39,13 @@
 - [TdhGetPropertySizeException](./nefarius.utilities.etw.exceptions.tdhgetpropertysizeexception.md)
 
 - [TdhGetWppPropertyException](./nefarius.utilities.etw.exceptions.tdhgetwpppropertyexception.md)
+
+## Namespace Nefarius.Utilities.ETW.Kaitai.PDB
+
+- [Cat](./nefarius.utilities.etw.kaitai.pdb.cat.md)
+
+- [Concat](./nefarius.utilities.etw.kaitai.pdb.concat.md)
+
+- [ConcatPages](./nefarius.utilities.etw.kaitai.pdb.concatpages.md)
+
+- [Hasher](./nefarius.utilities.etw.kaitai.pdb.hasher.md)
