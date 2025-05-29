@@ -252,6 +252,9 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                                 // TODO: can there be more than these?
                                 // see: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-#software-tracing
                                 .Replace("%!FUNC!", format.Function),
+                        // TODO: can those ever come populated?
+                        nameof(ComponentName) => "",
+                        nameof(SubComponentName) => "",
                         _ => value
                     };
                 }
