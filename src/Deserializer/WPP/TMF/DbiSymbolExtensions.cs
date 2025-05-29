@@ -1,11 +1,7 @@
-﻿using System.Diagnostics.CodeAnalysis;
-
-using Kaitai;
+﻿using Kaitai;
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
-[SuppressMessage("ReSharper", "UnusedType.Global")]
-[SuppressMessage("ReSharper", "UnusedMember.Global")]
 internal static class DbiSymbolExtensions
 {
     public static IEnumerable<SymProc32AnnotationPair> ExtractTmfAnnotations(
