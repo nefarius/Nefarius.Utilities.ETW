@@ -2,6 +2,9 @@
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
+/// <summary>
+///     Maps <see cref="ItemType" />s to the appropriate <see cref="EventRecordReader" /> reader method.
+/// </summary>
 internal static class ItemReader
 {
     public static readonly ReadOnlyDictionary<ItemType, Func<EventRecordReader, object>> Readers =
