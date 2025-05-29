@@ -1,0 +1,115 @@
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+8b4b1f23-87e2-3404-95b1-c7bc05edc751 BthPS3 // SRC=Bluetooth.PSM.c MJ= MN=
+#typev Bluetooth.PSM_c177 19 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.PSM_c165 18 "%0 [%!FUNC!] ERROR:Requested PSM 0x%10!04X! but got 0x%11!04X! instead" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+PSM_DS3_HID_INTERRUPT, ItemLong -- 10
+brb->Psm, ItemLong -- 11
+}
+#typev Bluetooth.PSM_c154 17 "%0 [%!FUNC!]Got PSM 0x%10!04X!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+brb->Psm, ItemLong -- 10
+}
+#typev Bluetooth.PSM_c141 16 "%0 [%!FUNC!] ERROR:BRB_REGISTER_PSM failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.PSM_c128 15 "%0 [%!FUNC!]Trying to register PSM 0x%10!04X!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+brb->Psm, ItemLong -- 10
+}
+#typev Bluetooth.PSM_c111 14 "%0 [%!FUNC!] ERROR:Requested PSM 0x%10!04X! but got 0x%11!04X! instead" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+PSM_DS3_HID_CONTROL, ItemLong -- 10
+brb->Psm, ItemLong -- 11
+}
+#typev Bluetooth.PSM_c100 13 "%0 [%!FUNC!]Got PSM 0x%10!04X!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+brb->Psm, ItemLong -- 10
+}
+#typev Bluetooth.PSM_c87 12 "%0 [%!FUNC!] ERROR:BRB_REGISTER_PSM failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.PSM_c74 11 "%0 [%!FUNC!]Trying to register PSM 0x%10!04X!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+brb->Psm, ItemLong -- 10
+}
+#typev Bluetooth.PSM_c56 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+}
+#typev Bluetooth.PSM_c243 23 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_UnregisterPSM
+{
+}
+#typev Bluetooth.PSM_c236 22 "%0 [%!FUNC!] ERROR:BRB_UNREGISTER_PSM failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_UnregisterPSM
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.PSM_c212 21 "%0 [%!FUNC!] ERROR:BRB_UNREGISTER_PSM failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_UnregisterPSM
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.PSM_c193 20 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_UnregisterPSM
+{
+}
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+#typev Bluetooth.PSM_c177 19 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.PSM_c165 18 "%0 [%!FUNC!] ERROR:Requested PSM 0x%10!04X! but got 0x%11!04X! instead" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+PSM_DS3_HID_INTERRUPT, ItemLong -- 10
+brb->Psm, ItemLong -- 11
+}
+#typev Bluetooth.PSM_c154 17 "%0 [%!FUNC!]Got PSM 0x%10!04X!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+brb->Psm, ItemLong -- 10
+}
+#typev Bluetooth.PSM_c141 16 "%0 [%!FUNC!] ERROR:BRB_REGISTER_PSM failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.PSM_c128 15 "%0 [%!FUNC!]Trying to register PSM 0x%10!04X!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+brb->Psm, ItemLong -- 10
+}
+#typev Bluetooth.PSM_c111 14 "%0 [%!FUNC!] ERROR:Requested PSM 0x%10!04X! but got 0x%11!04X! instead" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+PSM_DS3_HID_CONTROL, ItemLong -- 10
+brb->Psm, ItemLong -- 11
+}
+#typev Bluetooth.PSM_c100 13 "%0 [%!FUNC!]Got PSM 0x%10!04X!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+brb->Psm, ItemLong -- 10
+}
+#typev Bluetooth.PSM_c87 12 "%0 [%!FUNC!] ERROR:BRB_REGISTER_PSM failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.PSM_c74 11 "%0 [%!FUNC!]Trying to register PSM 0x%10!04X!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+brb->Psm, ItemLong -- 10
+}
+#typev Bluetooth.PSM_c56 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_RegisterPSM
+{
+}
+#typev Bluetooth.PSM_c243 23 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_UnregisterPSM
+{
+}
+#typev Bluetooth.PSM_c236 22 "%0 [%!FUNC!] ERROR:BRB_UNREGISTER_PSM failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_UnregisterPSM
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.PSM_c212 21 "%0 [%!FUNC!] ERROR:BRB_UNREGISTER_PSM failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_UnregisterPSM
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.PSM_c193 20 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_UnregisterPSM
+{
+}

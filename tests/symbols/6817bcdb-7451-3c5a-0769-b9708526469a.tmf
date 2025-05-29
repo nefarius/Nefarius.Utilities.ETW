@@ -1,0 +1,75 @@
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+6817bcdb-7451-3c5a-0769-b9708526469a BthPS3 // SRC=Driver.c MJ= MN=
+#typev Driver_c183 18 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DRIVER FUNC=BthPS3EvtDeviceAdd
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Driver_c179 17 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DRIVER FUNC=BthPS3EvtDeviceAdd
+{
+}
+#typev Driver_c195 19 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DRIVER FUNC=BthPS3EvtDriverContextCleanup
+{
+}
+#typev Driver_c162 16 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DRIVER FUNC=DriverEntry
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Driver_c154 15 "%0 [%!FUNC!] ERROR:Failed to get base address for WppRecorder.sys" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DRIVER FUNC=DriverEntry
+{
+}
+#typev Driver_c146 14 "%0 [%!FUNC!]imp_WppRecorderReplay not available on this Windows version" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DRIVER FUNC=DriverEntry
+{
+}
+#typev Driver_c136 13 "%0 [%!FUNC!]Found imp_WppRecorderReplay at 0x%10!p!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DRIVER FUNC=DriverEntry
+{
+functionAddress, ItemPtr -- 10
+}
+#typev Driver_c114 12 "%0 [%!FUNC!] ERROR:DomitoInit failed %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DRIVER FUNC=DriverEntry
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Driver_c103 11 "%0 [%!FUNC!] ERROR:WdfDriverCreate failed %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DRIVER FUNC=DriverEntry
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Driver_c80 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DRIVER FUNC=DriverEntry
+{
+}
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+#typev Driver_c183 18 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DRIVER FUNC=BthPS3EvtDeviceAdd
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Driver_c179 17 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DRIVER FUNC=BthPS3EvtDeviceAdd
+{
+}
+#typev Driver_c195 19 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DRIVER FUNC=BthPS3EvtDriverContextCleanup
+{
+}
+#typev Driver_c162 16 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DRIVER FUNC=DriverEntry
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Driver_c154 15 "%0 [%!FUNC!] ERROR:Failed to get base address for WppRecorder.sys" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DRIVER FUNC=DriverEntry
+{
+}
+#typev Driver_c146 14 "%0 [%!FUNC!]imp_WppRecorderReplay not available on this Windows version" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_DRIVER FUNC=DriverEntry
+{
+}
+#typev Driver_c136 13 "%0 [%!FUNC!]Found imp_WppRecorderReplay at 0x%10!p!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DRIVER FUNC=DriverEntry
+{
+functionAddress, ItemPtr -- 10
+}
+#typev Driver_c114 12 "%0 [%!FUNC!] ERROR:DomitoInit failed %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DRIVER FUNC=DriverEntry
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Driver_c103 11 "%0 [%!FUNC!] ERROR:WdfDriverCreate failed %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_DRIVER FUNC=DriverEntry
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Driver_c80 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DRIVER FUNC=DriverEntry
+{
+}

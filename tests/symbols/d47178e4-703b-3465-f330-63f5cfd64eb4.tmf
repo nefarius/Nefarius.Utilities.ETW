@@ -1,0 +1,59 @@
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+d47178e4-703b-3465-f330-63f5cfd64eb4 DmfKFramework // SRC=DmfInterfaceInternal.c MJ= MN=
+#typev DmfInterfaceInternal_c328 13 "%0 [%!FUNC!]Interface state closed. DmfInterfaceObject: 0x%10!p!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ModuleInterfaceDestroy
+{
+DmfInterfaceObject, ItemPtr -- 10
+}
+#typev DmfInterfaceInternal_c490 15 "%0 [%!FUNC!]Interface found. DmfInterfaceObject: 0x%10!p!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ModuleInterfaceFindAndRemove
+{
+dmfInterfaceObject, ItemPtr -- 10
+}
+#typev DmfInterfaceInternal_c677 20 "%0 [%!FUNC!]DmfInterfaceObject=0x%10!p! Interface rundown satisfied" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ModuleInterfaceWaitToClose
+{
+DmfInterfaceObject, ItemPtr -- 10
+}
+#typev DmfInterfaceInternal_c674 19 "%0 [%!FUNC!]DmfInterfaceObject=0x%10!p! Waiting for Interface to rundown: referenceCount=%11!d!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ModuleInterfaceWaitToClose
+{
+DmfInterfaceObject, ItemPtr -- 10
+referenceCount, ItemLong -- 11
+}
+#typev DmfInterfaceInternal_c1054 32 "%0 [%!FUNC!]DMF_ModuleInterfaceFind failed to find TransportModule=0x%10!p! in ProtocolModule=0x%11!p! Bindings" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleInterfaceUnbind
+{
+TransportModule, ItemPtr -- 10
+ProtocolModule, ItemPtr -- 11
+}
+#typev DmfInterfaceInternal_c1039 31 "%0 [%!FUNC!]DMF_ModuleInterfaceFind failed to find ProtocolModule=0x%10!p! in TransportModule=0x%11!p! Bindings" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleInterfaceUnbind
+{
+ProtocolModule, ItemPtr -- 10
+TransportModule, ItemPtr -- 11
+}
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+#typev DmfInterfaceInternal_c328 13 "%0 [%!FUNC!]Interface state closed. DmfInterfaceObject: 0x%10!p!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ModuleInterfaceDestroy
+{
+DmfInterfaceObject, ItemPtr -- 10
+}
+#typev DmfInterfaceInternal_c490 15 "%0 [%!FUNC!]Interface found. DmfInterfaceObject: 0x%10!p!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ModuleInterfaceFindAndRemove
+{
+dmfInterfaceObject, ItemPtr -- 10
+}
+#typev DmfInterfaceInternal_c677 20 "%0 [%!FUNC!]DmfInterfaceObject=0x%10!p! Interface rundown satisfied" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ModuleInterfaceWaitToClose
+{
+DmfInterfaceObject, ItemPtr -- 10
+}
+#typev DmfInterfaceInternal_c674 19 "%0 [%!FUNC!]DmfInterfaceObject=0x%10!p! Waiting for Interface to rundown: referenceCount=%11!d!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ModuleInterfaceWaitToClose
+{
+DmfInterfaceObject, ItemPtr -- 10
+referenceCount, ItemLong -- 11
+}
+#typev DmfInterfaceInternal_c1054 32 "%0 [%!FUNC!]DMF_ModuleInterfaceFind failed to find TransportModule=0x%10!p! in ProtocolModule=0x%11!p! Bindings" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleInterfaceUnbind
+{
+TransportModule, ItemPtr -- 10
+ProtocolModule, ItemPtr -- 11
+}
+#typev DmfInterfaceInternal_c1039 31 "%0 [%!FUNC!]DMF_ModuleInterfaceFind failed to find ProtocolModule=0x%10!p! in TransportModule=0x%11!p! Bindings" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleInterfaceUnbind
+{
+ProtocolModule, ItemPtr -- 10
+TransportModule, ItemPtr -- 11
+}

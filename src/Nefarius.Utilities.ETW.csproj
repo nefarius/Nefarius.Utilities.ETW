@@ -18,10 +18,11 @@
         <MinVerTagPrefix>v</MinVerTagPrefix>
     </PropertyGroup>
 
-    <Import Project="$(SolutionDir)CommonProjectProperties.targets" />
+    <Import Project="$(PrijectDir)..\CommonProjectProperties.targets" />
 
     <ItemGroup>
         <PackageReference Include="FastMember" Version="1.5.0" />
+        <PackageReference Include="KaitaiStruct.Runtime.CSharp" Version="0.10.0" />
         <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.196">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

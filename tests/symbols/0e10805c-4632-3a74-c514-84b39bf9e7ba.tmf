@@ -1,0 +1,97 @@
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+0e10805c-4632-3a74-c514-84b39bf9e7ba DmfKFramework // SRC=DmfPortable.c MJ= MN=
+#typev DmfPortable_c504 22 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventClose
+{
+}
+#typev DmfPortable_c494 21 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventClose
+{
+}
+#typev DmfPortable_c104 12 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfPortable_c63 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventCreate
+{
+}
+#typev DmfPortable_c176 16 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventReset
+{
+}
+#typev DmfPortable_c166 15 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventReset
+{
+}
+#typev DmfPortable_c142 14 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventSet
+{
+}
+#typev DmfPortable_c130 13 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventSet
+{
+}
+#typev DmfPortable_c278 18 "%0 [%!FUNC!] <-- Exit <returnValue=0x%10!X!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventWaitForSingleObject
+{
+returnValue, ItemLong -- 10
+}
+#typev DmfPortable_c210 17 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventWaitForSingleObject
+{
+}
+#typev DmfPortable_c577 24 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_LookasideListCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfPortable_c541 23 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_LookasideListCreate
+{
+}
+#typev DmfPortable_c628 26 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_LookasideListCreateMemory
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfPortable_c612 25 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_LookasideListCreateMemory
+{
+}
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+#typev DmfPortable_c504 22 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventClose
+{
+}
+#typev DmfPortable_c494 21 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventClose
+{
+}
+#typev DmfPortable_c104 12 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfPortable_c63 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventCreate
+{
+}
+#typev DmfPortable_c176 16 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventReset
+{
+}
+#typev DmfPortable_c166 15 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventReset
+{
+}
+#typev DmfPortable_c142 14 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventSet
+{
+}
+#typev DmfPortable_c130 13 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventSet
+{
+}
+#typev DmfPortable_c278 18 "%0 [%!FUNC!] <-- Exit <returnValue=0x%10!X!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventWaitForSingleObject
+{
+returnValue, ItemLong -- 10
+}
+#typev DmfPortable_c210 17 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_EventWaitForSingleObject
+{
+}
+#typev DmfPortable_c577 24 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_LookasideListCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfPortable_c541 23 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_LookasideListCreate
+{
+}
+#typev DmfPortable_c628 26 "%0 [%!FUNC!] <-- Exit <ntStatus=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_LookasideListCreateMemory
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfPortable_c612 25 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_Portable_LookasideListCreateMemory
+{
+}

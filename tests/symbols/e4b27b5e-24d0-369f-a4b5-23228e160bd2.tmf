@@ -1,0 +1,41 @@
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+e4b27b5e-24d0-369f-a4b5-23228e160bd2 BthPS3 // SRC=Bluetooth.Context.c MJ= MN=
+#typev Bluetooth.Context_c149 12 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_DeviceContextHeaderInit
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.Context_c83 11 "%0 [%!FUNC!] ERROR:Failed to pre-allocate request in device context with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_DeviceContextHeaderInit
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.Context_c58 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_DeviceContextHeaderInit
+{
+}
+#typev Bluetooth.Context_c240 14 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_ServerContextInit
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.Context_c170 13 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_ServerContextInit
+{
+}
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+#typev Bluetooth.Context_c149 12 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_DeviceContextHeaderInit
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.Context_c83 11 "%0 [%!FUNC!] ERROR:Failed to pre-allocate request in device context with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_DeviceContextHeaderInit
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.Context_c58 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_DeviceContextHeaderInit
+{
+}
+#typev Bluetooth.Context_c240 14 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_ServerContextInit
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.Context_c170 13 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_ServerContextInit
+{
+}

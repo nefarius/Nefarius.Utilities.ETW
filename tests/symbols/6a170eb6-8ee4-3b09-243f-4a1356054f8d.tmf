@@ -1,0 +1,23 @@
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+6a170eb6-8ee4-3b09-243f-4a1356054f8d BthPS3 // SRC=Util.c MJ= MN=
+#typev Util_c75 11 "%0 [%!FUNC!]LHS: "%10!s!" RHS: "%11!s!"" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_UTIL FUNC=StringUtil_BthNameIsEqual
+{
+&usLhs, ItemPWString -- 10
+&usRhs, ItemPWString -- 11
+}
+#typev Util_c68 10 "%0 [%!FUNC!] ERROR:RtlUnicodeStringPrintf failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_UTIL FUNC=StringUtil_BthNameIsEqual
+{
+status, ItemNTSTATUS -- 10
+}
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+#typev Util_c75 11 "%0 [%!FUNC!]LHS: "%10!s!" RHS: "%11!s!"" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_UTIL FUNC=StringUtil_BthNameIsEqual
+{
+&usLhs, ItemPWString -- 10
+&usRhs, ItemPWString -- 11
+}
+#typev Util_c68 10 "%0 [%!FUNC!] ERROR:RtlUnicodeStringPrintf failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_UTIL FUNC=StringUtil_BthNameIsEqual
+{
+status, ItemNTSTATUS -- 10
+}

@@ -1,0 +1,92 @@
+// PDB:  dshidmini.pdb
+// PDB:  Last Updated :2024-11-03:01:04:26:104 (UTC) [Tracepdb]
+9e4f6f15-7b4e-33a5-1f4c-27e69aa7858b sys // SRC=HID.Reports.c MJ= MN=
+#typev HID.Reports_c504 28 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+status, ItemNTSTATUS -- 10
+}
+#typev HID.Reports_c494 27 "%0 [%!FUNC!]-- Packet->reportId: %10!d!, Packet->reportBufferLen: %11!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+Packet->reportId, ItemLong -- 10
+Packet->reportBufferLen, ItemLong -- 11
+}
+#typev HID.Reports_c489 26 "%0 [%!FUNC!]%!FUNC! Not implemented" //   LEVEL=TRACE_LEVEL_WARNING FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+}
+#typev HID.Reports_c470 25 "%0 [%!FUNC!]-- XI FFB LM: %10!d!, RM: %11!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+lm, ItemLong -- 10
+rm, ItemLong -- 11
+}
+#typev HID.Reports_c135 19 "%0 [%!FUNC!]!! SET_EFFECT_REPORT, EffectBlockIndex: %10!d!, EffectType: %11!d!, TotalDuration: %12!d!, TriggerRepeatInterval: %13!d!, SamplePeriod: %14!d!, Gain: %15!d!, TriggerButton: %16!d!, AxesEnableX: %17!d!, AxesEnableY: %18!d!, DirectionEnable: %19!d!, DirectionInstance1: %20!d!, DirectionInstance2: %21!d!, StartDelay: %22!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+pSetEffect->EffectBlockIndex, ItemLong -- 10
+pSetEffect->EffectType, ItemLong -- 11
+pSetEffect->Duration, ItemLong -- 12
+pSetEffect->TriggerRepeatInterval, ItemLong -- 13
+pSetEffect->SamplePeriod, ItemLong -- 14
+pSetEffect->Gain, ItemLong -- 15
+pSetEffect->TriggerButton, ItemLong -- 16
+pSetEffect->AxesEnableX, ItemLong -- 17
+pSetEffect->AxesEnableY, ItemLong -- 18
+pSetEffect->DirectionEnable, ItemLong -- 19
+pSetEffect->DirectionInstance1, ItemLong -- 20
+pSetEffect->DirectionInstance2, ItemLong -- 21
+pSetEffect->StartDelay, ItemLong -- 22
+}
+#typev HID.Reports_c122 18 "%0 [%!FUNC!]!! PID_SET_CONDITION_REPORT, EffectBlockIndex: %10!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+pSetCondition->EffectBlockIndex, ItemLong -- 10
+}
+#typev HID.Reports_c163 20 "%0 [%!FUNC!]!! PID_SET_PERIODIC_REPORT, EffectBlockIndex: %10!d!, Magnitude: %11!d!, Offset: %12!d!, Phase: %13!d!, Period: %14!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+pSetPeriodic->EffectBlockIndex, ItemLong -- 10
+pSetPeriodic->Magnitude, ItemLong -- 11
+pSetPeriodic->Offset, ItemLong -- 12
+pSetPeriodic->Phase, ItemLong -- 13
+pSetPeriodic->Period, ItemLong -- 14
+}
+#typev HID.Reports_c188 22 "%0 [%!FUNC!]!! DS3 Rumble Value: %10!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+rumbleValue, ItemLong -- 10
+}
+#typev HID.Reports_c182 21 "%0 [%!FUNC!]!! PID_SET_CONSTANT_FORCE_REPORT, EffectBlockIndex: %10!d!, Magnitude: %11!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+pSetConstant->EffectBlockIndex, ItemLong -- 10
+pSetConstant->Magnitude, ItemLong -- 11
+}
+#typev HID.Reports_c210 23 "%0 [%!FUNC!]!! PID_EFFECT_OPERATION_REPORT, EffectBlockIndex: %10!d!, EffectOperation: %11!d!, LoopCount: %12!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+pEffectOperation->EffectBlockIndex, ItemLong -- 10
+pEffectOperation->EffectOperation, ItemLong -- 11
+pEffectOperation->LoopCount, ItemLong -- 12
+}
+#typev HID.Reports_c45 11 "%0 [%!FUNC!]!! DC Enable Actuators" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+}
+#typev HID.Reports_c48 12 "%0 [%!FUNC!]!! DC Disable Actuators" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+}
+#typev HID.Reports_c83 14 "%0 [%!FUNC!]!! DC Stop All Effects" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+}
+#typev HID.Reports_c51 13 "%0 [%!FUNC!]!! DC Reset" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+}
+#typev HID.Reports_c90 15 "%0 [%!FUNC!]!! DC Pause" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+}
+#typev HID.Reports_c93 16 "%0 [%!FUNC!]!! DC Continue" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+}
+#typev HID.Reports_c245 24 "%0 [%!FUNC!]!! PID_BLOCK_FREE_REPORT, EffectBlockIndex: %10!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+pBlockFree->EffectBlockIndex, ItemLong -- 10
+}
+#typev HID.Reports_c109 17 "%0 [%!FUNC!]!! PID_DEVICE_GAIN_REPORT, DeviceGain: %10!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+pGain->DeviceGain, ItemLong -- 10
+}
+#typev HID.Reports_c14 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_DSHIDMINIDRV FUNC=DSHM_WriteReport
+{
+}

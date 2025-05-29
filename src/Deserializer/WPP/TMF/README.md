@@ -1,6 +1,6 @@
-﻿# EXPERIMENTAL
+﻿# TMF Parsing
 
-Do not use, might catch fire 🔥
+Custom TMF parser implementation in pure C#.
 
 ## Sources
 

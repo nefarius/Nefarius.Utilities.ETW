@@ -1,0 +1,227 @@
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+0a9ab260-f7e4-311e-a23e-f8ab6856dc72 DmfKFramework // SRC=DmfCore.c MJ= MN=
+#typev DmfCore_c1793 36 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ModuleDestroy
+{
+}
+#typev DmfCore_c1775 35 "%0 [%!FUNC!]Remove Child=0x%10!p! Parent=0x%11!p! NumberOfChildModules=%12!d!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ModuleDestroy
+{
+dmfObject->MemoryDmfObject, ItemPtr -- 10
+dmfObject->DmfObjectParent->MemoryDmfObject, ItemPtr -- 11
+dmfObject->DmfObjectParent->NumberOfChildModules, ItemLong -- 12
+}
+#typev DmfCore_c1695 34 "%0 [%!FUNC!] --> Entry <DmfObject=0x%10!p! [%11!s!]" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ModuleDestroy
+{
+dmfObject, ItemPtr -- 10
+dmfObject->ClientModuleInstanceName, ItemString -- 11
+}
+#typev DmfCore_c495 14 "%0 [%!FUNC!]WdfMemoryCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DmfModuleCallbacksInitialize
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c480 13 "%0 [%!FUNC!]WdfMemoryCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DmfModuleCallbacksInitialize
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c431 12 "%0 [%!FUNC!]ReferenceCountLock create fails." //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DmfModuleChildObjectsInitialize
+{
+}
+#typev DmfCore_c385 11 "%0 [%!FUNC!]Unable to allocate Module Config" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DmfModuleChildObjectsInitialize
+{
+}
+#typev DmfCore_c994 16 "%0 [%!FUNC!]WppRecorderLogCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DmfModuleInFlightRecorderInitialize
+{
+recorderStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c316 10 "%0 [%!FUNC!]Unable to allocate ClientModuleInstanceName" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DmfModuleInstanceNameInitialize
+{
+}
+#typev DmfCore_c892 15 "%0 [%!FUNC!]Add Child=0x%10!p! Parent=0x%11!p! NumberOfChildModules=%12!d!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DmfModuleParentUpdate
+{
+DmfObject->MemoryDmfObject, ItemPtr -- 10
+dmfObjectParent->MemoryDmfObject, ItemPtr -- 11
+dmfObjectParent->NumberOfChildModules, ItemLong -- 12
+}
+#typev DmfCore_c1660 33 "%0 [%!FUNC!] <-- Exit <dmfObject=0x%10!p! [%11!s!]>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+dmfObject, ItemPtr -- 10
+(dmfObject != NULL) ? dmfObject->ClientModuleInstanceName : '', ItemString -- 11
+}
+#typev DmfCore_c1636 32 "%0 [%!FUNC!]DMF_Module_OpenOrRegisterNotificationOnCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1590 31 "%0 [%!FUNC!]Cleanup Failed Module=0x%10!p!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+memoryDmfObject, ItemPtr -- 10
+}
+#typev DmfCore_c1448 27 "%0 [%!FUNC!]WdfObjectAddCustomType fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1506 29 "%0 [%!FUNC!]DMF_ModuleCollectionCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1473 28 "%0 [%!FUNC!]ChildModulesAdd fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1415 26 "%0 [%!FUNC!]DmfModuleParentUpdate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1390 25 "%0 [%!FUNC!]DmfModuleObjectCallbacksInitialize fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1375 24 "%0 [%!FUNC!]DMF_Portable_EventCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1364 23 "%0 [%!FUNC!]DMF_SynchronizationCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1354 22 "%0 [%!FUNC!]DmfModuleChildObjectsInitialize fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1342 21 "%0 [%!FUNC!]DmfModuleInstanceNameInitialize fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1330 20 "%0 [%!FUNC!]WdfObjectAllocateContext fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1250 19 "%0 [%!FUNC!]Creating Module: Handle=0x%10!p! Object=0x%11!p!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+memoryDmfObject, ItemPtr -- 10
+dmfObject, ItemPtr -- 11
+}
+#typev DmfCore_c1244 18 "%0 [%!FUNC!]Unable to allocate DMF_OBJECT" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+}
+#typev DmfCore_c1538 30 "%0 [%!FUNC!]Remove Child=0x%10!p! Parent=0x%11!p! NumberOfChildModules=%12!d!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+memoryDmfObject, ItemPtr -- 10
+dmfObject->DmfObjectParent->MemoryDmfObject, ItemPtr -- 11
+dmfObject->DmfObjectParent->NumberOfChildModules, ItemLong -- 12
+}
+#typev DmfCore_c1126 17 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+}
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+#typev DmfCore_c1793 36 "%0 [%!FUNC!] <-- Exit" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ModuleDestroy
+{
+}
+#typev DmfCore_c1775 35 "%0 [%!FUNC!]Remove Child=0x%10!p! Parent=0x%11!p! NumberOfChildModules=%12!d!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ModuleDestroy
+{
+dmfObject->MemoryDmfObject, ItemPtr -- 10
+dmfObject->DmfObjectParent->MemoryDmfObject, ItemPtr -- 11
+dmfObject->DmfObjectParent->NumberOfChildModules, ItemLong -- 12
+}
+#typev DmfCore_c1695 34 "%0 [%!FUNC!] --> Entry <DmfObject=0x%10!p! [%11!s!]" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ModuleDestroy
+{
+dmfObject, ItemPtr -- 10
+dmfObject->ClientModuleInstanceName, ItemString -- 11
+}
+#typev DmfCore_c495 14 "%0 [%!FUNC!]WdfMemoryCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DmfModuleCallbacksInitialize
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c480 13 "%0 [%!FUNC!]WdfMemoryCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DmfModuleCallbacksInitialize
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c431 12 "%0 [%!FUNC!]ReferenceCountLock create fails." //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DmfModuleChildObjectsInitialize
+{
+}
+#typev DmfCore_c385 11 "%0 [%!FUNC!]Unable to allocate Module Config" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DmfModuleChildObjectsInitialize
+{
+}
+#typev DmfCore_c994 16 "%0 [%!FUNC!]WppRecorderLogCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DmfModuleInFlightRecorderInitialize
+{
+recorderStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c316 10 "%0 [%!FUNC!]Unable to allocate ClientModuleInstanceName" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DmfModuleInstanceNameInitialize
+{
+}
+#typev DmfCore_c892 15 "%0 [%!FUNC!]Add Child=0x%10!p! Parent=0x%11!p! NumberOfChildModules=%12!d!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DmfModuleParentUpdate
+{
+DmfObject->MemoryDmfObject, ItemPtr -- 10
+dmfObjectParent->MemoryDmfObject, ItemPtr -- 11
+dmfObjectParent->NumberOfChildModules, ItemLong -- 12
+}
+#typev DmfCore_c1660 33 "%0 [%!FUNC!] <-- Exit <dmfObject=0x%10!p! [%11!s!]>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+dmfObject, ItemPtr -- 10
+(dmfObject != NULL) ? dmfObject->ClientModuleInstanceName : '', ItemString -- 11
+}
+#typev DmfCore_c1636 32 "%0 [%!FUNC!]DMF_Module_OpenOrRegisterNotificationOnCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1590 31 "%0 [%!FUNC!]Cleanup Failed Module=0x%10!p!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+memoryDmfObject, ItemPtr -- 10
+}
+#typev DmfCore_c1448 27 "%0 [%!FUNC!]WdfObjectAddCustomType fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1506 29 "%0 [%!FUNC!]DMF_ModuleCollectionCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1473 28 "%0 [%!FUNC!]ChildModulesAdd fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1415 26 "%0 [%!FUNC!]DmfModuleParentUpdate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1390 25 "%0 [%!FUNC!]DmfModuleObjectCallbacksInitialize fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1375 24 "%0 [%!FUNC!]DMF_Portable_EventCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1364 23 "%0 [%!FUNC!]DMF_SynchronizationCreate fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1354 22 "%0 [%!FUNC!]DmfModuleChildObjectsInitialize fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1342 21 "%0 [%!FUNC!]DmfModuleInstanceNameInitialize fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1330 20 "%0 [%!FUNC!]WdfObjectAllocateContext fails: ntStatus=%10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfCore_c1250 19 "%0 [%!FUNC!]Creating Module: Handle=0x%10!p! Object=0x%11!p!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+memoryDmfObject, ItemPtr -- 10
+dmfObject, ItemPtr -- 11
+}
+#typev DmfCore_c1244 18 "%0 [%!FUNC!]Unable to allocate DMF_OBJECT" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+}
+#typev DmfCore_c1538 30 "%0 [%!FUNC!]Remove Child=0x%10!p! Parent=0x%11!p! NumberOfChildModules=%12!d!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+memoryDmfObject, ItemPtr -- 10
+dmfObject->DmfObjectParent->MemoryDmfObject, ItemPtr -- 11
+dmfObject->DmfObjectParent->NumberOfChildModules, ItemLong -- 12
+}
+#typev DmfCore_c1126 17 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=DMF_TRACE FUNC=DMF_ModuleCreate
+{
+}

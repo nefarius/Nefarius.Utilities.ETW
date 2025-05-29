@@ -1,0 +1,55 @@
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+1cd9540d-3b93-37c1-6f28-f268613fca07 BthPS3 // SRC=Bluetooth.Connection.c MJ= MN=
+#typev Bluetooth.Connection_c133 16 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_IndicationCallback
+{
+}
+#typev Bluetooth.Connection_c61 11 "%0 [%!FUNC!]IndicationAddReference" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_IndicationCallback
+{
+}
+#typev Bluetooth.Connection_c64 12 "%0 [%!FUNC!]IndicationReleaseReference" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_IndicationCallback
+{
+}
+#typev Bluetooth.Connection_c108 15 "%0 [%!FUNC!] ERROR:DMF_QueuedWorkItem_Enqueue failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_IndicationCallback
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.Connection_c91 14 "%0 [%!FUNC!]IRQL %10!s! too high, preparing async call" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_IndicationCallback
+{
+KeGetCurrentIrql(), ItemListByte(Low,APC,DPC) -- 10
+}
+#typev Bluetooth.Connection_c70 13 "%0 [%!FUNC!]New connection for PSM 0x%10!04X! from %11!012I64X! arrived" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_BTH FUNC=BthPS3_IndicationCallback
+{
+Parameters->Parameters.Connect.Request.PSM, ItemLong -- 10
+Parameters->BtAddress, ItemLongLongXX -- 11
+}
+#typev Bluetooth.Connection_c56 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_IndicationCallback
+{
+}
+// PDB:  BthPS3.pdb
+// PDB:  Last Updated :2025-04-28:18:52:26:152 (UTC) [Tracepdb]
+#typev Bluetooth.Connection_c133 16 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_IndicationCallback
+{
+}
+#typev Bluetooth.Connection_c61 11 "%0 [%!FUNC!]IndicationAddReference" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_IndicationCallback
+{
+}
+#typev Bluetooth.Connection_c64 12 "%0 [%!FUNC!]IndicationReleaseReference" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_IndicationCallback
+{
+}
+#typev Bluetooth.Connection_c108 15 "%0 [%!FUNC!] ERROR:DMF_QueuedWorkItem_Enqueue failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_BTH FUNC=BthPS3_IndicationCallback
+{
+status, ItemNTSTATUS -- 10
+}
+#typev Bluetooth.Connection_c91 14 "%0 [%!FUNC!]IRQL %10!s! too high, preparing async call" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_IndicationCallback
+{
+KeGetCurrentIrql(), ItemListByte(Low,APC,DPC) -- 10
+}
+#typev Bluetooth.Connection_c70 13 "%0 [%!FUNC!]New connection for PSM 0x%10!04X! from %11!012I64X! arrived" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_BTH FUNC=BthPS3_IndicationCallback
+{
+Parameters->Parameters.Connect.Request.PSM, ItemLong -- 10
+Parameters->BtAddress, ItemLongLongXX -- 11
+}
+#typev Bluetooth.Connection_c56 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_BTH FUNC=BthPS3_IndicationCallback
+{
+}

@@ -1,0 +1,111 @@
+// PDB:  dshidmini.pdb
+// PDB:  Last Updated :2024-11-03:01:04:26:104 (UTC) [Tracepdb]
+6827c296-b781-3084-bab0-678dd31e93ab sys // SRC=IPC.c MJ= MN=
+#typev IPC_c515 37 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_IPC FUNC=DSHM_IPC_ClientDispatchProc
+{
+}
+#typev IPC_c467 34 "%0 [%!FUNC!] ERROR:Wait failed with error %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=DSHM_IPC_ClientDispatchProc
+{
+GetLastError(), ItemWINERROR -- 10
+}
+#typev IPC_c503 36 "%0 [%!FUNC!] ERROR:DSHM_IPC_DispatchIncomingCommandMessage reported non-success status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=DSHM_IPC_ClientDispatchProc
+{
+status, ItemNTSTATUS -- 10
+}
+#typev IPC_c493 35 "%0 [%!FUNC!]Got message type %10!d! for target %11!d! and command %12!d!" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_IPC FUNC=DSHM_IPC_ClientDispatchProc
+{
+header->Type, ItemLong -- 10
+header->Target, ItemLong -- 11
+header->Command.Device, ItemLong -- 12
+}
+#typev IPC_c441 33 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_IPC FUNC=DSHM_IPC_ClientDispatchProc
+{
+}
+#typev IPC_c429 32 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_IPC FUNC=DSHM_IPC_DispatchIncomingCommandMessage
+{
+status, ItemNTSTATUS -- 10
+}
+#typev IPC_c416 31 "%0 [%!FUNC!] WARNING:Device with index %10!d! has no valid callback or context assigned" //   LEVEL=TRACE_LEVEL_WARNING FLAGS=TRACE_IPC FUNC=DSHM_IPC_DispatchIncomingCommandMessage
+{
+Message->TargetIndex, ItemLong -- 10
+}
+#typev IPC_c384 30 "%0 [%!FUNC!]IPC: PING message received" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_IPC FUNC=DSHM_IPC_DispatchIncomingCommandMessage
+{
+}
+#typev IPC_c359 29 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_IPC FUNC=DSHM_IPC_DispatchIncomingCommandMessage
+{
+}
+#typev IPC_c348 28 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_IPC FUNC=DestroyIPC
+{
+}
+#typev IPC_c314 27 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_IPC FUNC=DestroyIPC
+{
+}
+#typev IPC_c270 25 "%0 [%!FUNC!] <--" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_IPC FUNC=InitIPC
+{
+}
+#typev IPC_c304 26 "%0 [%!FUNC!] <-- Exit <status=%10!s!>" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_IPC FUNC=InitIPC
+{
+status, ItemNTSTATUS -- 10
+}
+#typev IPC_c257 24 "%0 [%!FUNC!] ERROR:Could not create dispatch thread (%10!s!)." //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=InitIPC
+{
+GetLastError(), ItemWINERROR -- 10
+}
+#typev IPC_c223 23 "%0 [%!FUNC!] ERROR:Could not map view of file HID REGION (%10!s!)." //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=InitIPC
+{
+GetLastError(), ItemWINERROR -- 10
+}
+#typev IPC_c201 22 "%0 [%!FUNC!] ERROR:Could not map view of file CMD REGION (%10!s!)." //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=InitIPC
+{
+GetLastError(), ItemWINERROR -- 10
+}
+#typev IPC_c182 21 "%0 [%!FUNC!] ERROR:Could not create file mapping object (%10!s!)." //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=InitIPC
+{
+GetLastError(), ItemWINERROR -- 10
+}
+#typev IPC_c162 20 "%0 [%!FUNC!] ERROR:Could not create event (%10!s!)." //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=InitIPC
+{
+GetLastError(), ItemWINERROR -- 10
+}
+#typev IPC_c151 19 "%0 [%!FUNC!] ERROR:Could not create WRITE event (%10!s!)." //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=InitIPC
+{
+GetLastError(), ItemWINERROR -- 10
+}
+#typev IPC_c140 18 "%0 [%!FUNC!] ERROR:Could not create READ event (%10!s!)." //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=InitIPC
+{
+GetLastError(), ItemWINERROR -- 10
+}
+#typev IPC_c129 17 "%0 [%!FUNC!] ERROR:Could not create mutex (%10!s!)." //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=InitIPC
+{
+GetLastError(), ItemWINERROR -- 10
+}
+#typev IPC_c118 16 "%0 [%!FUNC!] ERROR:ConvertStringSecurityDescriptorToSecurityDescriptor failed with error: %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=InitIPC
+{
+GetLastError(), ItemWINERROR -- 10
+}
+#typev IPC_c92 15 "%0 [%!FUNC!] ERROR:InitializeSecurityDescriptor failed with error: %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=InitIPC
+{
+GetLastError(), ItemWINERROR -- 10
+}
+#typev IPC_c82 14 "%0 [%!FUNC!]pageSize = %10!d!, cmdRegionSize = %11!d!, hidRegionSize = %12!d!, totalRegionSize = %13!d!" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_IPC FUNC=InitIPC
+{
+pageSize, ItemLong -- 10
+cmdRegionSize, ItemLong -- 11
+hidRegionSize, ItemLong -- 12
+totalRegionSize, ItemLong -- 13
+}
+#typev IPC_c66 13 "%0 [%!FUNC!]IPC feature disabled, aborting initialization" //   LEVEL=TRACE_LEVEL_INFORMATION FLAGS=TRACE_IPC FUNC=InitIPC
+{
+}
+#typev IPC_c53 12 "%0 [%!FUNC!] ERROR:WdfRegistryQueryULong failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=InitIPC
+{
+status, ItemNTSTATUS -- 10
+}
+#typev IPC_c39 11 "%0 [%!FUNC!] ERROR:WdfDriverOpenParametersRegistryKey failed with status %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=TRACE_IPC FUNC=InitIPC
+{
+status, ItemNTSTATUS -- 10
+}
+#typev IPC_c14 10 "%0 [%!FUNC!] --> Entry" //   LEVEL=TRACE_LEVEL_VERBOSE FLAGS=TRACE_IPC FUNC=InitIPC
+{
+}

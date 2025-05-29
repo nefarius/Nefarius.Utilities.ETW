@@ -1,0 +1,35 @@
+// PDB:  dshidmini.pdb
+// PDB:  Last Updated :2024-11-03:01:04:26:104 (UTC) [Tracepdb]
+a7f1b59a-87d9-3ccf-b014-434dbe9252e7 DmfUFramework // SRC=DmfDeviceInit.c MJ= MN=
+#typev DmfDeviceInit_c840 15 "%0 [%!FUNC!]DmfDeviceInit Memory invalid" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_DmfDeviceInitValidate
+{
+}
+#typev DmfDeviceInit_c885 21 "%0 [%!FUNC!]DMF_DmfControlDeviceInitSetClientDriverDevice should not be called!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_DmfDeviceInitValidate
+{
+}
+#typev DmfDeviceInit_c877 20 "%0 [%!FUNC!]DMF_DmfControlDeviceInitSetClientDriverDevice not called!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_DmfDeviceInitValidate
+{
+}
+#typev DmfDeviceInit_c867 19 "%0 [%!FUNC!]DMF_DmfDeviceInitHookFileObjectConfig not called!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_DmfDeviceInitValidate
+{
+}
+#typev DmfDeviceInit_c862 18 "%0 [%!FUNC!]DMF_DmfDeviceInitHookPowerPolicyEventCallbacks not called!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_DmfDeviceInitValidate
+{
+}
+#typev DmfDeviceInit_c857 17 "%0 [%!FUNC!]DMF_DmfDeviceInitHookPnpPowerEventCallbacks not called!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_DmfDeviceInitValidate
+{
+}
+#typev DmfDeviceInit_c848 16 "%0 [%!FUNC!]DmfDeviceInit Bridge not enabled" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_DmfDeviceInitValidate
+{
+}
+#typev DmfDeviceInit_c831 14 "%0 [%!FUNC!]DmfDeviceInit invalid" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_DmfDeviceInitValidate
+{
+}
+#typev DmfDeviceInit_c576 11 "%0 [%!FUNC!]WdfMemoryCreate failed! %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_DmfDeviceInitAllocate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
+#typev DmfDeviceInit_c553 10 "%0 [%!FUNC!]WdfMemoryCreate failed! %10!s!" //   LEVEL=TRACE_LEVEL_ERROR FLAGS=DMF_TRACE FUNC=DMF_DmfDeviceInitAllocate
+{
+ntStatus, ItemNTSTATUS -- 10
+}
