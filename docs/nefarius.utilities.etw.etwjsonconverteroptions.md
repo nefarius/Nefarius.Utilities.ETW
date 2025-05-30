@@ -17,12 +17,12 @@ Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) 
 Custom [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md) provider lookup.
 
 ```csharp
-public Func<PdbMetaData, DecodingContext> ContextProviderLookup { get; set; }
+public Func<PdbMetaData, DecodingContextType> ContextProviderLookup { get; set; }
 ```
 
 #### Property Value
 
-[Func&lt;PdbMetaData, DecodingContext&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.func-2)<br>
+[Func&lt;PdbMetaData, DecodingContextType&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.func-2)<br>
 
 ### <a id="properties-customprovidermanifest"/>**CustomProviderManifest**
 
