@@ -36,7 +36,7 @@ public PdbFileDecodingContextType()
 
 ### <a id="constructors-.ctor"/>**PdbFileDecodingContextType(String)**
 
-Gets decoding info from one or multiple `.pdb` files.
+Gets decoding info from one or multiple `.pdb` files by file path.
 
 ```csharp
 public PdbFileDecodingContextType(string path)
@@ -47,9 +47,18 @@ public PdbFileDecodingContextType(string path)
 `path` [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
 Relative or absolute path to a `.pdb` file.
 
-**Remarks:**
+### <a id="constructors-.ctor"/>**PdbFileDecodingContextType(Stream)**
 
-To specify multiple files, use [PdbFileDecodingContextType.CreateFrom(IList&lt;String&gt;)](./nefarius.utilities.etw.deserializer.wpp.pdbfiledecodingcontexttype.md#createfromiliststring).
+Gets decoding info from a stream containing PDB file data.
+
+```csharp
+public PdbFileDecodingContextType(Stream stream)
+```
+
+#### Parameters
+
+`stream` [Stream](https://docs.microsoft.com/en-us/dotnet/api/system.io.stream)<br>
+A stream containing a `.pdb` file.
 
 ## Methods
 
