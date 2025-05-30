@@ -280,6 +280,11 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                         _ => throw new NotImplementedException($"Unknown property \"{propertyName}\" encountered.")
                     };
                 }
+                else if (propertyName.Equals(nameof(FormattedString)))
+                {
+                    value =
+                        $"GUID={TraceGuid.ToString().ToUpperInvariant()}, ID={GuidTypeNameFormatId}, Version={Version} - No format information found.";
+                }
 
                 if (value is not null)
                 {
