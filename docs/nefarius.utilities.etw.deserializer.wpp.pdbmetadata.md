@@ -24,6 +24,18 @@ public int Age { get; set; }
 
 [Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)<br>
 
+### <a id="properties-downloadpath"/>**DownloadPath**
+
+Gets the typical symbol server download path.
+
+```csharp
+public string DownloadPath { get; }
+```
+
+#### Property Value
+
+[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+
 ### <a id="properties-guid"/>**Guid**
 
 The GUID uniquely identifying the symbol file.
