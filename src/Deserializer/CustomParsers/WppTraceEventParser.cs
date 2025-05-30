@@ -27,8 +27,6 @@ internal sealed class WppTraceEventParser : ICustomParser
     private static readonly PropertyMetadata RawSystemTimeMetadata;
     private static readonly PropertyMetadata ProviderGuidMetadata;
 
-    private readonly DecodingContext _decodingContext;
-
     static WppTraceEventParser()
     {
         VersionMetadata = new PropertyMetadata(_TDH_IN_TYPE.TDH_INTYPE_UINT32, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT,
@@ -88,15 +86,17 @@ internal sealed class WppTraceEventParser : ICustomParser
     public WppTraceEventParser(DecodingContext decodingContext)
     {
         ArgumentNullException.ThrowIfNull(decodingContext);
-        _decodingContext = decodingContext;
+        DecodingContext = decodingContext;
     }
+
+    public DecodingContext DecodingContext { get; init; }
 
     public unsafe void Parse<T>(EventRecordReader reader, T writer, EventMetadata[] metadataArray,
         RuntimeEventMetadata runtimeMetadata) where T : IEtwWriter
     {
         ushort id = reader.NativeEventRecord->EventHeader.EventDescriptor.Id;
-        
-        var eventMetadata = new EventMetadata(
+
+        EventMetadata eventMetadata = new(
             PInvoke.EventTraceGuid,
             id,
             0,
@@ -109,10 +109,10 @@ internal sealed class WppTraceEventParser : ICustomParser
                 ProviderGuidMetadata
             ]
         );
-        
+
         WppEventRecord decodedRecord = new(reader);
         // this does the heavy lifting of retrieving properties with the decoding context 
-        decodedRecord.Decode(_decodingContext);
+        decodedRecord.Decode(DecodingContext);
 
         writer.WriteEventBegin(eventMetadata, runtimeMetadata);
 

@@ -47,5 +47,5 @@ public readonly struct PdbMetaData
     /// <summary>
     ///     Gets the typical symbol server download path.
     /// </summary>
-    public string DownloadPath => $"/download/symbols/{IndexPrefix}/{PdbName}";
+    public string DownloadPath => $"/download/symbols/{IndexPrefix}";
 }

@@ -41,11 +41,11 @@ internal sealed partial class Deserializer<T>
 
     private readonly Dictionary<Guid, EventSourceManifest> _eventSourceManifestCache = new();
 
-    private readonly Func<PdbMetaData, DecodingContext>? _pdbContextProviderLookup;
+    private readonly Func<PdbMetaData, DecodingContextType?>? _pdbContextProviderLookup;
 
     private EventMetadata[]? _eventMetadataTable;
 
-    private WppTraceEventParser? _wppTraceEventParser;
+    private readonly WppTraceEventParser? _wppTraceEventParser;
 
     private T _writer;
 
@@ -56,7 +56,7 @@ internal sealed partial class Deserializer<T>
 
     public Deserializer(T writer, Func<Guid, Stream?>? customProviderManifest,
         DecodingContext? decodingContext = null,
-        Func<PdbMetaData, DecodingContext>? pdbContextProviderLookup = null) : this(writer)
+        Func<PdbMetaData, DecodingContextType?>? pdbContextProviderLookup = null) : this(writer)
     {
         _customProviderManifest = customProviderManifest;
         _pdbContextProviderLookup = pdbContextProviderLookup;
@@ -321,6 +321,7 @@ internal sealed partial class Deserializer<T>
             return;
         }
 
+#if FIXME
         // lets the caller react to finding the relevant .PDB(s) before WPP events get parsed, if any
         if (operand.Metadata.Name.Equals("MSNT_SystemTrace/EventTrace/DbgIdRSDS",
                 StringComparison.InvariantCultureIgnoreCase))
@@ -334,14 +335,16 @@ internal sealed partial class Deserializer<T>
 
             PdbMetaData meta = new() { Guid = pdbGuid, Age = (int)pdbAge, PdbName = pdbName };
 
-            DecodingContext? decodingContext = _pdbContextProviderLookup?.Invoke(meta);
+            DecodingContextType? dct = _pdbContextProviderLookup?.Invoke(meta);
 
-            if (decodingContext is not null)
+            if (dct is not null)
             {
-                // update with user-provided context
-                _wppTraceEventParser = new WppTraceEventParser(decodingContext);
+                _wppTraceEventParser = _wppTraceEventParser is null
+                    ? new WppTraceEventParser(new DecodingContext(dct))
+                    : new WppTraceEventParser(_wppTraceEventParser.DecodingContext.ExtendWith(dct));
             }
         }
+#endif
 
         _eventMetadataTableList.Add(operand.Metadata);
         _eventMetadataTable = _eventMetadataTableList.ToArray(); // TODO: Need to improve this
@@ -356,8 +359,13 @@ internal sealed partial class Deserializer<T>
             eventRecordReaderParam, eventWriterParam, eventMetadataTableParam, runtimeMetadataParam
         ];
         string name = CleanNameRegex().Replace(InvalidCharacters.Replace(operand.Metadata.Name, "_"), "_");
-        Expression body = EventTraceOperandExpressionBuilder.Build(operand, eventRecordReaderParam,
-            eventWriterParam, eventMetadataTableParam, runtimeMetadataParam);
+        Expression body = EventTraceOperandExpressionBuilder.Build(
+            operand,
+            eventRecordReaderParam,
+            eventWriterParam,
+            eventMetadataTableParam,
+            runtimeMetadataParam
+        );
         LambdaExpression expression =
             Expression.Lambda<Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata>>(body,
                 "Read_" + name, parameters);

@@ -130,9 +130,9 @@ public class Tests
 
         Assert.Pass();
     }
-    
+
     [Test]
-    public void SymbolsDownloadTest()
+    public void SymbolServerDownloadTest()
     {
         const string etwFilePath = @".\traces\BthPS3_0.etl";
 
@@ -140,20 +140,26 @@ public class Tests
 
         using MemoryStream ms = new();
         using Utf8JsonWriter jsonWriter = new(ms, options);
-        
-        var services = new ServiceCollection();
-        services.AddHttpClient();
-        var provider = services.BuildServiceProvider();
 
-        var factory = provider.GetRequiredService<IHttpClientFactory>();
-        var client = factory.CreateClient(); 
-       
+        ServiceCollection services = new();
+        services.AddHttpClient();
+        ServiceProvider provider = services.BuildServiceProvider();
+
+        IHttpClientFactory factory = provider.GetRequiredService<IHttpClientFactory>();
+        HttpClient client = factory.CreateClient();
+        client.BaseAddress = new Uri("http://192.168.2.12:5000");
+
         if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
             {
                 converterOptions.ContextProviderLookup = pdbMetaData =>
                 {
-                    // TODO: implement me!
-                    return null;
+                    using Stream webStream = client.GetStreamAsync(pdbMetaData.DownloadPath).GetAwaiter().GetResult();
+                    using MemoryStream memory = new();
+                    // we cannot seek a web stream, so we need to cache it in memory first
+                    webStream.CopyTo(memory);
+                    memory.Position = 0;
+
+                    return new PdbFileDecodingContextType(memory);
                 };
             }))
         {
@@ -162,7 +168,7 @@ public class Tests
 
         ms.Seek(0, SeekOrigin.Begin);
 
-        using FileStream outFile = File.OpenWrite("BthPS3_0_partial.json");
+        using FileStream outFile = File.OpenWrite("BthPS3_0_server.json");
         ms.CopyTo(outFile);
 
         Assert.Pass();

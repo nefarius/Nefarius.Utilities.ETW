@@ -27,7 +27,7 @@ public sealed class EtwJsonConverterOptions
     /// <summary>
     ///     Custom <see cref="DecodingContext" /> provider lookup.
     /// </summary>
-    public Func<PdbMetaData, DecodingContext>? ContextProviderLookup { get; set; }
+    public Func<PdbMetaData, DecodingContextType?>? ContextProviderLookup { get; set; }
 
     /// <summary>
     ///     If set, <c>PROCESS_TRACE_MODE_RAW_TIMESTAMP</c> will be applied when processing the trace record.
