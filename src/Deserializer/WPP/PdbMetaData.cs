@@ -6,6 +6,7 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 ///     Describes a Program DataBase metaobject extracted from the provided trace.
 /// </summary>
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
+[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public readonly struct PdbMetaData
 {
     /// <summary>
