@@ -2,6 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
+using System.Text;
 using System.Text.RegularExpressions;
 
 using Windows.Win32.Foundation;
@@ -284,6 +285,18 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                 {
                     value =
                         $"GUID={TraceGuid.ToString().ToUpperInvariant()}, ID={GuidTypeNameFormatId}, Version={Version} - No format information found.";
+                }
+                // fallback value to inform the caller that we couldn't decode 
+                else if (propertyName.Equals(nameof(FormattedString)))
+                {
+                    value = new StringBuilder().Append("GUID=")
+                        .Append(TraceGuid.ToString().ToUpperInvariant())
+                        .Append(", ID=")
+                        .Append(GuidTypeNameFormatId)
+                        .Append(", Version=")
+                        .Append(Version)
+                        .Append(" - No format information found.")
+                        .ToString();
                 }
 
                 if (value is not null)
