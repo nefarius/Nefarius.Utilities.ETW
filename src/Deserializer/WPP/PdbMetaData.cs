@@ -42,4 +42,9 @@ public readonly struct PdbMetaData
                 $"{filename}/{Guid.ToString("N").ToUpperInvariant()}{Age.ToString("X").ToUpperInvariant()}/{filename}";
         }
     }
+
+    /// <summary>
+    ///     Gets the typical symbol server download path.
+    /// </summary>
+    public string DownloadPath => $"/download/symbols/{IndexPrefix}/{PdbName}";
 }
