@@ -12,5 +12,5 @@ public abstract class DecodingContextType
     /// <summary>
     ///     Collection of extracted <see cref="TraceMessageFormat" />s of this <see cref="DecodingContextType" />.
     /// </summary>
-    public IEnumerable<TraceMessageFormat> TraceMessageFormats { get; protected init; } = null!;
+    public IEnumerable<TraceMessageFormat> TraceMessageFormats { get; protected set; } = null!;
 }

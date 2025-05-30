@@ -11,18 +11,37 @@ public sealed class PdbFileDecodingContextType()
     : DecodingContextType
 {
     /// <summary>
-    ///     Gets decoding info from one or multiple <c>.pdb</c> files.
+    ///     Gets decoding info from one or multiple <c>.pdb</c> files by file path.
     /// </summary>
-    /// <param name="path">
-    ///     Relative or absolute path to a <c>.pdb</c> file.
-    /// </param>
-    /// <remarks>To specify multiple files, use <see cref="CreateFrom" />.</remarks>
+    /// <param name="path">Relative or absolute path to a <c>.pdb</c> file.</param>
     public PdbFileDecodingContextType(string path) : this()
     {
         ArgumentException.ThrowIfNullOrEmpty(path);
 
-        using KaitaiStream stream = new(File.OpenRead(path));
-        MsPdb pdb = new(stream);
+        using FileStream fileStream = File.OpenRead(path);
+        using KaitaiStream kaitaiStream = new(fileStream);
+        InitializeFromStream(kaitaiStream);
+    }
+
+    /// <summary>
+    ///     Gets decoding info from a stream containing PDB file data.
+    /// </summary>
+    /// <param name="stream">A stream containing a <c>.pdb</c> file.</param>
+    public PdbFileDecodingContextType(Stream stream) : this()
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+
+        using KaitaiStream kaitaiStream = new(stream);
+        InitializeFromStream(kaitaiStream);
+    }
+
+    /// <summary>
+    ///     Initializes the decoding context from a KaitaiStream.
+    /// </summary>
+    /// <param name="kaitaiStream">Kaitai stream containing PDB data.</param>
+    private void InitializeFromStream(KaitaiStream kaitaiStream)
+    {
+        MsPdb pdb = new(kaitaiStream);
         string? originalName = pdb.GetOriginalPdbName();
 
         IEnumerable<SymProc32AnnotationPair> annotations = pdb

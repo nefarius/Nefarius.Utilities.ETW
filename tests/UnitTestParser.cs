@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
 
+using Microsoft.Extensions.DependencyInjection;
+
 using Nefarius.Utilities.ETW.Deserializer.WPP;
 using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
@@ -116,6 +118,43 @@ public class Tests
         if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
             {
                 converterOptions.WppDecodingContext = decodingContext;
+            }))
+        {
+            Assert.Fail();
+        }
+
+        ms.Seek(0, SeekOrigin.Begin);
+
+        using FileStream outFile = File.OpenWrite("BthPS3_0_partial.json");
+        ms.CopyTo(outFile);
+
+        Assert.Pass();
+    }
+    
+    [Test]
+    public void SymbolsDownloadTest()
+    {
+        const string etwFilePath = @".\traces\BthPS3_0.etl";
+
+        JsonWriterOptions options = new() { Indented = true };
+
+        using MemoryStream ms = new();
+        using Utf8JsonWriter jsonWriter = new(ms, options);
+        
+        var services = new ServiceCollection();
+        services.AddHttpClient();
+        var provider = services.BuildServiceProvider();
+
+        var factory = provider.GetRequiredService<IHttpClientFactory>();
+        var client = factory.CreateClient(); 
+       
+        if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
+            {
+                converterOptions.ContextProviderLookup = pdbMetaData =>
+                {
+                    // TODO: implement me!
+                    return null;
+                };
             }))
         {
             Assert.Fail();
