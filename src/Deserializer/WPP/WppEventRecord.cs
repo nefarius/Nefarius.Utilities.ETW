@@ -281,11 +281,6 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                         _ => throw new NotImplementedException($"Unknown property \"{propertyName}\" encountered.")
                     };
                 }
-                else if (propertyName.Equals(nameof(FormattedString)))
-                {
-                    value =
-                        $"GUID={TraceGuid.ToString().ToUpperInvariant()}, ID={GuidTypeNameFormatId}, Version={Version} - No format information found.";
-                }
                 // fallback value to inform the caller that we couldn't decode 
                 else if (propertyName.Equals(nameof(FormattedString)))
                 {
