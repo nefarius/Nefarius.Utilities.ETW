@@ -5,7 +5,6 @@ using BenchmarkDotNet.Reports;
 using BenchmarkDotNet.Running;
 
 using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
-using Nefarius.Utilities.ETW.Tests;
 
 namespace Nefarius.Utilities.ETW.Benchmarks;
 
@@ -20,25 +19,25 @@ public class EtlParserBenchmarks
     [Benchmark]
     public IReadOnlyList<TraceMessageFormat> TmfFileParserBenchmark()
     {
-        return Shared.ExtractFromFormatFiles();
+        return Tests.Shared.ExtractFromFormatFiles();
     }
 
     [Benchmark]
     public ReadOnlyCollection<TraceMessageFormat> PdbFileParserBenchmark()
     {
-        return Shared.ExtractFromSymbolFiles();
+        return Tests.Shared.ExtractFromSymbolFiles();
     }
 
     [Benchmark]
     public bool BthPs3EtlTraceDecodingBenchmark()
     {
-        return Shared.BthPs3EtlTraceDecoding();
+        return Tests.Shared.BthPs3EtlTraceDecoding();
     }
 
     [Benchmark]
     public bool DsHidMiniEtlTraceDecodingBenchmark()
     {
-        return Shared.DsHidMiniEtlTraceDecoding();
+        return Tests.Shared.DsHidMiniEtlTraceDecoding();
     }
 }
 
