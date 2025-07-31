@@ -17,6 +17,7 @@
     <ItemGroup>
         <!-- Nefarius.Shared.PdbUtils -->
         <Compile Include="..\pdbutils\**\*.cs" LinkBase="Shared" Visible="false" />
+        <ProjectReference Include="..\pdbutils\Nefarius.Shared.PdbUtils.csproj" />
     </ItemGroup>
     
     <PropertyGroup>
@@ -37,10 +38,6 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\pdbutils\Nefarius.Shared.PdbUtils.csproj" />
     </ItemGroup>
 
 </Project>

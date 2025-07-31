@@ -1,5 +1,6 @@
 ﻿using Kaitai;
 
+using Nefarius.Shared.PdbUtils.Extensions;
 using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP;
