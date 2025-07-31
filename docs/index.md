@@ -1,5 +1,15 @@
 # Assembly Nefarius.Utilities.ETW
 
+## Namespace Nefarius.Shared.PdbUtils.Kaitai.PDB
+
+- [Cat](./nefarius.shared.pdbutils.kaitai.pdb.cat.md)
+
+- [Concat](./nefarius.shared.pdbutils.kaitai.pdb.concat.md)
+
+- [ConcatPages](./nefarius.shared.pdbutils.kaitai.pdb.concatpages.md)
+
+- [Hasher](./nefarius.shared.pdbutils.kaitai.pdb.hasher.md)
+
 ## Namespace Nefarius.Utilities.ETW
 
 - [EtwJsonConverterOptions](./nefarius.utilities.etw.etwjsonconverteroptions.md)
@@ -39,13 +49,3 @@
 - [TdhGetPropertySizeException](./nefarius.utilities.etw.exceptions.tdhgetpropertysizeexception.md)
 
 - [TdhGetWppPropertyException](./nefarius.utilities.etw.exceptions.tdhgetwpppropertyexception.md)
-
-## Namespace Nefarius.Utilities.ETW.Kaitai.PDB
-
-- [Cat](./nefarius.utilities.etw.kaitai.pdb.cat.md)
-
-- [Concat](./nefarius.utilities.etw.kaitai.pdb.concat.md)
-
-- [ConcatPages](./nefarius.utilities.etw.kaitai.pdb.concatpages.md)
-
-- [Hasher](./nefarius.utilities.etw.kaitai.pdb.hasher.md)
