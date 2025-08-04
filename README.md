@@ -43,3 +43,4 @@ contributors.*
 - [kaitai-pdb](https://github.com/smx-smx/kaitai-pdb)
 - [MinVer](https://github.com/adamralph/minver)
 - [Fast access to .net fields/properties](https://github.com/mgravell/fast-member)
+- [Nefarius.Shared.PdbUtils](https://github.com/nefarius/PdbUtils)
