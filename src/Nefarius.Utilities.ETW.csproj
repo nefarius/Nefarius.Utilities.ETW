@@ -13,12 +13,6 @@
         <NoWarn Condition="'$(CI)' == 'true'">CS1591;CS8618;CS8600;CS8601;CS8603;CS8604;CS8765;CS0219;CS8625;CS8625;CS8714</NoWarn>
         <NoWarn>CS8765;CS1591;CS8600</NoWarn>
     </PropertyGroup>
-
-    <ItemGroup>
-        <!-- Nefarius.Shared.PdbUtils -->
-        <Compile Include="..\pdbutils\**\*.cs" LinkBase="Shared" Visible="false" />
-        <ProjectReference Include="..\pdbutils\Nefarius.Shared.PdbUtils.csproj" />
-    </ItemGroup>
     
     <PropertyGroup>
         <MinVerTagPrefix>v</MinVerTagPrefix>
@@ -38,6 +32,7 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+        <PackageReference Include="Nefarius.Shared.PdbUtils" Version="1.0.0-pre002" />
     </ItemGroup>
 
 </Project>

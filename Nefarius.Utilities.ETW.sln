@@ -24,10 +24,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nefarius.Utilities.ETW.Test
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nefarius.Utilities.ETW.Benchmarks", "benchmarks\Nefarius.Utilities.ETW.Benchmarks.csproj", "{C53933F7-7AA7-4FB1-9CBB-13BFFD56B0B0}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "shared", "shared", "{29CD226B-3929-4884-867C-46BD97D9E6BB}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nefarius.Shared.PdbUtils", "pdbutils\Nefarius.Shared.PdbUtils.csproj", "{6BD65A8A-1E60-41E3-AD2B-25BFBC84CD6E}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -46,10 +42,6 @@ Global
 		{C53933F7-7AA7-4FB1-9CBB-13BFFD56B0B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C53933F7-7AA7-4FB1-9CBB-13BFFD56B0B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C53933F7-7AA7-4FB1-9CBB-13BFFD56B0B0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6BD65A8A-1E60-41E3-AD2B-25BFBC84CD6E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6BD65A8A-1E60-41E3-AD2B-25BFBC84CD6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6BD65A8A-1E60-41E3-AD2B-25BFBC84CD6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6BD65A8A-1E60-41E3-AD2B-25BFBC84CD6E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -58,7 +50,6 @@ Global
 		{AE4BB73C-1697-432A-A9C6-3CC76434198A} = {16A7C57B-55E8-457F-B126-3F097A519E11}
 		{921BC504-4099-44A6-B1C1-849717491ACA} = {D7BDD91D-C2C9-4D87-B8F3-B1375D7FD79D}
 		{C53933F7-7AA7-4FB1-9CBB-13BFFD56B0B0} = {D7BDD91D-C2C9-4D87-B8F3-B1375D7FD79D}
-		{6BD65A8A-1E60-41E3-AD2B-25BFBC84CD6E} = {29CD226B-3929-4884-867C-46BD97D9E6BB}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0931682E-8EF3-47BC-BD8A-AFDDA0A55874}
