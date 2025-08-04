@@ -1,15 +1,5 @@
 # Assembly Nefarius.Utilities.ETW
 
-## Namespace Nefarius.Shared.PdbUtils.Kaitai.PDB
-
-- [Cat](./nefarius.shared.pdbutils.kaitai.pdb.cat.md)
-
-- [Concat](./nefarius.shared.pdbutils.kaitai.pdb.concat.md)
-
-- [ConcatPages](./nefarius.shared.pdbutils.kaitai.pdb.concatpages.md)
-
-- [Hasher](./nefarius.shared.pdbutils.kaitai.pdb.hasher.md)
-
 ## Namespace Nefarius.Utilities.ETW
 
 - [EtwJsonConverterOptions](./nefarius.utilities.etw.etwjsonconverteroptions.md)
