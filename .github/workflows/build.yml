@@ -14,6 +14,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: true
+          lfs: true
 
       - name: Setup .Net SDK
         uses: actions/setup-dotnet@v4
