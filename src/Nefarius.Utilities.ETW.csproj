@@ -32,7 +32,7 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-        <PackageReference Include="Nefarius.Shared.PdbUtils" Version="1.0.0-pre002" />
+        <PackageReference Include="Nefarius.Shared.PdbUtils" Version="1.0.0" />
     </ItemGroup>
 
 </Project>
