@@ -132,8 +132,14 @@ public class Tests
     }
 
     [Test]
+    [Category("Integration")]
     public async Task SymbolServerDownloadTest()
     {
+        if (!string.Equals(Environment.GetEnvironmentVariable("RUN_INTEGRATION_TESTS"), "true",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            Assert.Ignore("Set RUN_INTEGRATION_TESTS=true to run integration tests.");
+        }
         const string etwFilePath = @".\traces\BthPS3_0.etl";
 
         ServiceCollection services = new();
@@ -181,7 +187,7 @@ public class Tests
 
         ms.Seek(0, SeekOrigin.Begin);
 
-        await using FileStream outFile = File.OpenWrite("BthPS3_0_server.json");
+        await using FileStream outFile = File.Create("BthPS3_0_server.json");
         await ms.CopyToAsync(outFile, cts.Token).ConfigureAwait(false);
 
         Assert.Pass();
