@@ -139,15 +139,9 @@ public class Tests
         ServiceCollection services = new();
         services.AddHttpClient();
         ServiceProvider provider = services.BuildServiceProvider();
-
-        bool isCI = string.Equals(Environment.GetEnvironmentVariable("CI"), "true",
-            StringComparison.OrdinalIgnoreCase);
-
         IHttpClientFactory factory = provider.GetRequiredService<IHttpClientFactory>();
         HttpClient client = factory.CreateClient();
-        client.BaseAddress = isCI
-            ? new Uri("https://symbols.nefarius.at/")
-            : new Uri("http://192.168.2.12:5000");
+        client.BaseAddress = new Uri("https://symbols.nefarius.at/");
         client.Timeout = TimeSpan.FromSeconds(30);
 
         // Pass 1: collect all PDB references embedded in the trace.
@@ -156,7 +150,7 @@ public class Tests
         // Pass 2: resolve each PDB from the symbol server and build a DecodingContext.
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(30));
 
-        List<DecodingContextType> decodingTypes = new();
+        List<DecodingContextType> decodingTypes = [];
         foreach (PdbMetaData pdbMetaData in pdbRefs)
         {
             using HttpResponseMessage response =
@@ -171,11 +165,11 @@ public class Tests
 
         DecodingContext decodingContext = new(decodingTypes);
 
-        // Pass 3: decode the trace with the fully-assembled context.
+        // Pass 3: decode the trace with the fully assembled context.
         JsonWriterOptions options = new() { Indented = true };
 
         using MemoryStream ms = new();
-        using Utf8JsonWriter jsonWriter = new(ms, options);
+        await using Utf8JsonWriter jsonWriter = new(ms, options);
 
         if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
             {
@@ -187,8 +181,8 @@ public class Tests
 
         ms.Seek(0, SeekOrigin.Begin);
 
-        using FileStream outFile = File.OpenWrite("BthPS3_0_server.json");
-        await ms.CopyToAsync(outFile).ConfigureAwait(false);
+        await using FileStream outFile = File.OpenWrite("BthPS3_0_server.json");
+        await ms.CopyToAsync(outFile, cts.Token).ConfigureAwait(false);
 
         Assert.Pass();
     }
@@ -207,7 +201,7 @@ public class Tests
         // The BthPS3 trace must reference at least BthPS3.pdb and BthPS3PSM.pdb.
         Assert.That(refs, Is.Not.Empty);
 
-        IEnumerable<string> pdbNames = refs.Select(r => Path.GetFileName(r.PdbName).ToLowerInvariant());
+        IList<string> pdbNames = refs.Select(r => Path.GetFileName(r.PdbName).ToLowerInvariant()).ToList();
         Assert.That(pdbNames, Does.Contain("bthps3.pdb"));
         Assert.That(pdbNames, Does.Contain("bthps3psm.pdb"));
     }
