@@ -8,128 +8,214 @@ using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
 namespace Nefarius.Utilities.ETW.Tests;
 
+/// <summary>
+///     Core parser tests: TMF and PDB format parsing, ETL decode assertions, and plausibility checks.
+/// </summary>
+[Category("Parse")]
 public class Tests
 {
     private const int ExpectedTypesCount = 2610;
 
     private static readonly TraceMessageFormat ExpectedSampleType = new()
     {
-        FileName = "Bluetooth.Context.c",
-        Flags = "TRACE_BTH",
-        Function = "BthPS3_DeviceContextHeaderInit",
-        Id = 12,
-        Level = "TRACE_LEVEL_VERBOSE",
+        FileName      = "Bluetooth.Context.c",
+        Flags         = "TRACE_BTH",
+        Function      = "BthPS3_DeviceContextHeaderInit",
+        Id            = 12,
+        Level         = "TRACE_LEVEL_VERBOSE",
         MessageFormat = "%0 [%!FUNC!] <-- Exit <status=%10!s!>",
-        MessageGuid = Guid.Parse("e4b27b5e-24d0-369f-a4b5-23228e160bd2"),
-        Opcode = "Bluetooth_Context_c149",
-        Provider = "BthPS3"
+        MessageGuid   = Guid.Parse("e4b27b5e-24d0-369f-a4b5-23228e160bd2"),
+        Opcode        = "Bluetooth_Context_c149",
+        Provider      = "BthPS3"
     };
 
-    [SetUp]
-    public void Setup()
+    // Heavy parse results shared across tests in this fixture.
+    private ReadOnlyCollection<TraceMessageFormat> _tmfResult  = null!;
+    private ReadOnlyCollection<TraceMessageFormat> _pdbResult  = null!;
+
+    [OneTimeSetUp]
+    public void OneTimeSetup()
     {
+        _tmfResult = Shared.ExtractFromFormatFiles();
+        _pdbResult = Shared.ExtractFromSymbolFiles();
     }
 
-    /// <summary>
-    ///     Parses all found .tmf files.
-    /// </summary>
+    [SetUp]
+    public void Setup() { }
+
+    // -----------------------------------------------------------------------
+    // Format-file (TMF) parsing
+    // -----------------------------------------------------------------------
+
     [Test]
     public void TmfFileParserTest()
     {
-        IReadOnlyList<TraceMessageFormat> result = Shared.ExtractFromFormatFiles();
-
-        TraceMessageFormat sample = result.Single(format => format.Opcode.Equals("Bluetooth_Context_c149"));
+        TraceMessageFormat sample = _tmfResult.Single(f => f.Opcode.Equals("Bluetooth_Context_c149"));
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(sample, Is.EqualTo(ExpectedSampleType));
-            Assert.That(result, Has.Count.EqualTo(ExpectedTypesCount));
+            Assert.That(_tmfResult, Has.Count.EqualTo(ExpectedTypesCount));
         }
     }
 
-    /// <summary>
-    ///     Parses TMF information directly from PDBs.
-    /// </summary>
+    // -----------------------------------------------------------------------
+    // PDB parsing
+    // -----------------------------------------------------------------------
+
     [Test]
     public void PdbFileParserTest()
     {
-        ReadOnlyCollection<TraceMessageFormat> result = Shared.ExtractFromSymbolFiles();
-
-        TraceMessageFormat sample = result.Single(format => format.Opcode.Equals("Bluetooth_Context_c149"));
+        TraceMessageFormat sample = _pdbResult.Single(f => f.Opcode.Equals("Bluetooth_Context_c149"));
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(sample, Is.EqualTo(ExpectedSampleType));
-            Assert.That(result, Has.Count.EqualTo(ExpectedTypesCount));
+            Assert.That(_pdbResult, Has.Count.EqualTo(ExpectedTypesCount));
         }
     }
+
+    // -----------------------------------------------------------------------
+    // Plausibility: TMF and PDB results must be equivalent
+    // -----------------------------------------------------------------------
 
     [Test]
     public void PlausibilityTest()
     {
-        IReadOnlyList<TraceMessageFormat> lhs = Shared.ExtractFromFormatFiles();
-        ReadOnlyCollection<TraceMessageFormat> rhs = Shared.ExtractFromSymbolFiles();
-
-        List<string> formats = rhs.Select(s => s.MessageFormat).ToList();
-        List<ItemType> types = rhs
-            .SelectMany(format => format.FunctionParameters)
-            .Select(p => p.Type)
-            .Distinct()
-            .ToList();
-        List<string> listItems = rhs
-            .SelectMany(format => format.FunctionParameters)
-            .Where(p => p is { Type: ItemType.ItemListByte, ListItems: not null })
-            .SelectMany(p => p.ListItems!)
-            .Select(p => p.Value)
-            .Distinct()
-            .ToList();
-
-        //var t1 = lhs.Where(x => x.MessageGuid.Equals(Guid.Parse("49c0500c-96ae-35e4-0b57-99f5eded038e")));
-        //var t2 = rhs.Where(x => x.MessageGuid.Equals(Guid.Parse("49c0500c-96ae-35e4-0b57-99f5eded038e")));
-
-        //var diff = lhs.Except(rhs).ToList();
-
-        Assert.That(lhs, Is.EquivalentTo(rhs));
+        Assert.That(_tmfResult, Is.EquivalentTo(_pdbResult));
     }
 
+    // -----------------------------------------------------------------------
+    // BthPS3 ETL decode — full context (both PDB files)
+    // -----------------------------------------------------------------------
 
-    /// <summary>
-    ///     Decodes a sample .etl file with TMFs from PDBs.
-    /// </summary>
     [Test]
+    [Category("EndToEnd")]
     public void BthPs3EtlTraceDecodingTest()
     {
-        Assert.That(Shared.BthPs3EtlTraceDecoding(), Is.True);
+        string json = Shared.BthPs3EtlTraceDecodeToString();
+
+        using JsonDocument doc = JsonDocument.Parse(json);
+        JsonElement root = doc.RootElement;
+
+        JsonElement events = root.GetProperty("Events");
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(events.GetArrayLength(), Is.GreaterThan(0),
+                "Decoded trace must contain at least one event.");
+
+            // At least one event should be a successfully decoded WPP event (FormattedString
+            // must NOT begin with the fallback prefix "GUID=" when the full context is provided).
+            bool hasDecodedWppEvent = events.EnumerateArray()
+                .Select(e => e.GetProperty("Event"))
+                .Where(e => e.GetProperty("Name").GetString() == "WPP")
+                .Select(e => e.GetProperty("Properties")[0])
+                .Any(props =>
+                {
+                    string? fs = props.GetProperty("FormattedString").GetString();
+                    return fs is not null && !fs.StartsWith("GUID=");
+                });
+
+            Assert.That(hasDecodedWppEvent, Is.True,
+                "At least one WPP event must have a successfully decoded FormattedString (not the fallback 'GUID=...' message).");
+        }
     }
 
+    // -----------------------------------------------------------------------
+    // BthPS3 ETL decode — incomplete context (only BthPS3.pdb, no BthPS3PSM.pdb)
+    // -----------------------------------------------------------------------
+
     [Test]
+    [Category("EndToEnd")]
     public void BthPs3EtlTraceIncompleteContextTest()
+    {
+        string json = Shared.BthPs3EtlIncompleteContextDecodeToString();
+
+        using JsonDocument doc = JsonDocument.Parse(json);
+        JsonElement root = doc.RootElement;
+
+        JsonElement events = root.GetProperty("Events");
+
+        Assert.That(events.GetArrayLength(), Is.GreaterThan(0),
+            "Decoded trace must contain at least one event even with an incomplete context.");
+
+        // Some WPP events must fall back to the "no format information found" message because
+        // BthPS3PSM.pdb is absent from the context.
+        bool hasFallbackEvent = events.EnumerateArray()
+            .Select(e => e.GetProperty("Event"))
+            .Where(e => e.GetProperty("Name").GetString() == "WPP")
+            .Select(e => e.GetProperty("Properties")[0])
+            .Any(props =>
+            {
+                string? fs = props.GetProperty("FormattedString").GetString();
+                return fs is not null && fs.StartsWith("GUID=");
+            });
+
+        Assert.That(hasFallbackEvent, Is.True,
+            "At least one WPP event must fall back to the 'GUID=...' message when BthPS3PSM.pdb is absent.");
+    }
+
+    // -----------------------------------------------------------------------
+    // DsHidMini ETL decode
+    // -----------------------------------------------------------------------
+
+    [Test]
+    [Category("EndToEnd")]
+    public void DsHidMiniEtlTraceDecodingTest()
+    {
+        string json = Shared.DsHidMiniEtlTraceDecodeToString();
+
+        using JsonDocument doc = JsonDocument.Parse(json);
+        JsonElement root = doc.RootElement;
+
+        JsonElement events = root.GetProperty("Events");
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(events.GetArrayLength(), Is.GreaterThan(0),
+                "Decoded DsHidMini trace must contain at least one event.");
+
+            bool hasDecodedWppEvent = events.EnumerateArray()
+                .Select(e => e.GetProperty("Event"))
+                .Where(e => e.GetProperty("Name").GetString() == "WPP")
+                .Select(e => e.GetProperty("Properties")[0])
+                .Any(props =>
+                {
+                    string? fs = props.GetProperty("FormattedString").GetString();
+                    return fs is not null && !fs.StartsWith("GUID=");
+                });
+
+            Assert.That(hasDecodedWppEvent, Is.True,
+                "At least one WPP event must have a successfully decoded FormattedString.");
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // EnumeratePdbReferences – known-good trace
+    // -----------------------------------------------------------------------
+
+    [Test]
+    [Category("EndToEnd")]
+    public void EnumeratePdbReferencesTest()
     {
         const string etwFilePath = @".\traces\BthPS3_0.etl";
 
-        JsonWriterOptions options = new() { Indented = true };
+        IReadOnlyCollection<PdbMetaData> refs = EtwUtil.EnumeratePdbReferences([etwFilePath]);
 
-        using MemoryStream ms = new();
-        using Utf8JsonWriter jsonWriter = new(ms, options);
-        DecodingContext decodingContext = new(PdbFileDecodingContextType.CreateFrom(
-            @".\symbols\BthPS3.pdb"
-        ));
+        IList<string> pdbNames = refs.Select(r => Path.GetFileName(r.PdbName).ToLowerInvariant()).ToList();
 
-        if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
-            {
-                converterOptions.WppDecodingContext = decodingContext;
-            }))
+        using (Assert.EnterMultipleScope())
         {
-            Assert.Fail();
+            Assert.That(refs,     Is.Not.Empty);
+            Assert.That(pdbNames, Does.Contain("bthps3.pdb"));
+            Assert.That(pdbNames, Does.Contain("bthps3psm.pdb"));
         }
-
-        ms.Seek(0, SeekOrigin.Begin);
-
-        using FileStream outFile = File.OpenWrite("BthPS3_0_partial.json");
-        ms.CopyTo(outFile);
-
-        Assert.Pass();
     }
+
+    // -----------------------------------------------------------------------
+    // Symbol-server integration (opt-in via environment variable)
+    // -----------------------------------------------------------------------
 
     [Test]
     [Category("Integration")]
@@ -140,6 +226,7 @@ public class Tests
         {
             Assert.Ignore("Set RUN_INTEGRATION_TESTS=true to run integration tests.");
         }
+
         const string etwFilePath = @".\traces\BthPS3_0.etl";
 
         ServiceCollection services = new();
@@ -150,10 +237,8 @@ public class Tests
         client.BaseAddress = new Uri("https://symbols.nefarius.at/");
         client.Timeout = TimeSpan.FromSeconds(30);
 
-        // Pass 1: collect all PDB references embedded in the trace.
         IReadOnlyCollection<PdbMetaData> pdbRefs = EtwUtil.EnumeratePdbReferences([etwFilePath]);
 
-        // Pass 2: resolve each PDB from the symbol server and build a DecodingContext.
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(30));
 
         List<DecodingContextType> decodingTypes = [];
@@ -171,50 +256,19 @@ public class Tests
 
         DecodingContext decodingContext = new(decodingTypes);
 
-        // Pass 3: decode the trace with the fully assembled context.
         JsonWriterOptions options = new() { Indented = true };
-
         using MemoryStream ms = new();
         await using Utf8JsonWriter jsonWriter = new(ms, options);
 
-        if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
-            {
-                converterOptions.WppDecodingContext = decodingContext;
-            }))
+        bool success = EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
         {
-            Assert.Fail();
-        }
+            converterOptions.WppDecodingContext = decodingContext;
+        });
 
-        ms.Seek(0, SeekOrigin.Begin);
+        Assert.That(success, Is.True);
 
+        ms.Position = 0;
         await using FileStream outFile = File.Create("BthPS3_0_server.json");
         await ms.CopyToAsync(outFile, cts.Token).ConfigureAwait(false);
-
-        Assert.Pass();
-    }
-
-    /// <summary>
-    ///     Verifies that <see cref="EtwUtil.EnumeratePdbReferences" /> correctly discovers the PDB references
-    ///     embedded in the BthPS3 trace without performing a full decode.
-    /// </summary>
-    [Test]
-    public void EnumeratePdbReferencesTest()
-    {
-        const string etwFilePath = @".\traces\BthPS3_0.etl";
-
-        IReadOnlyCollection<PdbMetaData> refs = EtwUtil.EnumeratePdbReferences([etwFilePath]);
-
-        // The BthPS3 trace must reference at least BthPS3.pdb and BthPS3PSM.pdb.
-        Assert.That(refs, Is.Not.Empty);
-
-        IList<string> pdbNames = refs.Select(r => Path.GetFileName(r.PdbName).ToLowerInvariant()).ToList();
-        Assert.That(pdbNames, Does.Contain("bthps3.pdb"));
-        Assert.That(pdbNames, Does.Contain("bthps3psm.pdb"));
-    }
-
-    [Test]
-    public void DsHidMiniEtlTraceDecodingTest()
-    {
-        Assert.That(Shared.DsHidMiniEtlTraceDecoding(), Is.True);
     }
 }

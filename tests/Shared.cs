@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Text;
 using System.Text.Json;
 
 using Nefarius.Utilities.ETW.Deserializer.WPP;
@@ -35,7 +36,11 @@ public static class Shared
             .AsReadOnly();
     }
 
-    public static bool BthPs3EtlTraceDecoding()
+    /// <summary>
+    ///     Decodes <c>BthPS3_0.etl</c> with both PDB files and returns the resulting JSON as a string.
+    ///     Also writes the JSON to disk for reference.
+    /// </summary>
+    public static string BthPs3EtlTraceDecodeToString()
     {
         const string etwFilePath = @".\traces\BthPS3_0.etl";
 
@@ -53,18 +58,52 @@ public static class Shared
                 converterOptions.WppDecodingContext = decodingContext;
             }))
         {
-            return false;
+            throw new InvalidOperationException("BthPS3 ETL decode failed.");
         }
 
-        ms.Seek(0, SeekOrigin.Begin);
-
-        using FileStream outFile = File.OpenWrite("BthPS3_0.json");
+        using FileStream outFile = File.Create("BthPS3_0.json");
+        ms.Position = 0;
         ms.CopyTo(outFile);
 
-        return true;
+        return Encoding.UTF8.GetString(ms.ToArray());
     }
 
-    public static bool DsHidMiniEtlTraceDecoding()
+    /// <summary>
+    ///     Decodes <c>BthPS3_0.etl</c> with only <c>BthPS3.pdb</c> (deliberately omitting
+    ///     <c>BthPS3PSM.pdb</c>) to exercise the "no format information found" fallback path.
+    /// </summary>
+    public static string BthPs3EtlIncompleteContextDecodeToString()
+    {
+        const string etwFilePath = @".\traces\BthPS3_0.etl";
+
+        JsonWriterOptions options = new() { Indented = true };
+
+        using MemoryStream ms = new();
+        using Utf8JsonWriter jsonWriter = new(ms, options);
+        DecodingContext decodingContext = new(PdbFileDecodingContextType.CreateFrom(
+            @".\symbols\BthPS3.pdb"
+        ));
+
+        if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
+            {
+                converterOptions.WppDecodingContext = decodingContext;
+            }))
+        {
+            throw new InvalidOperationException("BthPS3 partial ETL decode failed.");
+        }
+
+        using FileStream outFile = File.Create("BthPS3_0_partial.json");
+        ms.Position = 0;
+        ms.CopyTo(outFile);
+
+        return Encoding.UTF8.GetString(ms.ToArray());
+    }
+
+    /// <summary>
+    ///     Decodes <c>DsHidMini.etl</c> with <c>DsHidMini.pdb</c> and returns the resulting JSON as a string.
+    ///     Also writes the JSON to disk for reference.
+    /// </summary>
+    public static string DsHidMiniEtlTraceDecodeToString()
     {
         const string etwFilePath = @".\traces\DsHidMini.etl";
 
@@ -79,14 +118,40 @@ public static class Shared
                 converterOptions.WppDecodingContext = decodingContext;
             }))
         {
-            return false;
+            throw new InvalidOperationException("DsHidMini ETL decode failed.");
         }
 
-        ms.Seek(0, SeekOrigin.Begin);
-
-        using FileStream outFile = File.OpenWrite("DsHidMini.json");
+        using FileStream outFile = File.Create("DsHidMini.json");
+        ms.Position = 0;
         ms.CopyTo(outFile);
 
-        return true;
+        return Encoding.UTF8.GetString(ms.ToArray());
+    }
+
+    // Kept for backward compatibility with benchmarks.
+    public static bool BthPs3EtlTraceDecoding()
+    {
+        try
+        {
+            BthPs3EtlTraceDecodeToString();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static bool DsHidMiniEtlTraceDecoding()
+    {
+        try
+        {
+            DsHidMiniEtlTraceDecodeToString();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
