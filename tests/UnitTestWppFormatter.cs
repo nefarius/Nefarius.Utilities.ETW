@@ -167,14 +167,27 @@ public class WppFormatterTests
     }
 
     [Test]
-    public void Substitute_FormatsUnsignedInteger()
+    public void Substitute_FormatsUnsignedInteger_WithLowercaseU()
     {
+        // WPP "%u" = unsigned decimal; .NET has no "U" specifier so it must be mapped to "D".
         FunctionParameter param = MakeParam(ItemType.ItemLong, index: 1);
         TraceMessageFormat format = MakeFormat("%1!u!", param);
 
         string result = WppFormatter.Substitute(format, Params((1, param, 4294967295U)));
 
         Assert.That(result, Is.EqualTo("4294967295"));
+    }
+
+    [Test]
+    public void Substitute_FormatsUnsignedInteger_WithZeroPad()
+    {
+        // Verify zero-padding still works when the specifier is "u".
+        FunctionParameter param = MakeParam(ItemType.ItemLong, index: 1);
+        TraceMessageFormat format = MakeFormat("%1!08u!", param);
+
+        string result = WppFormatter.Substitute(format, Params((1, param, 42U)));
+
+        Assert.That(result, Is.EqualTo("00000042"));
     }
 
     // -----------------------------------------------------------------------

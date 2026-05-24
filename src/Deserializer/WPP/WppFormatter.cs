@@ -68,9 +68,13 @@ internal static partial class WppFormatter
                             return string.Format($"{{0:{formatSpec}}}", pair.Value);
                         }
 
-                        string pad       = numberMatch.Groups["pad"].Success ? "0" : "";
-                        string width     = numberMatch.Groups["width"].Value;
-                        string specifier = numberMatch.Groups["specifier"].Value.ToUpperInvariant();
+                        string pad  = numberMatch.Groups["pad"].Success ? "0" : "";
+                        string width = numberMatch.Groups["width"].Value;
+                        // WPP's "%u" means unsigned decimal; .NET has no "U" format specifier,
+                        // so map it to "D". All other specifiers (x/X → "X", d → "D") are safe
+                        // to uppercase directly.
+                        string rawSpecifier = numberMatch.Groups["specifier"].Value;
+                        string specifier = rawSpecifier is "u" or "U" ? "D" : rawSpecifier.ToUpperInvariant();
                         string suffix    = $"{pad}{width}";
 
                         string finalFormat = isHexPrefixed
