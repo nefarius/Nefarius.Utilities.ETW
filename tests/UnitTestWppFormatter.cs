@@ -197,13 +197,16 @@ public class WppFormatterTests
     [Test]
     public void Substitute_ReturnsFallbackString_OnFormatException()
     {
-        // Passing a string where an integer is expected will throw inside string.Format.
+        // "%1!q!" — "q" is not in [Xxdu] so NumericFormatTokenRegex does not match,
+        // falling through to string.Format("{0:q}", 42).  "q" is not a valid composite
+        // format specifier for Int32, so .NET throws FormatException, which is caught
+        // and turned into the "<format error…>" fallback string.
         FunctionParameter param = MakeParam(ItemType.ItemLong, index: 1);
-        TraceMessageFormat format = MakeFormat("%1!d!", param);
+        TraceMessageFormat format = MakeFormat("%1!q!", param);
 
         string result = WppFormatter.Substitute(
             format,
-            Params((1, param, "not_an_int")));
+            Params((1, param, 42)));
 
         Assert.That(result, Does.StartWith("<format error for %1!"));
     }
