@@ -132,35 +132,54 @@ public class Tests
     }
 
     [Test]
-    public void SymbolServerDownloadTest()
+    [Category("Integration")]
+    public async Task SymbolServerDownloadTest()
     {
+        if (!string.Equals(Environment.GetEnvironmentVariable("RUN_INTEGRATION_TESTS"), "true",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            Assert.Ignore("Set RUN_INTEGRATION_TESTS=true to run integration tests.");
+        }
         const string etwFilePath = @".\traces\BthPS3_0.etl";
-
-        JsonWriterOptions options = new() { Indented = true };
-
-        using MemoryStream ms = new();
-        using Utf8JsonWriter jsonWriter = new(ms, options);
 
         ServiceCollection services = new();
         services.AddHttpClient();
         ServiceProvider provider = services.BuildServiceProvider();
-
         IHttpClientFactory factory = provider.GetRequiredService<IHttpClientFactory>();
         HttpClient client = factory.CreateClient();
-        client.BaseAddress = new Uri("http://192.168.2.12:5000");
+        client.BaseAddress = new Uri("https://symbols.nefarius.at/");
+        client.Timeout = TimeSpan.FromSeconds(30);
+
+        // Pass 1: collect all PDB references embedded in the trace.
+        IReadOnlyCollection<PdbMetaData> pdbRefs = EtwUtil.EnumeratePdbReferences([etwFilePath]);
+
+        // Pass 2: resolve each PDB from the symbol server and build a DecodingContext.
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(30));
+
+        List<DecodingContextType> decodingTypes = [];
+        foreach (PdbMetaData pdbMetaData in pdbRefs)
+        {
+            using HttpResponseMessage response =
+                await client.GetAsync(pdbMetaData.DownloadPath, cts.Token).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+
+            using MemoryStream memory = new();
+            await response.Content.CopyToAsync(memory, cts.Token).ConfigureAwait(false);
+            memory.Position = 0;
+            decodingTypes.Add(new PdbFileDecodingContextType(memory));
+        }
+
+        DecodingContext decodingContext = new(decodingTypes);
+
+        // Pass 3: decode the trace with the fully assembled context.
+        JsonWriterOptions options = new() { Indented = true };
+
+        using MemoryStream ms = new();
+        await using Utf8JsonWriter jsonWriter = new(ms, options);
 
         if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
             {
-                converterOptions.ContextProviderLookup = pdbMetaData =>
-                {
-                    using Stream webStream = client.GetStreamAsync(pdbMetaData.DownloadPath).GetAwaiter().GetResult();
-                    using MemoryStream memory = new();
-                    // we cannot seek a web stream, so we need to cache it in memory first
-                    webStream.CopyTo(memory);
-                    memory.Position = 0;
-
-                    return new PdbFileDecodingContextType(memory);
-                };
+                converterOptions.WppDecodingContext = decodingContext;
             }))
         {
             Assert.Fail();
@@ -168,10 +187,29 @@ public class Tests
 
         ms.Seek(0, SeekOrigin.Begin);
 
-        using FileStream outFile = File.OpenWrite("BthPS3_0_server.json");
-        ms.CopyTo(outFile);
+        await using FileStream outFile = File.Create("BthPS3_0_server.json");
+        await ms.CopyToAsync(outFile, cts.Token).ConfigureAwait(false);
 
         Assert.Pass();
+    }
+
+    /// <summary>
+    ///     Verifies that <see cref="EtwUtil.EnumeratePdbReferences" /> correctly discovers the PDB references
+    ///     embedded in the BthPS3 trace without performing a full decode.
+    /// </summary>
+    [Test]
+    public void EnumeratePdbReferencesTest()
+    {
+        const string etwFilePath = @".\traces\BthPS3_0.etl";
+
+        IReadOnlyCollection<PdbMetaData> refs = EtwUtil.EnumeratePdbReferences([etwFilePath]);
+
+        // The BthPS3 trace must reference at least BthPS3.pdb and BthPS3PSM.pdb.
+        Assert.That(refs, Is.Not.Empty);
+
+        IList<string> pdbNames = refs.Select(r => Path.GetFileName(r.PdbName).ToLowerInvariant()).ToList();
+        Assert.That(pdbNames, Does.Contain("bthps3.pdb"));
+        Assert.That(pdbNames, Does.Contain("bthps3psm.pdb"));
     }
 
     [Test]

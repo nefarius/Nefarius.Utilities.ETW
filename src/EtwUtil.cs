@@ -5,6 +5,7 @@ using System.Text.Json;
 using Windows.Win32.Foundation;
 
 using Nefarius.Utilities.ETW.Deserializer;
+using Nefarius.Utilities.ETW.Deserializer.WPP;
 
 namespace Nefarius.Utilities.ETW;
 
@@ -14,6 +15,54 @@ namespace Nefarius.Utilities.ETW;
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
 public static class EtwUtil
 {
+    /// <summary>
+    ///     Performs a lightweight pre-scan of one or more <c>.ETL</c> files and returns the deduplicated set of
+    ///     <see cref="PdbMetaData" /> entries discovered in the trace.
+    /// </summary>
+    /// <param name="inputFiles">
+    ///     One or more input <c>.etl</c> files to scan. Must not be <see langword="null" /> and must not
+    ///     contain any <see langword="null" /> or whitespace-only entries.
+    /// </param>
+    /// <param name="options">
+    ///     Optional callback to configure scan behaviour. Use it to subscribe to
+    ///     <see cref="EtwMetadataScanOptions.OnDbgIdRsds" /> (<c>KernelTraceControl/ImageID/DbgID_RSDS</c>),
+    ///     <see cref="EtwMetadataScanOptions.OnKernelDbgIdRsds" /> (<c>MSNT_SystemTrace/EventTrace/DbgIdRSDS</c>),
+    ///     <see cref="EtwMetadataScanOptions.OnImageId" /> (<c>KernelTraceControl/ImageID</c>), and
+    ///     <see cref="EtwMetadataScanOptions.OnImageIdFileVersion" /> (<c>KernelTraceControl/ImageID/FileVersion</c>)
+    ///     event notifications, or to provide a <see cref="EtwMetadataScanOptions.ReportError" /> handler.
+    /// </param>
+    /// <returns>
+    ///     A deduplicated, read-only collection of every <see cref="PdbMetaData" /> referenced by the trace.
+    ///     The caller should use these entries to locate or download the corresponding <c>.pdb</c> files (or find
+    ///     matching <c>.tmf</c> files), then pass the resulting <see cref="Deserializer.WPP.DecodingContext" /> to
+    ///     <see cref="ConvertToJson" /> via <see cref="EtwJsonConverterOptions.WppDecodingContext" />.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="inputFiles" /> is <see langword="null" />.</exception>
+    /// <exception cref="ArgumentException">
+    ///     One or more entries in <paramref name="inputFiles" /> are <see langword="null" />, empty, or consist only of
+    ///     whitespace.
+    /// </exception>
+    public static IReadOnlyCollection<PdbMetaData> EnumeratePdbReferences(IEnumerable<string> inputFiles,
+        Action<EtwMetadataScanOptions>? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(inputFiles);
+
+        List<string> list = inputFiles.ToList();
+        for (int i = 0; i < list.Count; i++)
+        {
+            if (string.IsNullOrWhiteSpace(list[i]))
+            {
+                throw new ArgumentException($"Entry at index {i} is null, empty, or whitespace.", nameof(inputFiles));
+            }
+        }
+
+        EtwMetadataScanOptions opts = new();
+        options?.Invoke(opts);
+
+        MetadataScanner scanner = new(opts);
+        return scanner.Scan(list);
+    }
+
     /// <summary>
     ///     Converts one or more .ETL files to a JSON object.
     /// </summary>
@@ -32,8 +81,7 @@ public static class EtwUtil
         Deserializer<EtwJsonWriter> deserializer = new(
             new EtwJsonWriter(jsonWriter),
             opts.CustomProviderManifest,
-            opts.WppDecodingContext,
-            opts.ContextProviderLookup
+            opts.WppDecodingContext
         );
 
         int count = list.Count;

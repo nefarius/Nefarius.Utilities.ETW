@@ -22,12 +22,14 @@ public sealed class EtwJsonConverterOptions
     /// <summary>
     ///     <see cref="DecodingContext" /> to read WPP events.
     /// </summary>
+    /// <remarks>
+    ///     Build this context by calling <see cref="EtwUtil.EnumeratePdbReferences" /> first to discover all PDB
+    ///     references in the trace, resolve each <see cref="PdbMetaData" /> to its actual <c>.pdb</c> file, then
+    ///     construct a <see cref="DecodingContext" /> from the resulting
+    ///     <see cref="PdbFileDecodingContextType" /> (or <see cref="TmfFilesDirectoryDecodingContextType" />) instances
+    ///     before calling <see cref="EtwUtil.ConvertToJson" />.
+    /// </remarks>
     public DecodingContext? WppDecodingContext { get; set; }
-
-    /// <summary>
-    ///     Custom <see cref="DecodingContext" /> provider lookup.
-    /// </summary>
-    public Func<PdbMetaData, DecodingContextType?>? ContextProviderLookup { get; set; }
 
     /// <summary>
     ///     If set, <c>PROCESS_TRACE_MODE_RAW_TIMESTAMP</c> will be applied when processing the trace record.
