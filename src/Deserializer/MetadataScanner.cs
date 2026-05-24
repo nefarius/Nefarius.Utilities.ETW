@@ -21,7 +21,7 @@ internal sealed class MetadataScanner
 
     private readonly EtwMetadataScanOptions _options;
 
-    internal MetadataScanner(EtwMetadataScanOptions options)
+    internal unsafe MetadataScanner(EtwMetadataScanOptions options)
     {
         _options = options;
         _callback = Callback;
