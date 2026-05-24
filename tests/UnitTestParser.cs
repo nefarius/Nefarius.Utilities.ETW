@@ -140,9 +140,14 @@ public class Tests
         services.AddHttpClient();
         ServiceProvider provider = services.BuildServiceProvider();
 
+        bool isCI = string.Equals(Environment.GetEnvironmentVariable("CI"), "true",
+            StringComparison.OrdinalIgnoreCase);
+
         IHttpClientFactory factory = provider.GetRequiredService<IHttpClientFactory>();
         HttpClient client = factory.CreateClient();
-        client.BaseAddress = new Uri("http://192.168.2.12:5000");
+        client.BaseAddress = isCI
+            ? new Uri("https://symbols.nefarius.at/")
+            : new Uri("http://192.168.2.12:5000");
         client.Timeout = TimeSpan.FromSeconds(30);
 
         // Pass 1: collect all PDB references embedded in the trace.
