@@ -67,14 +67,8 @@ public DecodingContext WppDecodingContext { get; set; }
 
 **Remarks:**
 
-Build this context by calling [EtwUtil.EnumeratePdbReferences](./nefarius.utilities.etw.etwutil.md) first to discover all PDB
-references in the trace, then choose one of two decoding sources for each `PdbMetaData`:
-
-- **`PdbFileDecodingContextType`** — parse the matching `.pdb` file directly (e.g. downloaded from a symbol
-  server using `PdbMetaData.DownloadPath`). Preferred when the PDB is available and accurate decoding is required.
-- **`TmfFilesDirectoryDecodingContextType`** — point at a directory containing pre-extracted `.tmf` files. Use
-  this when PDB files are unavailable but `.tmf` files have already been generated (e.g. with `tracepdb.exe` or
-  WDK tools).
-
-Combine one or more of these into a single `DecodingContext` and pass it here before calling
-[EtwUtil.ConvertToJson](./nefarius.utilities.etw.etwutil.md).
+Build this context by calling [EtwUtil.EnumeratePdbReferences(IEnumerable&lt;String&gt;, Action&lt;EtwMetadataScanOptions&gt;)](./nefarius.utilities.etw.etwutil.md#enumeratepdbreferencesienumerablestring-actionetwmetadatascanoptions) first to discover all PDB
+ references in the trace, resolve each [PdbMetaData](./nefarius.utilities.etw.deserializer.wpp.pdbmetadata.md) to its actual `.pdb` file, then
+ construct a [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md) from the resulting
+ [PdbFileDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.pdbfiledecodingcontexttype.md) (or [TmfFilesDirectoryDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.tmffilesdirectorydecodingcontexttype.md)) instances
+ before calling [EtwUtil.ConvertToJson(Utf8JsonWriter, IEnumerable&lt;String&gt;, Action&lt;EtwJsonConverterOptions&gt;)](./nefarius.utilities.etw.etwutil.md#converttojsonutf8jsonwriter-ienumerablestring-actionetwjsonconverteroptions).

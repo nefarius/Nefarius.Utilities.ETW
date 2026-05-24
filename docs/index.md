@@ -4,6 +4,8 @@
 
 - [EtwJsonConverterOptions](./nefarius.utilities.etw.etwjsonconverteroptions.md)
 
+- [EtwMetadataScanOptions](./nefarius.utilities.etw.etwmetadatascanoptions.md)
+
 - [EtwUtil](./nefarius.utilities.etw.etwutil.md)
 
 ## Namespace Nefarius.Utilities.ETW.Deserializer.WPP
@@ -29,6 +31,16 @@
 - [TmfParser](./nefarius.utilities.etw.deserializer.wpp.tmf.tmfparser.md)
 
 - [TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md)
+
+## Namespace Nefarius.Utilities.ETW.Events
+
+- [DbgIdRsdsEventInfo](./nefarius.utilities.etw.events.dbgidrsdseventinfo.md)
+
+- [ImageIdEventInfo](./nefarius.utilities.etw.events.imageideventinfo.md)
+
+- [ImageIdFileVersionEventInfo](./nefarius.utilities.etw.events.imageidfileversioneventinfo.md)
+
+- [KernelDbgIdRsdsEventInfo](./nefarius.utilities.etw.events.kerneldbgidrsdseventinfo.md)
 
 ## Namespace Nefarius.Utilities.ETW.Exceptions
 

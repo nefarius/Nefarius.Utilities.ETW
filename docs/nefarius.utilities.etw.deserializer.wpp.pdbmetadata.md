@@ -8,7 +8,8 @@ Describes a Program DataBase metaobject extracted from the provided trace.
 public struct PdbMetaData
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [ValueType](https://docs.microsoft.com/en-us/dotnet/api/system.valuetype) → [PdbMetaData](./nefarius.utilities.etw.deserializer.wpp.pdbmetadata.md)
+Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [ValueType](https://docs.microsoft.com/en-us/dotnet/api/system.valuetype) → [PdbMetaData](./nefarius.utilities.etw.deserializer.wpp.pdbmetadata.md)<br>
+Implements [IEquatable&lt;PdbMetaData&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.iequatable-1)
 
 ## Properties
 
@@ -76,3 +77,43 @@ public string PdbName { get; set; }
 #### Property Value
 
 [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+
+## Methods
+
+### <a id="methods-equals"/>**Equals(PdbMetaData)**
+
+```csharp
+bool Equals(PdbMetaData other)
+```
+
+#### Parameters
+
+`other` [PdbMetaData](./nefarius.utilities.etw.deserializer.wpp.pdbmetadata.md)<br>
+
+#### Returns
+
+[Boolean](https://docs.microsoft.com/en-us/dotnet/api/system.boolean)
+
+### <a id="methods-equals"/>**Equals(Object)**
+
+```csharp
+bool Equals(object obj)
+```
+
+#### Parameters
+
+`obj` [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object)<br>
+
+#### Returns
+
+[Boolean](https://docs.microsoft.com/en-us/dotnet/api/system.boolean)
+
+### <a id="methods-gethashcode"/>**GetHashCode()**
+
+```csharp
+int GetHashCode()
+```
+
+#### Returns
+
+[Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)
