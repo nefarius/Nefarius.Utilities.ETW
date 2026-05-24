@@ -154,7 +154,7 @@ public class Tests
         List<DecodingContextType> decodingTypes = new();
         foreach (PdbMetaData pdbMetaData in pdbRefs)
         {
-            HttpResponseMessage response =
+            using HttpResponseMessage response =
                 await client.GetAsync(pdbMetaData.DownloadPath, cts.Token).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 

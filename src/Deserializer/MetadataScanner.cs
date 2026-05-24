@@ -32,6 +32,7 @@ internal sealed class MetadataScanner
         int count = inputFiles.Count;
         EVENT_TRACE_LOGFILEW[] fileSessions = new EVENT_TRACE_LOGFILEW[count];
         ulong[] handles = new ulong[count];
+        WIN32_ERROR[] openErrors = new WIN32_ERROR[count];
 
         for (int i = 0; i < count; ++i)
         {
@@ -45,6 +46,8 @@ internal sealed class MetadataScanner
                 };
 
                 handles[i] = Etw.OpenTrace(ref fileSessions[i]);
+                // Capture per-file immediately; subsequent OpenTrace calls would overwrite GetLastWin32Error.
+                openErrors[i] = (WIN32_ERROR)Marshal.GetLastWin32Error();
             }
         }
 
@@ -57,7 +60,7 @@ internal sealed class MetadataScanner
                     continue;
                 }
 
-                WIN32_ERROR lastError = (WIN32_ERROR)Marshal.GetLastWin32Error();
+                WIN32_ERROR lastError = openErrors[i];
                 switch (lastError)
                 {
                     case WIN32_ERROR.ERROR_INVALID_PARAMETER:

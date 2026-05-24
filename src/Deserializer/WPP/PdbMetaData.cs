@@ -62,7 +62,10 @@ public readonly struct PdbMetaData : IEquatable<PdbMetaData>
 
     /// <inheritdoc />
     public override int GetHashCode() =>
-        HashCode.Combine(Guid, Age, Path.GetFileName(PdbName)?.ToLowerInvariant());
+        HashCode.Combine(
+            Guid,
+            Age,
+            StringComparer.OrdinalIgnoreCase.GetHashCode(Path.GetFileName(PdbName) ?? string.Empty));
 
     /// <inheritdoc />
     public static bool operator ==(PdbMetaData left, PdbMetaData right) => left.Equals(right);
