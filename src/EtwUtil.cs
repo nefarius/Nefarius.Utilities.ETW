@@ -5,6 +5,7 @@ using System.Text.Json;
 using Windows.Win32.Foundation;
 
 using Nefarius.Utilities.ETW.Deserializer;
+using Nefarius.Utilities.ETW.Deserializer.WPP;
 
 namespace Nefarius.Utilities.ETW;
 
@@ -14,6 +15,28 @@ namespace Nefarius.Utilities.ETW;
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
 public static class EtwUtil
 {
+    /// <summary>
+    ///     Performs a lightweight pre-scan of one or more <c>.ETL</c> files and returns the deduplicated set of
+    ///     <see cref="PdbMetaData" /> entries discovered in the trace's image-ID events.
+    /// </summary>
+    /// <param name="inputFiles">One or more input <c>.etl</c> files to scan.</param>
+    /// <param name="options">Optional callback to configure scan behaviour and subscribe to image-ID event notifications.</param>
+    /// <returns>
+    ///     A deduplicated, read-only collection of every <see cref="PdbMetaData" /> referenced by the trace.
+    ///     The caller should use these entries to locate or download the corresponding <c>.pdb</c> files, then pass the
+    ///     resulting <see cref="Deserializer.WPP.DecodingContext" /> to
+    ///     <see cref="ConvertToJson" /> via <see cref="EtwJsonConverterOptions.WppDecodingContext" />.
+    /// </returns>
+    public static IReadOnlyCollection<PdbMetaData> EnumeratePdbReferences(IEnumerable<string> inputFiles,
+        Action<EtwMetadataScanOptions>? options = null)
+    {
+        EtwMetadataScanOptions opts = new();
+        options?.Invoke(opts);
+
+        MetadataScanner scanner = new(opts);
+        return scanner.Scan(inputFiles.ToList());
+    }
+
     /// <summary>
     ///     Converts one or more .ETL files to a JSON object.
     /// </summary>
@@ -32,8 +55,7 @@ public static class EtwUtil
         Deserializer<EtwJsonWriter> deserializer = new(
             new EtwJsonWriter(jsonWriter),
             opts.CustomProviderManifest,
-            opts.WppDecodingContext,
-            opts.ContextProviderLookup
+            opts.WppDecodingContext
         );
 
         int count = list.Count;

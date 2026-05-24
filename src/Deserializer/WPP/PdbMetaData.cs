@@ -7,7 +7,7 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 /// </summary>
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-public readonly struct PdbMetaData
+public readonly struct PdbMetaData : IEquatable<PdbMetaData>
 {
     /// <summary>
     ///     The full path of the PDB extracted from the session information.
@@ -48,4 +48,21 @@ public readonly struct PdbMetaData
     ///     Gets the typical symbol server download path.
     /// </summary>
     public string DownloadPath => $"/download/symbols/{IndexPrefix}";
+
+    /// <inheritdoc />
+    public bool Equals(PdbMetaData other) =>
+        Guid == other.Guid && Age == other.Age &&
+        string.Equals(PdbName, other.PdbName, StringComparison.OrdinalIgnoreCase);
+
+    /// <inheritdoc />
+    public override bool Equals(object? obj) => obj is PdbMetaData other && Equals(other);
+
+    /// <inheritdoc />
+    public override int GetHashCode() => HashCode.Combine(Guid, Age, PdbName?.ToLowerInvariant());
+
+    /// <inheritdoc />
+    public static bool operator ==(PdbMetaData left, PdbMetaData right) => left.Equals(right);
+
+    /// <inheritdoc />
+    public static bool operator !=(PdbMetaData left, PdbMetaData right) => !left.Equals(right);
 }

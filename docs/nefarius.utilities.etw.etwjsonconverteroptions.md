@@ -12,18 +12,6 @@ Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) 
 
 ## Properties
 
-### <a id="properties-contextproviderlookup"/>**ContextProviderLookup**
-
-Custom [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md) provider lookup.
-
-```csharp
-public Func<PdbMetaData, DecodingContextType> ContextProviderLookup { get; set; }
-```
-
-#### Property Value
-
-[Func&lt;PdbMetaData, DecodingContextType&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.func-2)<br>
-
 ### <a id="properties-customprovidermanifest"/>**CustomProviderManifest**
 
 Custom manifest provider lookup.
@@ -76,3 +64,10 @@ public DecodingContext WppDecodingContext { get; set; }
 #### Property Value
 
 [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md)<br>
+
+**Remarks:**
+
+Build this context by calling [EtwUtil.EnumeratePdbReferences](./nefarius.utilities.etw.etwutil.md) first to discover all PDB
+references in the trace, resolve each `PdbMetaData` to its actual `.pdb` file, then
+construct a `DecodingContext` from the resulting `PdbFileDecodingContextType` instances
+before calling [EtwUtil.ConvertToJson](./nefarius.utilities.etw.etwutil.md).

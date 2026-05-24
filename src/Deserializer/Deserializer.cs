@@ -41,8 +41,6 @@ internal sealed partial class Deserializer<T>
 
     private readonly Dictionary<Guid, EventSourceManifest> _eventSourceManifestCache = new();
 
-    private readonly Func<PdbMetaData, DecodingContextType?>? _pdbContextProviderLookup;
-
     private EventMetadata[]? _eventMetadataTable;
 
     private readonly WppTraceEventParser? _wppTraceEventParser;
@@ -55,11 +53,9 @@ internal sealed partial class Deserializer<T>
     }
 
     public Deserializer(T writer, Func<Guid, Stream?>? customProviderManifest,
-        DecodingContext? decodingContext = null,
-        Func<PdbMetaData, DecodingContextType?>? pdbContextProviderLookup = null) : this(writer)
+        DecodingContext? decodingContext = null) : this(writer)
     {
         _customProviderManifest = customProviderManifest;
-        _pdbContextProviderLookup = pdbContextProviderLookup;
 
         if (decodingContext is not null)
         {
@@ -321,33 +317,8 @@ internal sealed partial class Deserializer<T>
             return;
         }
 
-#if FIXME
-        // lets the caller react to finding the relevant .PDB(s) before WPP events get parsed, if any
-        if (operand.Metadata.Name.Equals("MSNT_SystemTrace/EventTrace/DbgIdRSDS",
-                StringComparison.InvariantCultureIgnoreCase))
-        {
-            Guid pdbGuid = eventRecordReader.ReadGuid();
-            uint pdbAge = eventRecordReader.ReadUInt32();
-            string pdbName = eventRecordReader.ReadAnsiString();
-
-            // reset or parser will read out of bounds
-            eventRecordReader.Reset();
-
-            PdbMetaData meta = new() { Guid = pdbGuid, Age = (int)pdbAge, PdbName = pdbName };
-
-            DecodingContextType? dct = _pdbContextProviderLookup?.Invoke(meta);
-
-            if (dct is not null)
-            {
-                _wppTraceEventParser = _wppTraceEventParser is null
-                    ? new WppTraceEventParser(new DecodingContext(dct))
-                    : new WppTraceEventParser(_wppTraceEventParser.DecodingContext.ExtendWith(dct));
-            }
-        }
-#endif
-
         _eventMetadataTableList.Add(operand.Metadata);
-        _eventMetadataTable = _eventMetadataTableList.ToArray(); // TODO: Need to improve this
+        _eventMetadataTable = _eventMetadataTableList.ToArray();
 
         ParameterExpression eventRecordReaderParam = Expression.Parameter(ReaderType);
         ParameterExpression eventWriterParam = Expression.Parameter(WriterType);

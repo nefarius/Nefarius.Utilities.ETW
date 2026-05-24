@@ -20,6 +20,9 @@ contributors.*
 - Added support for [WPP Software Tracing](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/wpp-software-tracing) decoding
   - Supports `.PDB` files as a decoding source
   - Supports `.TMF` files as a decoding source
+- Added `EtwUtil.EnumeratePdbReferences` for lightweight pre-scanning of ETL files to collect all PDB metadata
+  (symbol GUIDs, ages and file names) referenced in the trace before performing a full decode — enabling
+  proper multi-PDB symbol resolution via symbol servers or local paths
 
 ## Known limitations
 

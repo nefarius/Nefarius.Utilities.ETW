@@ -136,11 +136,6 @@ public class Tests
     {
         const string etwFilePath = @".\traces\BthPS3_0.etl";
 
-        JsonWriterOptions options = new() { Indented = true };
-
-        using MemoryStream ms = new();
-        using Utf8JsonWriter jsonWriter = new(ms, options);
-
         ServiceCollection services = new();
         services.AddHttpClient();
         ServiceProvider provider = services.BuildServiceProvider();
@@ -149,18 +144,33 @@ public class Tests
         HttpClient client = factory.CreateClient();
         client.BaseAddress = new Uri("http://192.168.2.12:5000");
 
+        // Pass 1: collect all PDB references embedded in the trace.
+        IReadOnlyCollection<PdbMetaData> pdbRefs = EtwUtil.EnumeratePdbReferences([etwFilePath]);
+
+        // Pass 2: resolve each PDB from the symbol server and build a DecodingContext.
+        List<DecodingContextType> decodingTypes = pdbRefs
+            .Select(pdbMetaData =>
+            {
+                using Stream webStream = client.GetStreamAsync(pdbMetaData.DownloadPath).GetAwaiter().GetResult();
+                using MemoryStream memory = new();
+                // web streams are not seekable, so buffer into memory first
+                webStream.CopyTo(memory);
+                memory.Position = 0;
+                return (DecodingContextType)new PdbFileDecodingContextType(memory);
+            })
+            .ToList();
+
+        DecodingContext decodingContext = new(decodingTypes);
+
+        // Pass 3: decode the trace with the fully-assembled context.
+        JsonWriterOptions options = new() { Indented = true };
+
+        using MemoryStream ms = new();
+        using Utf8JsonWriter jsonWriter = new(ms, options);
+
         if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
             {
-                converterOptions.ContextProviderLookup = pdbMetaData =>
-                {
-                    using Stream webStream = client.GetStreamAsync(pdbMetaData.DownloadPath).GetAwaiter().GetResult();
-                    using MemoryStream memory = new();
-                    // we cannot seek a web stream, so we need to cache it in memory first
-                    webStream.CopyTo(memory);
-                    memory.Position = 0;
-
-                    return new PdbFileDecodingContextType(memory);
-                };
+                converterOptions.WppDecodingContext = decodingContext;
             }))
         {
             Assert.Fail();
@@ -172,6 +182,25 @@ public class Tests
         ms.CopyTo(outFile);
 
         Assert.Pass();
+    }
+
+    /// <summary>
+    ///     Verifies that <see cref="EtwUtil.EnumeratePdbReferences" /> correctly discovers the PDB references
+    ///     embedded in the BthPS3 trace without performing a full decode.
+    /// </summary>
+    [Test]
+    public void EnumeratePdbReferencesTest()
+    {
+        const string etwFilePath = @".\traces\BthPS3_0.etl";
+
+        IReadOnlyCollection<PdbMetaData> refs = EtwUtil.EnumeratePdbReferences([etwFilePath]);
+
+        // The BthPS3 trace must reference at least BthPS3.pdb and BthPS3PSM.pdb.
+        Assert.That(refs, Is.Not.Empty);
+
+        IEnumerable<string> pdbNames = refs.Select(r => Path.GetFileName(r.PdbName).ToLowerInvariant());
+        Assert.That(pdbNames, Does.Contain("bthps3.pdb"));
+        Assert.That(pdbNames, Does.Contain("bthps3psm.pdb"));
     }
 
     [Test]
