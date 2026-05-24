@@ -35,10 +35,10 @@ internal static partial class WppFormatter
         return PlaceholderRegex().Replace(format.MessageFormat, match =>
         {
             bool isHexPrefixed = match.Groups[1].Success;
-            int index = int.Parse(match.Groups[2].Value);
             string formatSpec = match.Groups[3].Value;
 
-            if (!parameterValues.TryGetValue(index, out (FunctionParameter Parameter, object Value) pair))
+            if (!int.TryParse(match.Groups[2].Value, out int index) ||
+                !parameterValues.TryGetValue(index, out (FunctionParameter Parameter, object Value) pair))
             {
                 return match.Value; // leave placeholder intact when index is not present
             }
