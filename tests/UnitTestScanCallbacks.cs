@@ -1,3 +1,4 @@
+using Nefarius.Utilities.ETW.Deserializer.WPP;
 using Nefarius.Utilities.ETW.Events;
 
 namespace Nefarius.Utilities.ETW.Tests;

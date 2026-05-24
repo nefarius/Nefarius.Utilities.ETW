@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+using Nefarius.Utilities.ETW.Deserializer.WPP;
+
 namespace Nefarius.Utilities.ETW.Tests;
 
 /// <summary>
