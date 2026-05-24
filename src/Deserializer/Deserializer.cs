@@ -41,7 +41,7 @@ internal sealed partial class Deserializer<T>
 
     private readonly Dictionary<Guid, EventSourceManifest> _eventSourceManifestCache = new();
 
-    private EventMetadata[]? _eventMetadataTable;
+    private EventMetadata[] _eventMetadataTable = Array.Empty<EventMetadata>();
 
     private readonly WppTraceEventParser? _wppTraceEventParser;
 

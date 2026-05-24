@@ -132,7 +132,7 @@ public class Tests
     }
 
     [Test]
-    public void SymbolServerDownloadTest()
+    public async Task SymbolServerDownloadTest()
     {
         const string etwFilePath = @".\traces\BthPS3_0.etl";
 
@@ -143,22 +143,26 @@ public class Tests
         IHttpClientFactory factory = provider.GetRequiredService<IHttpClientFactory>();
         HttpClient client = factory.CreateClient();
         client.BaseAddress = new Uri("http://192.168.2.12:5000");
+        client.Timeout = TimeSpan.FromSeconds(30);
 
         // Pass 1: collect all PDB references embedded in the trace.
         IReadOnlyCollection<PdbMetaData> pdbRefs = EtwUtil.EnumeratePdbReferences([etwFilePath]);
 
         // Pass 2: resolve each PDB from the symbol server and build a DecodingContext.
-        List<DecodingContextType> decodingTypes = pdbRefs
-            .Select(pdbMetaData =>
-            {
-                using Stream webStream = client.GetStreamAsync(pdbMetaData.DownloadPath).GetAwaiter().GetResult();
-                using MemoryStream memory = new();
-                // web streams are not seekable, so buffer into memory first
-                webStream.CopyTo(memory);
-                memory.Position = 0;
-                return (DecodingContextType)new PdbFileDecodingContextType(memory);
-            })
-            .ToList();
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(30));
+
+        List<DecodingContextType> decodingTypes = new();
+        foreach (PdbMetaData pdbMetaData in pdbRefs)
+        {
+            HttpResponseMessage response =
+                await client.GetAsync(pdbMetaData.DownloadPath, cts.Token).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+
+            using MemoryStream memory = new();
+            await response.Content.CopyToAsync(memory, cts.Token).ConfigureAwait(false);
+            memory.Position = 0;
+            decodingTypes.Add(new PdbFileDecodingContextType(memory));
+        }
 
         DecodingContext decodingContext = new(decodingTypes);
 
@@ -179,7 +183,7 @@ public class Tests
         ms.Seek(0, SeekOrigin.Begin);
 
         using FileStream outFile = File.OpenWrite("BthPS3_0_server.json");
-        ms.CopyTo(outFile);
+        await ms.CopyToAsync(outFile).ConfigureAwait(false);
 
         Assert.Pass();
     }

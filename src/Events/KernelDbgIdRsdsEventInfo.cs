@@ -36,5 +36,17 @@ public readonly record struct KernelDbgIdRsdsEventInfo
     public string PdbName { get; init; }
 
     /// <summary>Projects this event into the <see cref="PdbMetaData" /> structure used for symbol server lookups.</summary>
-    public PdbMetaData ToPdbMetaData() => new() { Guid = Guid, Age = (int)Age, PdbName = PdbName };
+    /// <exception cref="ArgumentOutOfRangeException">
+    ///     Thrown when <see cref="Age" /> exceeds <see cref="int.MaxValue" /> and cannot be safely narrowed.
+    /// </exception>
+    public PdbMetaData ToPdbMetaData()
+    {
+        if (Age > int.MaxValue)
+        {
+            throw new ArgumentOutOfRangeException(nameof(Age), Age,
+                $"PDB age value {Age} exceeds Int32.MaxValue and cannot be stored in PdbMetaData.");
+        }
+
+        return new PdbMetaData { Guid = Guid, Age = (int)Age, PdbName = PdbName };
+    }
 }

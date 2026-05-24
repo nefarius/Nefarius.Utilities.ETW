@@ -57,7 +57,8 @@ internal sealed class MetadataScanner
                     continue;
                 }
 
-                switch ((WIN32_ERROR)Marshal.GetLastWin32Error())
+                WIN32_ERROR lastError = (WIN32_ERROR)Marshal.GetLastWin32Error();
+                switch (lastError)
                 {
                     case WIN32_ERROR.ERROR_INVALID_PARAMETER:
                         _options.ReportError?.Invoke("ERROR: For file: " + inputFiles[i] +
@@ -73,7 +74,7 @@ internal sealed class MetadataScanner
                         break;
                     default:
                         _options.ReportError?.Invoke("ERROR: For file: " + inputFiles[i] +
-                                                     " Windows returned an unknown error.");
+                                                     $" Windows returned an unknown error: 0x{(uint)lastError:X8} ({lastError}).");
                         break;
                 }
 

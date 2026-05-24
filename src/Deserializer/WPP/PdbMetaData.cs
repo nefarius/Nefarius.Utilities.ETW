@@ -52,13 +52,17 @@ public readonly struct PdbMetaData : IEquatable<PdbMetaData>
     /// <inheritdoc />
     public bool Equals(PdbMetaData other) =>
         Guid == other.Guid && Age == other.Age &&
-        string.Equals(PdbName, other.PdbName, StringComparison.OrdinalIgnoreCase);
+        string.Equals(
+            Path.GetFileName(PdbName),
+            Path.GetFileName(other.PdbName),
+            StringComparison.OrdinalIgnoreCase);
 
     /// <inheritdoc />
     public override bool Equals(object? obj) => obj is PdbMetaData other && Equals(other);
 
     /// <inheritdoc />
-    public override int GetHashCode() => HashCode.Combine(Guid, Age, PdbName?.ToLowerInvariant());
+    public override int GetHashCode() =>
+        HashCode.Combine(Guid, Age, Path.GetFileName(PdbName)?.ToLowerInvariant());
 
     /// <inheritdoc />
     public static bool operator ==(PdbMetaData left, PdbMetaData right) => left.Equals(right);
