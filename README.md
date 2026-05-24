@@ -29,6 +29,7 @@ contributors.*
 - Currently relies on **Windows-only** APIs so no support for other platforms
 - Not all WPP extended format specification strings are implemented
 - User prefixes are currently not implemented
+- `TmfFileDecodingContextType` (single `.tmf` file path mode / `TDH_CONTEXT_WPP_TMFFILE`) is not yet implemented; use `TmfFilesDirectoryDecodingContextType` instead
 
 ## Documentation
 
