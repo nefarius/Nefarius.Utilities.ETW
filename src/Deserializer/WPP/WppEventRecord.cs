@@ -1,9 +1,7 @@
-﻿using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
-using System.Text.RegularExpressions;
 
 using Windows.Win32.Foundation;
 
@@ -34,7 +32,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
             return format.MessageFormat;
         }
 
-        Dictionary<int, FunctionParameterValuePair> indexedParameterValues = [];
+        Dictionary<int, (FunctionParameter Parameter, object Value)> indexedParameterValues = [];
 
         foreach (FunctionParameter parameter in format.FunctionParameters)
         {
@@ -42,109 +40,10 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                 ? reader(eventRecordReader)
                 : throw new NotImplementedException($"Type of item {parameter.Type} not implemented.");
 
-            indexedParameterValues.Add(parameter.Index, new FunctionParameterValuePair(parameter, value));
+            indexedParameterValues.Add(parameter.Index, (parameter, value));
         }
 
-        string formatString = format.MessageFormat;
-
-        // substitute the placeholders with the real variable values
-        string formatted = PlaceholderRegex().Replace(formatString, match =>
-        {
-            // ensures we don't generate "0x0x..."
-            bool isHexPrefixed = match.Groups[1].Success;
-            int index = int.Parse(match.Groups[2].Value);
-            string formatSpec = match.Groups[3].Value;
-
-            if (!indexedParameterValues.TryGetValue(index, out FunctionParameterValuePair? pair))
-            {
-                return match.Value; // Leave as is if missing
-            }
-
-            // Apply formatting
-            try
-            {
-                switch (formatSpec)
-                {
-                    // value results in a string
-                    case "s":
-                        return ItemToString(pair);
-                    // pointer values
-                    case "p":
-                        return pair.Value switch
-                        {
-                            IntPtr ptr => $"0x{ptr:X}",
-                            long l => $"0x{l:X}",
-                            int i => $"0x{i:X}",
-                            _ => $"0x{Convert.ToUInt64(pair.Value):X}"
-                        };
-                    // complex numerical values 
-                    default:
-                        {
-                            Match numberMatch = NumericFormatTokenRegex().Match(formatSpec);
-
-                            if (!numberMatch.Success)
-                            {
-                                return string.Format($"{{0:{formatSpec}}}", pair.Value);
-                            }
-
-                            string pad = numberMatch.Groups["pad"].Success ? "0" : "";
-                            string width = numberMatch.Groups["width"].Value;
-                            string specifier = numberMatch.Groups["specifier"].Value.ToUpperInvariant();
-
-                            string formatSuffix = $"{pad}{width}";
-                            // convert so string.Format can do the job for us
-                            string finalFormat = isHexPrefixed
-                                ? $"0x{{0:{specifier}{formatSuffix}}}"
-                                : $"{{0:{specifier}{formatSuffix}}}";
-                            string result = string.Format(finalFormat, pair.Value);
-                            return result;
-                        }
-                }
-            }
-            catch
-            {
-                return $"<format error for %{index}!{formatSpec}!>";
-            }
-        });
-
-        return formatted;
-    }
-
-    private static string ItemToString(FunctionParameterValuePair pair)
-    {
-        // handle "enum" values like %irql%
-        if (pair.Parameter is { Type: ItemType.ItemListByte, ListItems: not null })
-        {
-            return pair.Parameter.ListItems[(byte)pair.Value];
-        }
-
-        // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
-        switch (pair.Parameter.Type)
-        {
-            // handle NTSTATUS translation
-            case ItemType.ItemNTSTATUS:
-                {
-                    uint ntStatus = (uint)pair.Value;
-                    return NtStatus.Values.TryGetValue(ntStatus, out string? status)
-                        ? $"{status} (0x{ntStatus:X8})"
-                        : $"Unknown NTSTATUS Error code: 0x{ntStatus:X8}";
-                }
-            // handle WINERROR translation
-            case ItemType.ItemWINERROR:
-                {
-                    uint error = (uint)pair.Value;
-                    return new Win32Exception((int)error).Message;
-                }
-            // handle HRESULT translation
-            case ItemType.ItemHRESULT:
-                {
-                    int hr = (int)pair.Value;
-                    return Marshal.GetExceptionForHR(hr)?.Message ??
-                           $"Unknown HRESULT Error code: 0x{hr:X8}";
-                }
-            default:
-                return pair.Value.ToString() ?? throw new InvalidOperationException("Unexpected null value.");
-        }
+        return WppFormatter.Substitute(format, indexedParameterValues);
     }
 
     private string? ReadUnicodeStringProperty(PROPERTY_DATA_DESCRIPTOR* descriptor, uint size)
@@ -360,13 +259,6 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
         }
     }
 
-    [GeneratedRegex(@"(0[xX])?%(\d+)!([^!]*)!", RegexOptions.Compiled)]
-    private static partial Regex PlaceholderRegex();
-
-    [GeneratedRegex(@"^(?<pad>0)?(?<width>\d+)?(?<modifier>I\d+)?(?<specifier>[Xxdu])$")]
-    private static partial Regex NumericFormatTokenRegex();
-
-    private record FunctionParameterValuePair(FunctionParameter Parameter, object Value);
 
     #region WPP Properties
 

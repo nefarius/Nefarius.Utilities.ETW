@@ -54,7 +54,7 @@ public sealed class DecodingContext
     /// <returns>The extended <see cref="DecodingContext" /> instance.</returns>
     public DecodingContext ExtendWith(params IList<DecodingContextType> additionalDecodingTypes)
     {
-        return new DecodingContext((IList<DecodingContextType>)_decodingTypes.Concat(additionalDecodingTypes));
+        return new DecodingContext(_decodingTypes.Concat(additionalDecodingTypes).ToList());
     }
 
     private record TraceMessageFormatLookupKey(Guid MessageGuid, int Id);
