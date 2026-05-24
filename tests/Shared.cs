@@ -38,7 +38,6 @@ public static class Shared
 
     /// <summary>
     ///     Decodes <c>BthPS3_0.etl</c> with both PDB files and returns the resulting JSON as a string.
-    ///     Also writes the JSON to disk for reference.
     /// </summary>
     public static string BthPs3EtlTraceDecodeToString()
     {
@@ -60,10 +59,6 @@ public static class Shared
         {
             throw new InvalidOperationException("BthPS3 ETL decode failed.");
         }
-
-        using FileStream outFile = File.Create("BthPS3_0.json");
-        ms.Position = 0;
-        ms.CopyTo(outFile);
 
         return Encoding.UTF8.GetString(ms.ToArray());
     }
@@ -92,16 +87,11 @@ public static class Shared
             throw new InvalidOperationException("BthPS3 partial ETL decode failed.");
         }
 
-        using FileStream outFile = File.Create("BthPS3_0_partial.json");
-        ms.Position = 0;
-        ms.CopyTo(outFile);
-
         return Encoding.UTF8.GetString(ms.ToArray());
     }
 
     /// <summary>
     ///     Decodes <c>DsHidMini.etl</c> with <c>DsHidMini.pdb</c> and returns the resulting JSON as a string.
-    ///     Also writes the JSON to disk for reference.
     /// </summary>
     public static string DsHidMiniEtlTraceDecodeToString()
     {
@@ -120,10 +110,6 @@ public static class Shared
         {
             throw new InvalidOperationException("DsHidMini ETL decode failed.");
         }
-
-        using FileStream outFile = File.Create("DsHidMini.json");
-        ms.Position = 0;
-        ms.CopyTo(outFile);
 
         return Encoding.UTF8.GetString(ms.ToArray());
     }
