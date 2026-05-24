@@ -15,7 +15,7 @@ internal static partial class WppFormatter
     [GeneratedRegex(@"(0[xX])?%(\d+)!([^!]*)!", RegexOptions.Compiled)]
     internal static partial Regex PlaceholderRegex();
 
-    [GeneratedRegex(@"^(?<pad>0)?(?<width>\d+)?(?<modifier>I\d+)?(?<specifier>[Xxdu])$")]
+    [GeneratedRegex(@"^(?<pad>0)?(?<width>\d+)?(?<modifier>I\d+)?(?<specifier>[XxduU])$")]
     internal static partial Regex NumericFormatTokenRegex();
 
     /// <summary>

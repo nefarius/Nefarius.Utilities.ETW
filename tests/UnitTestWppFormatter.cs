@@ -179,6 +179,19 @@ public class WppFormatterTests
     }
 
     [Test]
+    public void Substitute_FormatsUnsignedInteger_WithUppercaseU()
+    {
+        // WPP also emits "%U" (uppercase); the regex must match it and the specifier
+        // mapping must translate it to .NET's "D", not leave it as "U" (which is invalid).
+        FunctionParameter param = MakeParam(ItemType.ItemLong, index: 1);
+        TraceMessageFormat format = MakeFormat("%1!U!", param);
+
+        string result = WppFormatter.Substitute(format, Params((1, param, 4294967295U)));
+
+        Assert.That(result, Is.EqualTo("4294967295"));
+    }
+
+    [Test]
     public void Substitute_FormatsUnsignedInteger_WithZeroPad()
     {
         // Verify zero-padding still works when the specifier is "u".
