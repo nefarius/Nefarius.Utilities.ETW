@@ -6,6 +6,8 @@ using Nefarius.Utilities.ETW.Deserializer.CustomParsers;
 using Nefarius.Utilities.ETW.Deserializer.WPP;
 using Nefarius.Utilities.ETW.Events;
 
+// ReSharper disable InconsistentNaming
+
 namespace Nefarius.Utilities.ETW.Deserializer;
 
 /// <summary>
@@ -131,14 +133,57 @@ internal sealed class MetadataScanner
                         break;
                 }
             }
-            else if (providerId == PInvoke.EventTraceGuid && opcode == 36)
+            else if (providerId == PInvoke.EventTraceGuid)
             {
-                HandleKernelDbgIdRsds(reader, eventRecord);
+                // The MSNT_SystemTrace/EventTrace/DbgIdRSDS event has no stable numeric opcode that
+                // works across OS versions.  Replicate the original #if FIXME approach: ask TDH for
+                // the opcode name and match on "DbgIdRSDS" (case-insensitive), exactly as the
+                // original Deserializer.SlowLookup code did via operand.Metadata.Name.
+                TryHandleMsntDbgIdRsdsViaTdh(reader, eventRecord);
             }
         }
         catch
         {
             // Swallow: a malformed or unexpected event payload must not crash the scan.
+        }
+    }
+
+    /// <summary>
+    ///     Calls TDH to resolve the opcode name for a <see cref="PInvoke.EventTraceGuid" /> event and, when the name
+    ///     is <c>"DbgIdRSDS"</c>, forwards the record to <see cref="HandleKernelDbgIdRsds" />.
+    ///     This mirrors the name-based detection in the original <c>#if FIXME</c> block inside
+    ///     <see cref="Deserializer{T}" />.
+    /// </summary>
+    private unsafe void TryHandleMsntDbgIdRsdsViaTdh(EventRecordReader reader, EVENT_RECORD* eventRecord)
+    {
+        uint bufferSize = 0;
+        uint ret = PInvoke.TdhGetEventInformation(eventRecord, 0, null, null, &bufferSize);
+
+        if (ret != (uint)WIN32_ERROR.ERROR_INSUFFICIENT_BUFFER)
+        {
+            return;
+        }
+
+        TRACE_EVENT_INFO* info = (TRACE_EVENT_INFO*)Marshal.AllocHGlobal((int)bufferSize);
+        try
+        {
+            ret = PInvoke.TdhGetEventInformation(eventRecord, 0, null, info, &bufferSize);
+            if (ret != 0 || info->OpcodeNameOffset == 0)
+            {
+                return;
+            }
+
+            string opcodeName = new((char*)((byte*)info + info->OpcodeNameOffset));
+            if (!opcodeName.Equals("DbgIdRSDS", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            HandleKernelDbgIdRsds(reader, eventRecord);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal((IntPtr)info);
         }
     }
 
