@@ -44,6 +44,8 @@
 
 ## Namespace Nefarius.Utilities.ETW.Exceptions
 
+- [EtwOpenTraceException](./nefarius.utilities.etw.exceptions.etwopentraceexception.md)
+
 - [TdhGetEventInformationException](./nefarius.utilities.etw.exceptions.tdhgeteventinformationexception.md)
 
 - [TdhGetPropertyException](./nefarius.utilities.etw.exceptions.tdhgetpropertyexception.md)
