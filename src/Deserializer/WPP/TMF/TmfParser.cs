@@ -160,6 +160,7 @@ public static partial class TmfParser
             }
 
             List<FunctionParameter> parameters = [];
+            bool tmfValid = true;
 
             // start of one or more parameter blocks
             while (reader.ReadLine() is { } paramsBody)
@@ -172,15 +173,27 @@ public static partial class TmfParser
 
                 Match parameterMatch = ParameterBodyRegex().Match(paramsBody);
 
-                string expression = parameterMatch.Groups[1].Value;
-                string typeName  = parameterMatch.Groups[2].Value;
-                int varIndex     = int.Parse(parameterMatch.Groups[4].Value);
-
-                // Skip parameters whose type names we don't recognise rather than throwing,
-                // so unknown types in third-party TMFs don't abort the whole file parse.
-                if (!Enum.TryParse(typeName, out ItemType type))
+                if (!parameterMatch.Success)
                 {
                     continue;
+                }
+
+                string expression = parameterMatch.Groups[1].Value;
+                string typeName  = parameterMatch.Groups[2].Value;
+
+                if (!int.TryParse(parameterMatch.Groups[4].Value, out int varIndex))
+                {
+                    continue;
+                }
+
+                // An unrecognised ItemType means we cannot know the wire size of this parameter,
+                // so the payload cursor would be misaligned for every subsequent parameter.
+                // Discard the entire TMF rather than producing a partially-decoded parameter list
+                // that would silently corrupt downstream reads in WppEventRecord.
+                if (!Enum.TryParse(typeName, out ItemType type))
+                {
+                    tmfValid = false;
+                    break;
                 }
 
                 FunctionParameter parsed = new() { Expression = expression, Type = type, Index = varIndex };
@@ -207,6 +220,11 @@ public static partial class TmfParser
                 }
 
                 parameters.Add(parsed);
+            }
+
+            if (!tmfValid)
+            {
+                continue;
             }
 
             tmf.FunctionParameters = parameters.ToArray();
