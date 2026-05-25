@@ -2,11 +2,19 @@
 
 ## Namespace Nefarius.Utilities.ETW
 
+- [EtwClockResolution](./nefarius.utilities.etw.etwclockresolution.md)
+
 - [EtwJsonConverterOptions](./nefarius.utilities.etw.etwjsonconverteroptions.md)
 
 - [EtwMetadataScanOptions](./nefarius.utilities.etw.etwmetadatascanoptions.md)
 
+- [EtwRealtimeSession](./nefarius.utilities.etw.etwrealtimesession.md)
+
+- [EtwRealtimeSessionOptions](./nefarius.utilities.etw.etwrealtimesessionoptions.md)
+
 - [EtwUtil](./nefarius.utilities.etw.etwutil.md)
+
+- [TraceEventLevel](./nefarius.utilities.etw.traceeventlevel.md)
 
 ## Namespace Nefarius.Utilities.ETW.Deserializer.WPP
 
@@ -44,7 +52,11 @@
 
 ## Namespace Nefarius.Utilities.ETW.Exceptions
 
+- [EtwEnableTraceException](./nefarius.utilities.etw.exceptions.etwenabletraceexception.md)
+
 - [EtwOpenTraceException](./nefarius.utilities.etw.exceptions.etwopentraceexception.md)
+
+- [EtwStartTraceException](./nefarius.utilities.etw.exceptions.etwstarttraceexception.md)
 
 - [TdhGetEventInformationException](./nefarius.utilities.etw.exceptions.tdhgeteventinformationexception.md)
 

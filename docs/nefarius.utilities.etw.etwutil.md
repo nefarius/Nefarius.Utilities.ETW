@@ -12,6 +12,51 @@ Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) 
 
 ## Methods
 
+### <a id="methods-convertrealtimetojson"/>**ConvertRealtimeToJson(Utf8JsonWriter, String, Action&lt;EtwJsonConverterOptions&gt;, CancellationToken)**
+
+Converts a live real-time ETW session to a stream of JSON objects written to
+ `jsonWriter`, blocking until the session ends or
+ `cancellationToken` is cancelled.
+
+```csharp
+public static bool ConvertRealtimeToJson(Utf8JsonWriter jsonWriter, string sessionName, Action<EtwJsonConverterOptions> options, CancellationToken cancellationToken)
+```
+
+#### Parameters
+
+`jsonWriter` Utf8JsonWriter<br>
+The target JSON writer to write to.
+
+`sessionName` [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+The name of an already-running real-time ETW session (e.g., created via
+ [EtwRealtimeSession.Create(String, Action&lt;EtwRealtimeSessionOptions&gt;)](./nefarius.utilities.etw.etwrealtimesession.md#createstring-actionetwrealtimesessionoptions) or `logman start`).
+
+`options` [Action&lt;EtwJsonConverterOptions&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-1)<br>
+Options to further tweak the parsing operation.
+
+`cancellationToken` [CancellationToken](https://docs.microsoft.com/en-us/dotnet/api/system.threading.cancellationtoken)<br>
+Token that, when cancelled, stops trace processing and returns from this method.
+
+#### Returns
+
+when the session ended normally or was cancelled;
+  if the session could not be opened.
+
+#### Exceptions
+
+[ArgumentNullException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentnullexception)<br>
+`jsonWriter` or `sessionName` is .
+
+[ArgumentException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentexception)<br>
+`sessionName` is empty or whitespace.
+
+**Remarks:**
+
+WPP decoding in real-time mode requires a pre-built
+ [EtwJsonConverterOptions.WppDecodingContext](./nefarius.utilities.etw.etwjsonconverteroptions.md#wppdecodingcontext) supplied via
+ `options` — the file-based
+ [EtwUtil.EnumeratePdbReferences(IEnumerable&lt;String&gt;, Action&lt;EtwMetadataScanOptions&gt;)](./nefarius.utilities.etw.etwutil.md#enumeratepdbreferencesienumerablestring-actionetwmetadatascanoptions) pre-scan cannot be applied to live sessions.
+
 ### <a id="methods-converttojson"/>**ConvertToJson(Utf8JsonWriter, IEnumerable&lt;String&gt;, Action&lt;EtwJsonConverterOptions&gt;)**
 
 Converts one or more .ETL files to a JSON object.
@@ -122,3 +167,81 @@ A deduplicated, read-only collection of every [PdbMetaData](./nefarius.utilities
 [ArgumentException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentexception)<br>
 One or more entries in `inputFiles` are , empty, or consist only of
  whitespace.
+
+### <a id="methods-enumeraterealtimeeventsasync"/>**EnumerateRealtimeEventsAsync(String, Action&lt;EtwJsonConverterOptions&gt;, CancellationToken)**
+
+Streams decoded events from a live real-time ETW session as UTF-8 JSON objects,
+ yielding each event as a [ReadOnlyMemory<byte>](https://docs.microsoft.com/en-us/dotnet/api/system.readonlymemory-1)
+ as it is produced.
+
+```csharp
+public static IAsyncEnumerable<ReadOnlyMemory<Byte>> EnumerateRealtimeEventsAsync(string sessionName, Action<EtwJsonConverterOptions> options, CancellationToken cancellationToken)
+```
+
+#### Parameters
+
+`sessionName` [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+The name of an already-running real-time ETW session (e.g., created via
+ [EtwRealtimeSession.Create(String, Action&lt;EtwRealtimeSessionOptions&gt;)](./nefarius.utilities.etw.etwrealtimesession.md#createstring-actionetwrealtimesessionoptions) or `logman start`).
+
+`options` [Action&lt;EtwJsonConverterOptions&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-1)<br>
+Options to further tweak the parsing operation.
+
+`cancellationToken` [CancellationToken](https://docs.microsoft.com/en-us/dotnet/api/system.threading.cancellationtoken)<br>
+Token that, when cancelled, stops trace processing and completes the enumeration.
+
+#### Returns
+
+An [IAsyncEnumerable&lt;T&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.iasyncenumerable-1) of raw UTF-8 JSON buffers, one per event. Each buffer
+ is a self-contained JSON object — `{"Event":{"Timestamp":…,"Properties":[{…}]}}` —
+ with no outer array wrapper. The caller may concatenate or wrap items as needed.
+
+#### Exceptions
+
+[ArgumentNullException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentnullexception)<br>
+`sessionName` is .
+
+[ArgumentException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentexception)<br>
+`sessionName` is empty or whitespace.
+
+[EtwOpenTraceException](./nefarius.utilities.etw.exceptions.etwopentraceexception.md)<br>
+The session could not be opened by the ETW API.
+
+**Remarks:**
+
+Each [ReadOnlyMemory<byte>](https://docs.microsoft.com/en-us/dotnet/api/system.readonlymemory-1) is backed by a buffer rented from
+ [ArrayPool&lt;T&gt;.Shared](https://docs.microsoft.com/en-us/dotnet/api/system.buffers.arraypool-1.shared). The buffer is valid only until the next iteration step; the library
+ returns it to the pool when `MoveNextAsync` is called. Do not retain references to the memory
+ across iterations.
+
+Trace processing runs on a dedicated background thread. A bounded channel couples the producer to the
+ consumer, applying natural backpressure. When cancelled, the trace handle is closed from the
+ cancellation callback, causing `ProcessTrace` to return promptly rather than waiting for the
+ next flush-timer tick.
+
+WPP decoding in real-time mode requires a pre-built
+ [EtwJsonConverterOptions.WppDecodingContext](./nefarius.utilities.etw.etwjsonconverteroptions.md#wppdecodingcontext) supplied via
+ `options` — the file-based [EtwUtil.EnumeratePdbReferences(IEnumerable&lt;String&gt;, Action&lt;EtwMetadataScanOptions&gt;)](./nefarius.utilities.etw.etwutil.md#enumeratepdbreferencesienumerablestring-actionetwmetadatascanoptions) pre-scan cannot be
+ applied to live sessions.
+
+### <a id="methods-stoporphansession"/>**StopOrphanSession(String)**
+
+Stops a real-time ETW session by name, ignoring the error if no session with that name exists.
+ Use this at application startup to clean up sessions left behind by a previous crash.
+
+```csharp
+public static void StopOrphanSession(string sessionName)
+```
+
+#### Parameters
+
+`sessionName` [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+Name of the orphaned session to stop.
+
+#### Exceptions
+
+[ArgumentNullException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentnullexception)<br>
+`sessionName` is .
+
+[ArgumentException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentexception)<br>
+`sessionName` is empty or whitespace.
