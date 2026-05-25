@@ -47,15 +47,40 @@ internal static class ItemReader
 
             #region enumeration types
 
-            [ItemType.ItemListByte] = r => r.ReadUInt8(),
+            [ItemType.ItemListByte]   = r => r.ReadUInt8(),
+            [ItemType.ItemListShort]  = r => r.ReadInt16(),
+            [ItemType.ItemListLong]   = r => r.ReadInt32(),
+
+            [ItemType.ItemSetByte]    = r => r.ReadUInt8(),
+            [ItemType.ItemSetShort]   = r => r.ReadUInt16(),
+            [ItemType.ItemSetLong]    = r => r.ReadUInt32(),
+
+            [ItemType.ItemEnum]       = r => r.ReadUInt32(),
+            [ItemType.ItemFlagsEnum]  = r => r.ReadUInt32(),
 
             #endregion
 
             #region special formats
 
-            [ItemType.ItemNTSTATUS] = r => r.ReadUInt32(),
-            [ItemType.ItemWINERROR] = r => r.ReadUInt32(),
-            [ItemType.ItemHRESULT] = r => r.ReadInt32()
+            [ItemType.ItemNTSTATUS]   = r => r.ReadUInt32(),
+            [ItemType.ItemWINERROR]   = r => r.ReadUInt32(),
+            [ItemType.ItemHRESULT]    = r => r.ReadInt32(),
+
+            [ItemType.ItemNDIS_STATUS] = r => r.ReadUInt32(),
+            [ItemType.ItemNDIS_OID]    = r => r.ReadUInt32(),
+
+            [ItemType.ItemIPAddr]     = r => r.ReadUInt32(),
+            [ItemType.ItemPort]       = r => r.ReadUInt16(),
+
+            [ItemType.ItemTimestamp]  = r => r.ReadInt64(),
+            [ItemType.ItemTimeDelta]  = r => r.ReadInt64(),
+            [ItemType.ItemWaitTime]   = r => r.ReadInt64(),
+
+            [ItemType.ItemCLSID]      = r => r.ReadGuid(),
+            [ItemType.ItemLIBID]      = r => r.ReadGuid(),
+            [ItemType.ItemIID]        = r => r.ReadGuid(),
+
+            [ItemType.ItemChar4]      = r => r.ReadInt32()
 
             #endregion
         }.AsReadOnly();

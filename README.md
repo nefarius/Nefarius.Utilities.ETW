@@ -20,6 +20,12 @@ contributors.*
 - Added support for [WPP Software Tracing](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/wpp-software-tracing) decoding
   - Supports `.PDB` files as a decoding source
   - Supports `.TMF` files as a decoding source
+  - Full support for all [WPP extended format specification strings](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-)
+    (`%!FUNC!`, `%!LEVEL!`, `%!FLAGS!`, `%!IPADDR!`, `%!TIMESTAMP!`, `%!delta!`, `%!due!`, `%!GUID!`,
+    `%!CLSID!`/`%!LIBID!`/`%!IID!`, `%!PORT!`, `%!STATUS!`, `%!WINERROR!`, `%!HRESULT!`,
+    `%!NDIS_STATUS!`, `%!NDIS_OID!`, `%!sid!`, bitset/list enumerations, and more)
+  - `USEPREFIX`/`USESUFFIX` trace message prefixes are automatically expanded — the `%0` standard-prefix
+    sentinel and `%!FUNC!`/`%!LEVEL!` context markers are resolved from the TMF metadata at decode time
 - Added `EtwUtil.EnumeratePdbReferences` for lightweight pre-scanning of ETL files to collect all PDB metadata
   (symbol GUIDs, ages and file names) referenced in the trace before performing a full decode — enabling
   proper multi-PDB symbol resolution via symbol servers or local paths
@@ -27,8 +33,7 @@ contributors.*
 ## Known limitations
 
 - Currently relies on **Windows-only** APIs so no support for other platforms
-- Not all WPP extended format specification strings are implemented
-- User prefixes are currently not implemented
+- `%!ItemEnum!`/`%!ItemFlagsEnum!` types display raw numeric values; PDB-based enum name resolution is not yet implemented
 
 ## Documentation
 

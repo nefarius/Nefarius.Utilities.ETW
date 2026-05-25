@@ -1,5 +1,7 @@
 using System.ComponentModel;
+using System.Net;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 
 using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
@@ -18,6 +20,45 @@ internal static partial class WppFormatter
     [GeneratedRegex(@"^(?<pad>0)?(?<width>\d+)?(?<modifier>I\d+)?(?<specifier>[XxduU])$")]
     internal static partial Regex NumericFormatTokenRegex();
 
+    // Matches %!NAME! context markers (e.g. %!FUNC!, %!LEVEL!)
+    [GeneratedRegex(@"%!(?<name>[A-Za-z_][A-Za-z0-9_]*)!", RegexOptions.Compiled)]
+    internal static partial Regex ContextMarkerRegex();
+
+    // Matches the %0 standard-prefix sentinel at the start of the string (with optional trailing space)
+    [GeneratedRegex(@"^%0 ?")]
+    internal static partial Regex StdPrefixRegex();
+
+    /// <summary>
+    ///     Substitutes context markers (<c>%!FUNC!</c>, <c>%!LEVEL!</c>, <c>%!FLAGS!</c>, <c>%!FILE!</c>, etc.)
+    ///     and strips the <c>%0</c> STDPREFIX sentinel from a raw message-format string.
+    /// </summary>
+    internal static string SubstituteContext(TraceMessageFormat format, string message)
+    {
+        // Strip leading %0 / "%0 " (the STDPREFIX sentinel injected by USEPREFIX(*,"%!STDPREFIX!"))
+        message = StdPrefixRegex().Replace(message, string.Empty);
+
+        // Replace %!NAME! context markers
+        message = ContextMarkerRegex().Replace(message, match =>
+        {
+            string name = match.Groups["name"].Value;
+            return name.ToUpperInvariant() switch
+            {
+                "FUNC"     => format.Function ?? string.Empty,
+                "LEVEL"    => format.Level    ?? string.Empty,
+                "FLAGS"    => format.Flags    ?? string.Empty,
+                "KEYWORDS" => format.Flags    ?? string.Empty, // KEYWORDS is the manifest alias of FLAGS
+                "FILE"     => format.FileName ?? string.Empty,
+                // These are compile-time constants (e.g. __LINE__, __COMPNAME__); no TMF metadata available
+                "LINE"     => string.Empty,
+                "COMPNAME" => string.Empty,
+                // Leave unknown markers intact so the caller can see them
+                _          => match.Value
+            };
+        });
+
+        return message;
+    }
+
     /// <summary>
     ///     Substitutes placeholders in <paramref name="format" />'s message-format string using
     ///     <paramref name="parameterValues" />, which maps each parameter index to the already-read
@@ -27,12 +68,16 @@ internal static partial class WppFormatter
         TraceMessageFormat format,
         IReadOnlyDictionary<int, (FunctionParameter Parameter, object Value)> parameterValues)
     {
+        // First pass: resolve context markers and strip %0
+        string message = SubstituteContext(format, format.MessageFormat);
+
         if (!format.FunctionParameters.Any())
         {
-            return format.MessageFormat;
+            return message;
         }
 
-        return PlaceholderRegex().Replace(format.MessageFormat, match =>
+        // Second pass: substitute %N!fmt! parameter placeholders
+        return PlaceholderRegex().Replace(message, match =>
         {
             bool isHexPrefixed = match.Groups[1].Success;
             string formatSpec = match.Groups[3].Value;
@@ -94,18 +139,55 @@ internal static partial class WppFormatter
 
     /// <summary>
     ///     Converts a single parameter value to its string representation, handling enum lists,
-    ///     NTSTATUS, WINERROR, and HRESULT translations.
+    ///     NTSTATUS, WINERROR, HRESULT, timestamps, IP addresses, and all other WPP ItemTypes.
     /// </summary>
     internal static string ItemToString(FunctionParameter parameter, object value)
     {
-        if (parameter is { Type: ItemType.ItemListByte, ListItems: not null })
+        // List-byte enum (ItemListByte, ItemListShort, ItemListLong): look up by zero-based index
+        if (parameter.ListItems is not null && parameter.Type is
+                ItemType.ItemListByte or
+                ItemType.ItemListShort or
+                ItemType.ItemListLong)
         {
-            return parameter.ListItems[(byte)value];
+            int idx = parameter.Type switch
+            {
+                ItemType.ItemListByte  => (byte)value,
+                ItemType.ItemListShort => (short)value,
+                _                      => (int)value
+            };
+            return parameter.ListItems.TryGetValue(idx, out string? label) ? label : idx.ToString();
+        }
+
+        // Set-bit enums (ItemSetByte, ItemSetShort, ItemSetLong): comma-join the names of each set bit
+        if (parameter.ListItems is not null && parameter.Type is
+                ItemType.ItemSetByte or
+                ItemType.ItemSetShort or
+                ItemType.ItemSetLong)
+        {
+            ulong bits = parameter.Type switch
+            {
+                ItemType.ItemSetByte  => (byte)value,
+                ItemType.ItemSetShort => (ushort)value,
+                _                     => (uint)value
+            };
+
+            List<string> names = [];
+            for (int i = 0; i < parameter.ListItems.Count; i++)
+            {
+                ulong mask = 1UL << i;
+                if ((bits & mask) != 0 && parameter.ListItems.TryGetValue(i, out string? bitName))
+                {
+                    names.Add(bitName);
+                }
+            }
+
+            return names.Count > 0 ? string.Join(", ", names) : $"0x{bits:X}";
         }
 
         switch (parameter.Type)
         {
             case ItemType.ItemNTSTATUS:
+            case ItemType.ItemNDIS_STATUS:
             {
                 uint ntStatus = (uint)value;
                 return NtStatus.Values.TryGetValue(ntStatus, out string? status)
@@ -122,6 +204,72 @@ internal static partial class WppFormatter
                 int hr = (int)value;
                 return Marshal.GetExceptionForHR(hr)?.Message
                        ?? $"Unknown HRESULT Error code: 0x{hr:X8}";
+            }
+            case ItemType.ItemNDIS_OID:
+            {
+                uint oid = (uint)value;
+                return $"0x{oid:X8}";
+            }
+            // GUID-based types — all formatted identically since we have no registry to look up names
+            case ItemType.ItemGuid:
+            case ItemType.ItemCLSID:
+            case ItemType.ItemLIBID:
+            case ItemType.ItemIID:
+            {
+                return ((Guid)value).ToString("B").ToUpperInvariant();
+            }
+            // IPv4 address stored as a UInt32 in network byte order
+            case ItemType.ItemIPAddr:
+            {
+                uint raw = (uint)value;
+                return new IPAddress(BitConverter.GetBytes(raw)).ToString();
+            }
+            // Port number stored as a UInt16 in network byte order
+            case ItemType.ItemPort:
+            {
+                ushort raw = (ushort)value;
+                // Convert from network byte order (big-endian) to host byte order
+                ushort hostPort = (ushort)IPAddress.NetworkToHostOrder((short)raw);
+                return hostPort.ToString();
+            }
+            // Timestamp types: FILETIME Int64 → ISO-8601
+            case ItemType.ItemTimestamp:
+            case ItemType.ItemWaitTime:
+            {
+                long ft = (long)value;
+                return DateTime.FromFileTimeUtc(ft).ToString("o");
+            }
+            // Time delta stored as a LONGLONG in milliseconds, displayed as day~h:m:s
+            case ItemType.ItemTimeDelta:
+            {
+                long ms = (long)value;
+                long totalSecs = Math.Abs(ms) / 1000;
+                long days    = totalSecs / 86400;
+                long hours   = totalSecs % 86400 / 3600;
+                long minutes = totalSecs % 3600 / 60;
+                long secs    = totalSecs % 60;
+                return $"{days}~{hours}:{minutes:D2}:{secs:D2}";
+            }
+            // FOURCC / four-char-code: render each byte as a printable ASCII character (dot for non-printable)
+            case ItemType.ItemChar4:
+            {
+                int raw = (int)value;
+                byte[] bytes = BitConverter.GetBytes(raw);
+                StringBuilder sb = new(4);
+                foreach (byte b in bytes)
+                {
+                    sb.Append(b >= 32 && b < 127 ? (char)b : '.');
+                }
+                return sb.ToString();
+            }
+            // Enum types: PDB-based lookup is out of scope; emit raw value
+            case ItemType.ItemEnum:
+            {
+                return Convert.ToUInt32(value).ToString();
+            }
+            case ItemType.ItemFlagsEnum:
+            {
+                return $"0x{Convert.ToUInt32(value):X8}";
             }
             default:
                 return value.ToString() ?? throw new InvalidOperationException("Unexpected null value.");

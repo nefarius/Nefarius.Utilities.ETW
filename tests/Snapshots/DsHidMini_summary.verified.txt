@@ -14,19 +14,19 @@
       Provider: sys,
       Function: DriverEntry,
       Level: TRACE_LEVEL_INFORMATION,
-      FormattedString: %0 [%!FUNC!]%!FUNC! Entry
+      FormattedString: [DriverEntry]DriverEntry Entry
     },
     {
       Provider: sys,
       Function: InitIPC,
       Level: TRACE_LEVEL_VERBOSE,
-      FormattedString: %0 [%!FUNC!] --> Entry
+      FormattedString: [InitIPC] --> Entry
     },
     {
       Provider: sys,
       Function: InitIPC,
       Level: TRACE_LEVEL_ERROR,
-      FormattedString: %0 [%!FUNC!] ERROR:WdfRegistryQueryULong failed with status STATUS_NO_SUCH_FILE (0xC000000F)
+      FormattedString: [InitIPC] ERROR:WdfRegistryQueryULong failed with status STATUS_NO_SUCH_FILE (0xC000000F)
     }
   ]
 }

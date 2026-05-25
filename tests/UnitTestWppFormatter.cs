@@ -339,4 +339,319 @@ public class WppFormatterTests
         Assert.That(m.Success, Is.True);
         Assert.That(m.Groups[1].Success, Is.True);
     }
+
+    // -----------------------------------------------------------------------
+    // WppFormatter.SubstituteContext — context markers and %0 stripping
+    // -----------------------------------------------------------------------
+
+    [Test]
+    public void SubstituteContext_ReplacesFunc()
+    {
+        TraceMessageFormat format = MakeFormat("[%!FUNC!] message");
+
+        string result = WppFormatter.SubstituteContext(format, format.MessageFormat);
+
+        Assert.That(result, Is.EqualTo("[TestFunction] message"));
+    }
+
+    [Test]
+    public void SubstituteContext_ReplacesLevel()
+    {
+        TraceMessageFormat format = MakeFormat("level=%!LEVEL! msg");
+
+        string result = WppFormatter.SubstituteContext(format, format.MessageFormat);
+
+        Assert.That(result, Is.EqualTo("level=TRACE_LEVEL_VERBOSE msg"));
+    }
+
+    [Test]
+    public void SubstituteContext_ReplacesFlags()
+    {
+        TraceMessageFormat format = MakeFormat("flags=%!FLAGS!");
+
+        string result = WppFormatter.SubstituteContext(format, format.MessageFormat);
+
+        Assert.That(result, Is.EqualTo("flags=TRACE_TEST"));
+    }
+
+    [Test]
+    public void SubstituteContext_ReplacesKeywordsAsAliasOfFlags()
+    {
+        TraceMessageFormat format = MakeFormat("kw=%!KEYWORDS!");
+
+        string result = WppFormatter.SubstituteContext(format, format.MessageFormat);
+
+        Assert.That(result, Is.EqualTo("kw=TRACE_TEST"));
+    }
+
+    [Test]
+    public void SubstituteContext_ReplacesFile()
+    {
+        TraceMessageFormat format = MakeFormat("src=%!FILE!");
+
+        string result = WppFormatter.SubstituteContext(format, format.MessageFormat);
+
+        Assert.That(result, Is.EqualTo("src=test.c"));
+    }
+
+    [Test]
+    public void SubstituteContext_ReplacesLineWithEmpty()
+    {
+        TraceMessageFormat format = MakeFormat("line=%!LINE! end");
+
+        string result = WppFormatter.SubstituteContext(format, format.MessageFormat);
+
+        Assert.That(result, Is.EqualTo("line= end"));
+    }
+
+    [Test]
+    public void SubstituteContext_LeavesUnknownMarkerIntact()
+    {
+        TraceMessageFormat format = MakeFormat("%!FOO! bar");
+
+        string result = WppFormatter.SubstituteContext(format, format.MessageFormat);
+
+        Assert.That(result, Is.EqualTo("%!FOO! bar"));
+    }
+
+    [Test]
+    public void SubstituteContext_StripsLeadingStdPrefixWithSpace()
+    {
+        TraceMessageFormat format = MakeFormat("%0 [%!FUNC!] msg");
+
+        string result = WppFormatter.SubstituteContext(format, format.MessageFormat);
+
+        Assert.That(result, Is.EqualTo("[TestFunction] msg"));
+    }
+
+    [Test]
+    public void SubstituteContext_StripsLeadingStdPrefixWithoutSpace()
+    {
+        TraceMessageFormat format = MakeFormat("%0[%!FUNC!] msg");
+
+        string result = WppFormatter.SubstituteContext(format, format.MessageFormat);
+
+        Assert.That(result, Is.EqualTo("[TestFunction] msg"));
+    }
+
+    [Test]
+    public void SubstituteContext_DoesNotStrip_WhenPercent0_NotAtStart()
+    {
+        TraceMessageFormat format = MakeFormat("x%0 trailing");
+
+        string result = WppFormatter.SubstituteContext(format, format.MessageFormat);
+
+        // %0 not at the very start is left as-is
+        Assert.That(result, Does.Contain("%0"));
+    }
+
+    // -----------------------------------------------------------------------
+    // WppFormatter.Substitute — USEPREFIX-baked TMF strings (end-to-end)
+    // -----------------------------------------------------------------------
+
+    [Test]
+    public void Substitute_RendersBakedInUserPrefix_WithNtStatusParam()
+    {
+        // Mirrors a real TMF produced by USEPREFIX(*, "%!STDPREFIX! [%!FUNC!] <--"):
+        // #typev ... "%0 [%!FUNC!] <-- Exit <status=%10!s!>"
+        FunctionParameter statusParam = MakeParam(ItemType.ItemNTSTATUS, index: 10);
+        TraceMessageFormat format = MakeFormat(
+            "%0 [%!FUNC!] <-- Exit <status=%10!s!>",
+            statusParam);
+
+        string result = WppFormatter.Substitute(
+            format,
+            Params((10, statusParam, (uint)0x00000000)));
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(result, Does.Not.Contain("%0"));
+            Assert.That(result, Does.Not.Contain("%!FUNC!"));
+            Assert.That(result, Does.Contain("[TestFunction]"));
+            Assert.That(result, Does.Contain("STATUS_SUCCESS"));
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // WppFormatter.ItemToString — new ItemType formatters
+    // -----------------------------------------------------------------------
+
+    [Test]
+    public void ItemToString_FormatsIPv4()
+    {
+        FunctionParameter param = MakeParam(ItemType.ItemIPAddr, index: 1);
+
+        // 192.168.1.1 in network byte order: bytes 0xC0 0xA8 0x01 0x01
+        // As a little-endian UInt32 read from the wire that is 0x0101A8C0
+        uint networkOrderValue = 0x0101A8C0;
+        string result = WppFormatter.ItemToString(param, networkOrderValue);
+
+        Assert.That(result, Is.EqualTo("192.168.1.1"));
+    }
+
+    [Test]
+    public void ItemToString_FormatsPort()
+    {
+        FunctionParameter param = MakeParam(ItemType.ItemPort, index: 1);
+
+        // Port 80 in network byte order is 0x5000 as a UInt16 (big-endian)
+        ushort networkOrderPort = 0x5000;
+        string result = WppFormatter.ItemToString(param, networkOrderPort);
+
+        Assert.That(result, Is.EqualTo("80"));
+    }
+
+    [Test]
+    public void ItemToString_FormatsTimestamp()
+    {
+        FunctionParameter param = MakeParam(ItemType.ItemTimestamp, index: 1);
+
+        // Known FILETIME: 2000-01-01 00:00:00 UTC
+        DateTime dt        = new(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        long     fileTime  = dt.ToFileTimeUtc();
+        string   result    = WppFormatter.ItemToString(param, fileTime);
+
+        // ISO-8601 round-trip: "2000-01-01T00:00:00.0000000Z"
+        Assert.That(result, Does.StartWith("2000-01-01T00:00:00"));
+    }
+
+    [Test]
+    public void ItemToString_FormatsTimeDelta()
+    {
+        FunctionParameter param = MakeParam(ItemType.ItemTimeDelta, index: 1);
+
+        // 1 day, 2 hours, 3 minutes, 4 seconds = (1*86400 + 2*3600 + 3*60 + 4) * 1000 ms
+        long ms = (1L * 86400 + 2 * 3600 + 3 * 60 + 4) * 1000;
+        string result = WppFormatter.ItemToString(param, ms);
+
+        Assert.That(result, Is.EqualTo("1~02:03:04"));
+    }
+
+    [Test]
+    public void ItemToString_FormatsClsid()
+    {
+        FunctionParameter param = MakeParam(ItemType.ItemCLSID, index: 1);
+        Guid guid = new("12345678-1234-1234-1234-123456789ABC");
+
+        string result = WppFormatter.ItemToString(param, guid);
+
+        Assert.That(result, Is.EqualTo("{12345678-1234-1234-1234-123456789ABC}"));
+    }
+
+    [Test]
+    public void ItemToString_FormatsChar4_Printable()
+    {
+        FunctionParameter param = MakeParam(ItemType.ItemChar4, index: 1);
+
+        // 'WAVE' as a FOURCC = 0x45564157 (little-endian: W A V E)
+        int wave = BitConverter.ToInt32(new byte[] { (byte)'W', (byte)'A', (byte)'V', (byte)'E' }, 0);
+        string result = WppFormatter.ItemToString(param, wave);
+
+        Assert.That(result, Is.EqualTo("WAVE"));
+    }
+
+    [Test]
+    public void ItemToString_FormatsChar4_NonPrintableReplacedWithDot()
+    {
+        FunctionParameter param = MakeParam(ItemType.ItemChar4, index: 1);
+
+        int value = BitConverter.ToInt32(new byte[] { 0x01, (byte)'K', 0xFF, (byte)'Z' }, 0);
+        string result = WppFormatter.ItemToString(param, value);
+
+        Assert.That(result[1], Is.EqualTo('K'));
+        Assert.That(result[0], Is.EqualTo('.'));
+        Assert.That(result[2], Is.EqualTo('.'));
+        Assert.That(result[3], Is.EqualTo('Z'));
+    }
+
+    [Test]
+    public void ItemToString_FormatsItemSetLong_AsBitNames()
+    {
+        var listItems = new ReadOnlyDictionary<int, string>(new Dictionary<int, string>
+        {
+            [0] = "Read",
+            [1] = "Write",
+            [2] = "Execute"
+        });
+
+        FunctionParameter param = new()
+        {
+            Expression = "perms",
+            Type       = ItemType.ItemSetLong,
+            Index      = 1,
+            ListItems  = listItems
+        };
+
+        // bits 0 and 2 set = Read | Execute
+        string result = WppFormatter.ItemToString(param, (uint)0b101);
+
+        Assert.That(result, Is.EqualTo("Read, Execute"));
+    }
+
+    [Test]
+    public void ItemToString_FormatsItemSetLong_NoBitsSet_ReturnsHex()
+    {
+        var listItems = new ReadOnlyDictionary<int, string>(new Dictionary<int, string>
+        {
+            [0] = "Read",
+            [1] = "Write"
+        });
+
+        FunctionParameter param = new()
+        {
+            Expression = "perms",
+            Type       = ItemType.ItemSetLong,
+            Index      = 1,
+            ListItems  = listItems
+        };
+
+        string result = WppFormatter.ItemToString(param, (uint)0);
+
+        Assert.That(result, Does.StartWith("0x"));
+    }
+
+    [Test]
+    public void ItemToString_ResolvesListLongToBoolString()
+    {
+        // Mirrors CUSTOM_TYPE(bool, ItemListLong(false,true)) from defaultwpp.ini
+        var listItems = new ReadOnlyDictionary<int, string>(new Dictionary<int, string>
+        {
+            [0] = "false",
+            [1] = "true"
+        });
+
+        FunctionParameter param = new()
+        {
+            Expression = "flag",
+            Type       = ItemType.ItemListLong,
+            Index      = 1,
+            ListItems  = listItems
+        };
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(WppFormatter.ItemToString(param, (int)0), Is.EqualTo("false"));
+            Assert.That(WppFormatter.ItemToString(param, (int)1), Is.EqualTo("true"));
+        }
+    }
+
+    [Test]
+    public void ItemToString_NdisStatus_UsesNtStatusLookup()
+    {
+        FunctionParameter param = MakeParam(ItemType.ItemNDIS_STATUS, index: 1);
+
+        string result = WppFormatter.ItemToString(param, (uint)0x00000000); // STATUS_SUCCESS
+
+        Assert.That(result, Does.Contain("STATUS_SUCCESS"));
+    }
+
+    [Test]
+    public void ItemToString_NdisOid_FormatsAsHex()
+    {
+        FunctionParameter param = MakeParam(ItemType.ItemNDIS_OID, index: 1);
+
+        string result = WppFormatter.ItemToString(param, (uint)0x00010101);
+
+        Assert.That(result, Is.EqualTo("0x00010101"));
+    }
 }
