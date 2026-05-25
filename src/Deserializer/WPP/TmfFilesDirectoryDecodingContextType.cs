@@ -5,7 +5,8 @@ using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 
 /// <summary>
-///     A <see cref="TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFFILE" />  wrapper for use with <see cref="DecodingContext" />.
+///     A <see cref="TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFSEARCHPATH" /> wrapper for use with
+///     <see cref="DecodingContext" />.
 /// </summary>
 [SuppressMessage("ReSharper", "UnusedType.Global")]
 public sealed class TmfFilesDirectoryDecodingContextType()

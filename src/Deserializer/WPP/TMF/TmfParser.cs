@@ -33,6 +33,19 @@ public static partial class TmfParser
     private static partial Regex ParameterBodyRegex();
 
     /// <summary>
+    ///     Parses a single <c>.TMF</c> file.
+    /// </summary>
+    /// <param name="path">The path to a <c>.tmf</c> file.</param>
+    /// <returns>A collection of extracted <see cref="TraceMessageFormat" /> entries.</returns>
+    public static IEnumerable<TraceMessageFormat> ParseFile(string path)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(path);
+
+        using StreamReader fs = File.OpenText(path);
+        return ParseFile(fs, originalSymbolFileName: Path.GetFileName(path)).ToList();
+    }
+
+    /// <summary>
     ///     Processes a given directory of <c>.TMF</c> files and parses them.
     /// </summary>
     /// <param name="path">The directory to search in.</param>

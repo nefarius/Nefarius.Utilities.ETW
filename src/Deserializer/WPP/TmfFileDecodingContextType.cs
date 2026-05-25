@@ -1,31 +1,37 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
+using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
+
 namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 
 /// <summary>
-///     A <see cref="TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFSEARCHPATH" />  wrapper for use with
-///     <see cref="DecodingContext" />.
+///     A <see cref="TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFFILE" /> wrapper for use with <see cref="DecodingContext" />.
 /// </summary>
 [SuppressMessage("ReSharper", "UnusedType.Global")]
 public sealed class TmfFileDecodingContextType()
     : DecodingContextType
 {
     /// <summary>
-    ///     Gets decoding info from multiple paths containing <c>.TMF</c> files.
+    ///     Gets decoding info from a single <c>.tmf</c> file.
     /// </summary>
-    /// <param name="path">
-    ///     Null-terminated Unicode string that contains the path to the .tmf file. You do not have to
-    ///     specify this path if the search path contains the file. Only specify this context information if you also specify
-    ///     the TDH_CONTEXT_WPP_TMFFILE context type. If the file is not found, TDH searches the following locations in the
-    ///     given order:
-    ///     <ul>
-    ///         <li>The path specified in the TRACE_FORMAT_SEARCH_PATH environment variable</li>
-    ///         <li>The current folder</li>
-    ///     </ul>
-    /// </param>
+    /// <param name="path">Path to a single <c>.tmf</c> file.</param>
     public TmfFileDecodingContextType(string path) : this()
     {
-        ArgumentNullException.ThrowIfNull(path);
-        throw new NotImplementedException();
+        ArgumentException.ThrowIfNullOrEmpty(path);
+
+        TraceMessageFormats = TmfParser
+            .ParseFile(path)
+            .Distinct();
+    }
+
+    /// <summary>
+    ///     Converts a list of paths to <c>*.tmf</c> files into their corresponding
+    ///     <see cref="TmfFileDecodingContextType" /> objects.
+    /// </summary>
+    /// <param name="pathList">One or more paths to <c>.tmf</c> files.</param>
+    /// <returns>One or more <see cref="TmfFileDecodingContextType" />s.</returns>
+    public static IList<DecodingContextType> CreateFrom(params IList<string> pathList)
+    {
+        return pathList.Select(DecodingContextType (path) => new TmfFileDecodingContextType(path)).ToList();
     }
 }
