@@ -433,9 +433,15 @@ public static class EtwUtil
 
                 dest[sessionName.Length] = '\0';
 
-                // Pass 0 for handle — ControlTraceW uses the session name when TraceHandle is 0.
-                // ERROR_WMI_INSTANCE_NOT_FOUND (0x80071069 / 4201) means the session doesn't exist; that's fine.
-                PInvoke.ControlTrace(0, sessionName, props, Etw.EVENT_TRACE_CONTROL_STOP);
+                // Pass default(CONTROLTRACE_HANDLE) — ControlTrace uses the session name when the
+                // handle is zero.  Ignore return value: ERROR_WMI_INSTANCE_NOT_FOUND means the
+                // session does not exist, which is the expected case for orphan cleanup.
+                ref EVENT_TRACE_PROPERTIES propsRef = ref Unsafe.AsRef<EVENT_TRACE_PROPERTIES>(props);
+                PInvoke.ControlTrace(
+                    default,
+                    sessionName,
+                    ref propsRef,
+                    (EVENT_TRACE_CONTROL)Etw.EVENT_TRACE_CONTROL_STOP);
             }
             finally
             {
