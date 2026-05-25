@@ -228,6 +228,11 @@ public static class EtwUtil
                 LogFileMode = PInvoke.PROCESS_TRACE_MODE_EVENT_RECORD | PInvoke.PROCESS_TRACE_MODE_REAL_TIME
             };
 
+            if (opts.PreserveRawTimestamps)
+            {
+                session.LogFileMode |= PInvoke.PROCESS_TRACE_MODE_RAW_TIMESTAMP;
+            }
+
             handle = Etw.OpenTrace(ref session);
         }
 
@@ -499,6 +504,11 @@ public static class EtwUtil
                             LogFileMode = PInvoke.PROCESS_TRACE_MODE_EVENT_RECORD |
                                           PInvoke.PROCESS_TRACE_MODE_REAL_TIME
                         };
+
+                        if (opts.PreserveRawTimestamps)
+                        {
+                            sessions[i].LogFileMode |= PInvoke.PROCESS_TRACE_MODE_RAW_TIMESTAMP;
+                        }
                     }
                     else
                     {

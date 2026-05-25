@@ -25,14 +25,16 @@ namespace Nefarius.Utilities.ETW;
 public sealed class EtwRealtimeSession : IDisposable
 {
     private readonly string _sessionName;
+    private readonly Action<string>? _reportError;
     private readonly object _lock = new();
     private CONTROLTRACE_HANDLE _sessionHandle;
     private bool _disposed;
 
-    private EtwRealtimeSession(string sessionName, CONTROLTRACE_HANDLE sessionHandle)
+    private EtwRealtimeSession(string sessionName, CONTROLTRACE_HANDLE sessionHandle, Action<string>? reportError)
     {
         _sessionName = sessionName;
         _sessionHandle = sessionHandle;
+        _reportError = reportError;
     }
 
     /// <summary>
@@ -103,7 +105,7 @@ public sealed class EtwRealtimeSession : IDisposable
                     throw new EtwStartTraceException(error, sessionName);
                 }
 
-                return new EtwRealtimeSession(sessionName, handle);
+                return new EtwRealtimeSession(sessionName, handle, opts.ReportError);
             }
             finally
             {
@@ -154,12 +156,18 @@ public sealed class EtwRealtimeSession : IDisposable
     ///     without waiting for the next flush-timer tick.
     /// </summary>
     /// <exception cref="ObjectDisposedException">The session has been disposed.</exception>
+    /// <exception cref="System.ComponentModel.Win32Exception"><c>ControlTrace(FLUSH)</c> returned a non-zero error code.</exception>
     public void Flush()
     {
         lock (_lock)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            ControlSession(Etw.EVENT_TRACE_CONTROL_FLUSH);
+            uint error = ControlSession(Etw.EVENT_TRACE_CONTROL_FLUSH);
+            if (error != 0)
+            {
+                throw new System.ComponentModel.Win32Exception((int)error,
+                    $"ControlTrace(FLUSH) failed for session '{_sessionName}'.");
+            }
         }
     }
 
@@ -167,6 +175,8 @@ public sealed class EtwRealtimeSession : IDisposable
     /// <remarks>
     ///     Stops the ETW session (via <c>ControlTraceW</c> with <c>EVENT_TRACE_CONTROL_STOP</c>).
     ///     It is safe to call <see cref="Dispose" /> more than once.
+    ///     If the native stop call fails the session may persist as an orphan;
+    ///     use <see cref="EtwUtil.StopOrphanSession" /> at next startup to recover.
     /// </remarks>
     public void Dispose()
     {
@@ -177,9 +187,24 @@ public sealed class EtwRealtimeSession : IDisposable
                 return;
             }
 
+            // Mark disposed first to prevent re-entrant calls while the native
+            // stop is in progress (Dispose must not throw per .NET guidelines).
             _disposed = true;
-            ControlSession(Etw.EVENT_TRACE_CONTROL_STOP);
-            _sessionHandle = default;
+            uint error = ControlSession(Etw.EVENT_TRACE_CONTROL_STOP);
+
+            // Only zero the handle when the native stop succeeded.  If it failed
+            // the ETW session may still be running; the non-zero handle value is
+            // preserved for diagnostic purposes even though this object is unusable.
+            if (error == 0)
+            {
+                _sessionHandle = default;
+            }
+            else
+            {
+                _reportError?.Invoke(
+                    $"ControlTrace(STOP) failed for session '{_sessionName}' with Win32 error 0x{error:X8}. " +
+                    $"The session may still be running — use EtwUtil.StopOrphanSession to recover.");
+            }
         }
     }
 
@@ -215,9 +240,9 @@ public sealed class EtwRealtimeSession : IDisposable
         }
     }
 
-    private void ControlSession(uint controlCode)
+    private uint ControlSession(uint controlCode)
     {
-        // ControlSession must be called with _lock held and _sessionHandle != 0.
+        // ControlSession must be called with _lock held.
         unsafe
         {
             int propsSize = Marshal.SizeOf<EVENT_TRACE_PROPERTIES>();
@@ -236,7 +261,7 @@ public sealed class EtwRealtimeSession : IDisposable
                 // ControlTrace(CONTROLTRACE_HANDLE, string, ref EVENT_TRACE_PROPERTIES, EVENT_TRACE_CONTROL).
                 // Passing the handle means Windows identifies the session without searching by name.
                 ref EVENT_TRACE_PROPERTIES propsRef = ref Unsafe.AsRef<EVENT_TRACE_PROPERTIES>(props);
-                PInvoke.ControlTrace(
+                return (uint)PInvoke.ControlTrace(
                     _sessionHandle,
                     _sessionName,
                     ref propsRef,

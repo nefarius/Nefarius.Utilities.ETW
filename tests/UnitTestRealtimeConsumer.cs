@@ -50,7 +50,8 @@ public class RealtimeConsumerTests
         using EtwRealtimeSession session = EtwRealtimeSession.Create(SessionName);
         session.EnableProvider(KernelProcessGuid, TraceEventLevel.Information);
 
-        using CancellationTokenSource cts = new();
+        // Hard 30-second ceiling so the test cannot hang if the provider emits nothing.
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(30));
 
         int received = 0;
         bool cancelled = false;
@@ -99,7 +100,11 @@ public class RealtimeConsumerTests
 
         int received = 0;
 
-        await foreach (ReadOnlyMemory<byte> _ in EtwUtil.EnumerateRealtimeEventsAsync(SessionName))
+        // Hard 30-second ceiling so the test cannot hang if the provider emits nothing.
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(30));
+
+        await foreach (ReadOnlyMemory<byte> _ in EtwUtil.EnumerateRealtimeEventsAsync(SessionName,
+                           cancellationToken: cts.Token))
         {
             received++;
             if (received >= breakAfter)
@@ -131,6 +136,10 @@ public class RealtimeConsumerTests
 
         Assert.That(result, Is.True, "ConvertRealtimeToJson must return true when cancelled normally.");
 
+        // Flush the writer's internal buffer into the MemoryStream before reading it,
+        // so the test does not depend on ConvertRealtimeToJson's internal flush behaviour.
+        await writer.FlushAsync();
+
         string json = System.Text.Encoding.UTF8.GetString(ms.ToArray());
         using JsonDocument doc = JsonDocument.Parse(json);
 
@@ -144,9 +153,25 @@ public class RealtimeConsumerTests
     }
 
     // -----------------------------------------------------------------------
-    // Argument validation (no admin required)
+    // Helpers
     // -----------------------------------------------------------------------
 
+    private static bool IsRunningAsAdmin()
+    {
+        using WindowsIdentity identity = WindowsIdentity.GetCurrent();
+        WindowsPrincipal principal = new(identity);
+        return principal.IsInRole(WindowsBuiltInRole.Administrator);
+    }
+}
+
+/// <summary>
+///     Argument-guard tests for <see cref="EtwUtil.EnumerateRealtimeEventsAsync" /> and
+///     <see cref="EtwUtil.ConvertRealtimeToJson" /> that do not require administrator privileges
+///     (no ETW session is actually started).
+/// </summary>
+[Category("Realtime")]
+public class RealtimeConsumerArgumentValidationTests
+{
     [Test]
     public void EnumerateRealtimeEventsAsync_NullSessionName_Throws() =>
         Assert.Throws<ArgumentNullException>(() =>
@@ -170,16 +195,5 @@ public class RealtimeConsumerTests
 
         Assert.Throws<ArgumentNullException>(() =>
             EtwUtil.ConvertRealtimeToJson(writer, null!));
-    }
-
-    // -----------------------------------------------------------------------
-    // Helpers
-    // -----------------------------------------------------------------------
-
-    private static bool IsRunningAsAdmin()
-    {
-        using WindowsIdentity identity = WindowsIdentity.GetCurrent();
-        WindowsPrincipal principal = new(identity);
-        return principal.IsInRole(WindowsBuiltInRole.Administrator);
     }
 }

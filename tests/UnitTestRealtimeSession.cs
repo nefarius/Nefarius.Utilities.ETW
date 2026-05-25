@@ -136,18 +136,6 @@ public class RealtimeSessionTests
     }
 
     // -----------------------------------------------------------------------
-    // Option validation
-    // -----------------------------------------------------------------------
-
-    [Test]
-    public void CreateWithNullNameThrows() =>
-        Assert.Throws<ArgumentNullException>(() => EtwRealtimeSession.Create(null!));
-
-    [Test]
-    public void CreateWithBlankNameThrows() =>
-        Assert.Throws<ArgumentException>(() => EtwRealtimeSession.Create("  "));
-
-    // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
 
@@ -157,4 +145,20 @@ public class RealtimeSessionTests
         WindowsPrincipal principal = new(identity);
         return principal.IsInRole(WindowsBuiltInRole.Administrator);
     }
+}
+
+/// <summary>
+///     Argument-guard tests for <see cref="EtwRealtimeSession" /> that do not
+///     require administrator privileges (no ETW session is actually started).
+/// </summary>
+[Category("Realtime")]
+public class RealtimeSessionArgumentValidationTests
+{
+    [Test]
+    public void CreateWithNullNameThrows() =>
+        Assert.Throws<ArgumentNullException>(() => EtwRealtimeSession.Create(null!));
+
+    [Test]
+    public void CreateWithBlankNameThrows() =>
+        Assert.Throws<ArgumentException>(() => EtwRealtimeSession.Create("  "));
 }

@@ -16,17 +16,17 @@ public sealed class EtwEnableTraceException : Win32Exception
         error switch
         {
             WIN32_ERROR.ERROR_ACCESS_DENIED =>
-                $"Cannot enable provider {{{providerGuid}}} on session '{sessionName}': access denied.",
+                $"Cannot modify provider {{{providerGuid}}} on session '{sessionName}': access denied.",
 
             WIN32_ERROR.ERROR_INVALID_PARAMETER =>
-                $"Cannot enable provider {{{providerGuid}}} on session '{sessionName}': invalid parameter. " +
+                $"Cannot modify provider {{{providerGuid}}} on session '{sessionName}': invalid parameter. " +
                 "Verify that the session handle is valid and the provider GUID is correct.",
 
             WIN32_ERROR.ERROR_NOT_FOUND =>
-                $"Cannot enable provider {{{providerGuid}}} on session '{sessionName}': provider not registered " +
+                $"Cannot modify provider {{{providerGuid}}} on session '{sessionName}': provider not registered " +
                 "on this system. The provider GUID may be incorrect.",
 
-            _ => $"Cannot enable provider {{{providerGuid}}} on session '{sessionName}': " +
+            _ => $"Cannot modify provider {{{providerGuid}}} on session '{sessionName}': " +
                  $"EnableTraceEx2 failed with Win32 error 0x{(uint)error:X8}."
         };
 }

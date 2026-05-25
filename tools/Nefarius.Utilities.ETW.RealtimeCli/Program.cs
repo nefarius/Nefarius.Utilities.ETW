@@ -93,7 +93,7 @@ realtime.SetAction(async (ParseResult result, CancellationToken cancellationToke
         matchAny = ParseKeywordMask(keywordsRaw);
         matchAll = ParseKeywordMask(matchAllRaw);
     }
-    catch (FormatException)
+    catch (Exception ex) when (ex is FormatException or OverflowException)
     {
         Console.Error.WriteLine(
             $"[!] Invalid keyword value. Use decimal (255) or hex (0xFF). " +
