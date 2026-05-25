@@ -160,12 +160,15 @@ static async Task<int> RunAsync(
     {
         e.Cancel = true;
         Console.Error.WriteLine("\r[*] Interrupt received — stopping session...");
-        cts.Cancel();
+        try { cts.Cancel(); } catch (ObjectDisposedException) { }
     };
 
     // Process-exit: ensure the ETW session is torn down even when the process
     // exits via Environment.Exit() or an unhandled exception finaliser.
-    AppDomain.CurrentDomain.ProcessExit += (_, _) => cts.Cancel();
+    AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+    {
+        try { cts.Cancel(); } catch (ObjectDisposedException) { }
+    };
 
     // Remove any orphan session from a previous crash before we start.
     EtwUtil.StopOrphanSession(sessionName);
@@ -239,8 +242,11 @@ static DecodingContext? ResolveSymbols(string[] symbolPaths)
         if (arg.Contains('*') || arg.Contains('?'))
         {
             // Glob pattern: split into directory root + file pattern.
+            // Recurse only when the caller explicitly uses ** in the pattern.
             string root = Path.GetDirectoryName(arg) ?? ".";
             string pattern = Path.GetFileName(arg);
+            bool recurse = arg.Contains("**");
+            SearchOption search = recurse ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
 
             if (!Directory.Exists(root))
             {
@@ -248,7 +254,7 @@ static DecodingContext? ResolveSymbols(string[] symbolPaths)
                 continue;
             }
 
-            foreach (string file in Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories))
+            foreach (string file in Directory.EnumerateFiles(root, pattern, search))
             {
                 AddSymbolFile(contexts, file);
             }
@@ -275,6 +281,7 @@ static DecodingContext? ResolveSymbols(string[] symbolPaths)
                 try
                 {
                     contexts.Add(new TmfFilesDirectoryDecodingContextType(arg));
+                    Console.Error.WriteLine($"    + {arg} (TMF directory)");
                     anyFound = true;
                 }
                 catch (Exception ex)
@@ -321,12 +328,14 @@ static bool AddSymbolFile(List<DecodingContextType> contexts, string path)
         if (ext.Equals(".pdb", StringComparison.OrdinalIgnoreCase))
         {
             contexts.Add(new PdbFileDecodingContextType(path));
+            Console.Error.WriteLine($"    + {path}");
             return true;
         }
 
         if (ext.Equals(".tmf", StringComparison.OrdinalIgnoreCase))
         {
             contexts.Add(new TmfFileDecodingContextType(path));
+            Console.Error.WriteLine($"    + {path}");
             return true;
         }
 
