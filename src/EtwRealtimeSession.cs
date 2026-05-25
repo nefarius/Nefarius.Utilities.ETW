@@ -201,9 +201,16 @@ public sealed class EtwRealtimeSession : IDisposable
             }
             else
             {
-                _reportError?.Invoke(
-                    $"ControlTrace(STOP) failed for session '{_sessionName}' with Win32 error 0x{error:X8}. " +
-                    $"The session may still be running — use EtwUtil.StopOrphanSession to recover.");
+                try
+                {
+                    _reportError?.Invoke(
+                        $"ControlTrace(STOP) failed for session '{_sessionName}' with Win32 error 0x{error:X8}. " +
+                        $"The session may still be running — use EtwUtil.StopOrphanSession to recover.");
+                }
+                catch
+                {
+                    // Swallow exceptions from the callback; Dispose must not throw.
+                }
             }
         }
     }
