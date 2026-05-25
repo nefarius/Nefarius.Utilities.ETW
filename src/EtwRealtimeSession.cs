@@ -93,7 +93,7 @@ public sealed class EtwRealtimeSession : IDisposable
                 CopySessionName(sessionName, (byte*)props, propsSize);
 
                 ulong handle = 0;
-                uint error = PInvoke.StartTraceW(&handle, sessionName, props);
+                uint error = PInvoke.StartTrace(&handle, sessionName, props);
                 if (error != 0)
                 {
                     throw new EtwStartTraceException(error, sessionName);
@@ -230,7 +230,7 @@ public sealed class EtwRealtimeSession : IDisposable
                 // Pass the handle (non-zero) so Windows identifies the session by handle.
                 // The session name in the props buffer is still required for the struct's
                 // LoggerNameOffset field to be valid.
-                PInvoke.ControlTraceW(_sessionHandle, _sessionName, props, controlCode);
+                PInvoke.ControlTrace(_sessionHandle, _sessionName, props, controlCode);
             }
             finally
             {
