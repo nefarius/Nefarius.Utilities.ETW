@@ -124,6 +124,69 @@ await foreach (ReadOnlyMemory<byte> eventJson in EtwUtil.EnumerateRealtimeEvents
 - **WPP decoding** in realtime mode requires a pre-built `DecodingContext`. The file-based `EnumeratePdbReferences` pre-scan only works on `.etl` files, not on live sessions. Build the `DecodingContext` from known `.pdb` or `.tmf` paths before starting the session.
 - **Kernel-mode providers / NT Kernel Logger** are not supported in this release.
 
+## Realtime CLI (`realtimewpp`)
+
+The `tools/Nefarius.Utilities.ETW.RealtimeCli` project builds a self-contained command-line tool (`realtimewpp`) that wraps the realtime API and writes decoded events as **NDJSON** on `stdout`, making it trivial to pipe into `jq`, `grep`, log aggregators, or any line-oriented consumer.
+
+> **Admin required.** ETW session creation requires an elevated process.
+
+### Usage
+
+```
+realtimewpp realtime <provider-guid>
+    [--keywords           <hex|dec>]   # match-any mask, default 0xFFFFFFFFFFFFFFFF
+    [--match-all-keywords <hex|dec>]   # match-all mask, default 0
+    [--level <Critical|Error|Warning|Information|Verbose>]  # default Verbose
+    [--session-name <name>]            # default NefariusEtwCli-<pid>
+    [--symbols <path>] ...             # repeatable; literal file, directory, or glob
+    [--buffer-size-kb <n>]             # ETW buffer size, default 64
+    [--flush-seconds  <n>]             # flush interval, default 1
+```
+
+### Examples
+
+Capture all events from a provider and pretty-print them with `jq`:
+
+```bash
+# Replace the GUID below with the actual provider GUID you want to trace.
+realtimewpp realtime {12345678-1234-1234-1234-1234567890AB} | jq .
+```
+
+Capture only errors and warnings, with WPP symbol files loaded from a directory:
+
+```bash
+realtimewpp realtime {12345678-1234-1234-1234-1234567890AB} \
+    --level Warning \
+    --symbols C:\Symbols\MyDriver.pdb \
+    --symbols C:\Symbols\TMFs\
+```
+
+Glob expansion — load every PDB from an entire symbol tree:
+
+```bash
+realtimewpp realtime {12345678-1234-1234-1234-1234567890AB} \
+    --keywords 0xFFFFFFFF --level Verbose \
+    --symbols "C:\Symbols\**\*.pdb"
+```
+
+### NDJSON contract
+
+Each line written to `stdout` is a self-contained JSON object. Status and error messages are written to `stderr` so the `stdout` pipe stays clean. Ctrl+C stops the session gracefully; the tool exits with code `0` on clean shutdown and `1` on fatal error.
+
+```jsonc
+// stdout — one JSON object per line (NDJSON)
+{"EventName":"ProcessStart","ProcessId":1234,"ImageName":"notepad.exe", ...}
+{"EventName":"ProcessStop","ProcessId":1234, ...}
+
+// stderr — human-readable status (never mixed into stdout)
+[*] Session 'NefariusEtwCli-9876' started. Provider {12345678-...} | level=Verbose | keywords=0xFFFFFFFF
+[*] Streaming events... (Ctrl+C to stop)
+[*] Done.
+
+# Example pipeline
+realtimewpp realtime {12345678-1234-1234-1234-1234567890AB} | jq .
+```
+
 ## Known limitations
 
 - Currently relies on **Windows-only** APIs so no support for other platforms
