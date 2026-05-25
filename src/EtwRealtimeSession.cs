@@ -97,7 +97,7 @@ public sealed class EtwRealtimeSession : IDisposable
                 // access both the struct fields and the name bytes appended after the struct.
                 ref EVENT_TRACE_PROPERTIES propsRef = ref Unsafe.AsRef<EVENT_TRACE_PROPERTIES>(props);
                 CONTROLTRACE_HANDLE handle;
-                uint error = PInvoke.StartTrace(out handle, sessionName, ref propsRef);
+                uint error = (uint)PInvoke.StartTrace(out handle, sessionName, ref propsRef);
                 if (error != 0)
                 {
                     throw new EtwStartTraceException(error, sessionName);
@@ -197,7 +197,7 @@ public sealed class EtwRealtimeSession : IDisposable
             unsafe
             {
                 // EnableTraceEx2 takes 'in Guid' (not Guid*); C# passes it by reference automatically.
-                uint error = PInvoke.EnableTraceEx2(
+                uint error = (uint)PInvoke.EnableTraceEx2(
                     _sessionHandle,
                     in providerGuid,
                     controlCode,
