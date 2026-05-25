@@ -103,6 +103,13 @@ public class StreamingTests
         const string etwFilePath = @".\traces\BthPS3_0.etl";
         const int cancelAfter = 10;
 
+        // Provide the full decoding context so WPP events are decoded and the trace
+        // yields well more than cancelAfter items before the cancellation is triggered.
+        DecodingContext decodingContext = new(PdbFileDecodingContextType.CreateFrom(
+            @".\symbols\BthPS3.pdb",
+            @".\symbols\BthPS3PSM.pdb"
+        ));
+
         using CancellationTokenSource cts = new();
 
         int received = 0;
@@ -112,7 +119,8 @@ public class StreamingTests
         {
             await foreach (ReadOnlyMemory<byte> _ in EtwUtil.EnumerateEventsAsync(
                                [etwFilePath],
-                               cancellationToken: cts.Token))
+                               opts => opts.WppDecodingContext = decodingContext,
+                               cts.Token))
             {
                 received++;
                 if (received >= cancelAfter)
