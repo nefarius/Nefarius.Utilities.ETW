@@ -155,11 +155,15 @@ static async Task<int> RunAsync(
     using CancellationTokenSource cts =
         CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
+    // Print the "stopping" notice the moment the token is cancelled, regardless
+    // of what triggered it (Ctrl+C or ProcessExit), so it always appears before
+    // the finally-block "[*] Done." message.
+    cts.Token.Register(() => Console.Error.WriteLine("\r[*] Interrupt received — stopping session..."));
+
     // Ctrl+C: cancel gracefully without immediately terminating the process.
     Console.CancelKeyPress += (_, e) =>
     {
         e.Cancel = true;
-        Console.Error.WriteLine("\r[*] Interrupt received — stopping session...");
         try { cts.Cancel(); } catch (ObjectDisposedException) { }
     };
 
@@ -198,6 +202,10 @@ static async Task<int> RunAsync(
                            o => o.WppDecodingContext = decodingContext,
                            cts.Token))
         {
+            // Stop emitting immediately once cancellation is requested so no
+            // buffered events leak out after Ctrl+C.
+            if (cts.Token.IsCancellationRequested) break;
+
             // Each buffer is a self-contained JSON object; append a newline for NDJSON.
             await stdout.WriteAsync(json, cts.Token);
             stdout.WriteByte((byte)'\n');
