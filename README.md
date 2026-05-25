@@ -55,10 +55,80 @@ private async IAsyncEnumerable<object> GetEtwStream([EnumeratorCancellation] Can
 }
 ```
 
+- Added realtime ETW session support via `EtwRealtimeSession` and `EtwUtil.EnumerateRealtimeEventsAsync`:
+  - `EtwRealtimeSession.Create(name)` starts a user-mode ETW session (`StartTraceW`)
+  - `EnableProvider` / `DisableProvider` toggle providers at runtime via `EnableTraceEx2`
+  - `EtwUtil.EnumerateRealtimeEventsAsync` attaches to any externally-managed session and streams decoded events as UTF-8 JSON using the same bounded-channel / background-thread architecture as the file-based `EnumerateEventsAsync`
+  - `EtwUtil.ConvertRealtimeToJson` blocks and writes events to a `Utf8JsonWriter` until cancelled
+  - `EtwUtil.StopOrphanSession` cleanly stops a session left behind by a previous crash
+
+## Realtime decoding
+
+The library ships two independent layers for realtime ETW consumption.
+
+### Layer 1 — attach to any existing session (consumer-only)
+
+If the session is already running (started by `logman`, `xperf`, another process, or your own code), attach directly with a session name:
+
+```csharp
+using CancellationTokenSource cts = new();
+
+// Cancel after Ctrl+C or when your app shuts down.
+Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+
+await foreach (ReadOnlyMemory<byte> eventJson in EtwUtil.EnumerateRealtimeEventsAsync(
+    "MySession",
+    cancellationToken: cts.Token))
+{
+    Console.WriteLine(System.Text.Encoding.UTF8.GetString(eventJson.Span));
+}
+```
+
+### Layer 2 — full session management (start + enable + stop)
+
+Use `EtwRealtimeSession` when your application owns the session lifetime.
+**Requires administrator / `SeSystemProfilePrivilege`.**
+
+```csharp
+// Clean up any orphan from a previous crash.
+EtwUtil.StopOrphanSession("MyApp-Live");
+
+using EtwRealtimeSession session = EtwRealtimeSession.Create("MyApp-Live",
+    opts =>
+    {
+        opts.BufferSizeKb = 64;
+        opts.FlushTimerSeconds = 1;
+        opts.ClockResolution = EtwClockResolution.QueryPerformanceCounter;
+    });
+
+// Enable one or more providers at the desired verbosity level.
+Guid microsoftWindowsKernelProcess = new("22FB2CD6-0E7B-422B-A0C7-2FAD1FD0E716");
+session.EnableProvider(microsoftWindowsKernelProcess, TraceEventLevel.Information);
+
+using CancellationTokenSource cts = new();
+Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+
+await foreach (ReadOnlyMemory<byte> eventJson in EtwUtil.EnumerateRealtimeEventsAsync(
+    session.SessionName,
+    cancellationToken: cts.Token))
+{
+    Console.WriteLine(System.Text.Encoding.UTF8.GetString(eventJson.Span));
+}
+// Disposing session calls ControlTraceW(STOP) — no orphan left behind.
+```
+
+### Realtime caveats
+
+- **Admin required** to start a session. `EtwRealtimeSession.Create` throws `EtwStartTraceException` with `ERROR_ACCESS_DENIED` when the process is not elevated.
+- **Sessions persist after process exit.** Always dispose `EtwRealtimeSession`, and call `EtwUtil.StopOrphanSession("name")` at startup as a safety net.
+- **WPP decoding** in realtime mode requires a pre-built `DecodingContext`. The file-based `EnumeratePdbReferences` pre-scan only works on `.etl` files, not on live sessions. Build the `DecodingContext` from known `.pdb` or `.tmf` paths before starting the session.
+- **Kernel-mode providers / NT Kernel Logger** are not supported in this release.
+
 ## Known limitations
 
 - Currently relies on **Windows-only** APIs so no support for other platforms
 - `%!ItemEnum!`/`%!ItemFlagsEnum!` types display raw numeric values; PDB-based enum name resolution is not yet implemented
+- Kernel-mode ETW providers and the NT Kernel Logger session are not yet supported for realtime mode
 
 ## Documentation
 

@@ -163,6 +163,122 @@ public static class EtwUtil
     }
 
     /// <summary>
+    ///     Converts a live real-time ETW session to a stream of JSON objects written to
+    ///     <paramref name="jsonWriter" />, blocking until the session ends or
+    ///     <paramref name="cancellationToken" /> is cancelled.
+    /// </summary>
+    /// <param name="jsonWriter">The target JSON writer to write to.</param>
+    /// <param name="sessionName">
+    ///     The name of an already-running real-time ETW session (e.g., created via
+    ///     <see cref="EtwRealtimeSession.Create" /> or <c>logman start</c>).
+    /// </param>
+    /// <param name="options">Options to further tweak the parsing operation.</param>
+    /// <param name="cancellationToken">
+    ///     Token that, when cancelled, stops trace processing and returns from this method.
+    /// </param>
+    /// <returns>
+    ///     <see langword="true" /> when the session ended normally or was cancelled;
+    ///     <see langword="false" /> if the session could not be opened.
+    /// </returns>
+    /// <remarks>
+    ///     WPP decoding in real-time mode requires a pre-built
+    ///     <see cref="EtwJsonConverterOptions.WppDecodingContext" /> supplied via
+    ///     <paramref name="options" /> — the file-based
+    ///     <see cref="EnumeratePdbReferences" /> pre-scan cannot be applied to live sessions.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">
+    ///     <paramref name="jsonWriter" /> or <paramref name="sessionName" /> is <see langword="null" />.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    ///     <paramref name="sessionName" /> is empty or whitespace.
+    /// </exception>
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    public static bool ConvertRealtimeToJson(
+        Utf8JsonWriter jsonWriter,
+        string sessionName,
+        Action<EtwJsonConverterOptions>? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(jsonWriter);
+        ArgumentNullException.ThrowIfNull(sessionName);
+        if (string.IsNullOrWhiteSpace(sessionName))
+        {
+            throw new ArgumentException("Session name must not be empty or whitespace.", nameof(sessionName));
+        }
+
+        EtwJsonConverterOptions opts = new();
+        options?.Invoke(opts);
+
+        Deserializer<EtwJsonWriter> deserializer = new(
+            new EtwJsonWriter(jsonWriter),
+            opts.CustomProviderManifest,
+            opts.WppDecodingContext
+        );
+
+        EVENT_TRACE_LOGFILEW session;
+        ulong handle;
+
+        unsafe
+        {
+            session = new EVENT_TRACE_LOGFILEW
+            {
+                LoggerName = sessionName,
+                EventRecordCallback = deserializer.Deserialize,
+                BufferCallback = _ => !cancellationToken.IsCancellationRequested,
+                LogFileMode = PInvoke.PROCESS_TRACE_MODE_EVENT_RECORD | PInvoke.PROCESS_TRACE_MODE_REAL_TIME
+            };
+
+            handle = Etw.OpenTrace(ref session);
+        }
+
+        unchecked
+        {
+            if (handle == (ulong)~0)
+            {
+                WIN32_ERROR error = (WIN32_ERROR)Marshal.GetLastWin32Error();
+                opts.ReportError?.Invoke(
+                    $"ERROR: Session '{sessionName}': OpenTrace failed with {error} (0x{(uint)error:X8}).");
+                return false;
+            }
+        }
+
+        // Atomically closed flag prevents double-close between the cancellation
+        // callback and the finally block below.
+        int handleClosed = 0;
+
+        void CloseHandleSafe()
+        {
+            if (Interlocked.Exchange(ref handleClosed, 1) == 0)
+            {
+                Etw.CloseTrace(handle);
+            }
+        }
+
+        using CancellationTokenRegistration reg = cancellationToken.Register(CloseHandleSafe);
+
+        try
+        {
+            jsonWriter.WriteStartObject();
+            jsonWriter.WritePropertyName("Events");
+            jsonWriter.WriteStartArray();
+
+            Etw.ProcessTrace([handle], 1, IntPtr.Zero, IntPtr.Zero);
+
+            jsonWriter.WriteEndArray();
+            jsonWriter.WriteEndObject();
+
+            GC.KeepAlive(session);
+        }
+        finally
+        {
+            CloseHandleSafe();
+        }
+
+        jsonWriter.Flush();
+        return true;
+    }
+
+    /// <summary>
     ///     Converts one or more .ETL files to a stream of UTF-8 JSON objects, yielding each decoded event
     ///     as a <see cref="ReadOnlyMemory{T}">ReadOnlyMemory&lt;byte&gt;</see> as it is produced.
     /// </summary>
@@ -219,54 +335,196 @@ public static class EtwUtil
         // the async iterator so that nothing is allocated or started until MoveNextAsync is
         // first called.  If the returned IAsyncEnumerable is never iterated, no resources are
         // consumed and no worker thread is started.
-        return StreamEventsAsync(list, opts, cancellationToken);
+        return StreamEventsAsync(list, realtimeSessionName: null, opts, cancellationToken);
     }
 
+    /// <summary>
+    ///     Streams decoded events from a live real-time ETW session as UTF-8 JSON objects,
+    ///     yielding each event as a <see cref="ReadOnlyMemory{T}">ReadOnlyMemory&lt;byte&gt;</see>
+    ///     as it is produced.
+    /// </summary>
+    /// <param name="sessionName">
+    ///     The name of an already-running real-time ETW session (e.g., created via
+    ///     <see cref="EtwRealtimeSession.Create" /> or <c>logman start</c>).
+    /// </param>
+    /// <param name="options">Options to further tweak the parsing operation.</param>
+    /// <param name="cancellationToken">
+    ///     Token that, when cancelled, stops trace processing and completes the enumeration.
+    /// </param>
+    /// <returns>
+    ///     An <see cref="IAsyncEnumerable{T}" /> of raw UTF-8 JSON buffers, one per event. Each buffer
+    ///     is a self-contained JSON object — <c>{"Event":{"Timestamp":…,"Properties":[{…}]}}</c> —
+    ///     with no outer array wrapper. The caller may concatenate or wrap items as needed.
+    /// </returns>
+    /// <remarks>
+    ///     <para>
+    ///         Each <see cref="ReadOnlyMemory{T}">ReadOnlyMemory&lt;byte&gt;</see> is backed by a buffer rented from
+    ///         <see cref="ArrayPool{T}.Shared" />. The buffer is valid only until the next iteration step; the library
+    ///         returns it to the pool when <c>MoveNextAsync</c> is called. Do not retain references to the memory
+    ///         across iterations.
+    ///     </para>
+    ///     <para>
+    ///         Trace processing runs on a dedicated background thread. A bounded channel couples the producer to the
+    ///         consumer, applying natural backpressure. When cancelled, the trace handle is closed from the
+    ///         cancellation callback, causing <c>ProcessTrace</c> to return promptly rather than waiting for the
+    ///         next flush-timer tick.
+    ///     </para>
+    ///     <para>
+    ///         WPP decoding in real-time mode requires a pre-built
+    ///         <see cref="EtwJsonConverterOptions.WppDecodingContext" /> supplied via
+    ///         <paramref name="options" /> — the file-based <see cref="EnumeratePdbReferences" /> pre-scan cannot be
+    ///         applied to live sessions.
+    ///     </para>
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="sessionName" /> is <see langword="null" />.</exception>
+    /// <exception cref="ArgumentException"><paramref name="sessionName" /> is empty or whitespace.</exception>
+    /// <exception cref="EtwOpenTraceException">The session could not be opened by the ETW API.</exception>
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    public static IAsyncEnumerable<ReadOnlyMemory<byte>> EnumerateRealtimeEventsAsync(
+        string sessionName,
+        Action<EtwJsonConverterOptions>? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(sessionName);
+        if (string.IsNullOrWhiteSpace(sessionName))
+        {
+            throw new ArgumentException("Session name must not be empty or whitespace.", nameof(sessionName));
+        }
+
+        EtwJsonConverterOptions opts = new();
+        options?.Invoke(opts);
+
+        return StreamEventsAsync(files: null, realtimeSessionName: sessionName, opts, cancellationToken);
+    }
+
+    /// <summary>
+    ///     Stops a real-time ETW session by name, ignoring the error if no session with that name exists.
+    ///     Use this at application startup to clean up sessions left behind by a previous crash.
+    /// </summary>
+    /// <param name="sessionName">Name of the orphaned session to stop.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="sessionName" /> is <see langword="null" />.</exception>
+    /// <exception cref="ArgumentException"><paramref name="sessionName" /> is empty or whitespace.</exception>
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    public static void StopOrphanSession(string sessionName)
+    {
+        ArgumentNullException.ThrowIfNull(sessionName);
+        if (string.IsNullOrWhiteSpace(sessionName))
+        {
+            throw new ArgumentException("Session name must not be empty or whitespace.", nameof(sessionName));
+        }
+
+        unsafe
+        {
+            int propsSize = Marshal.SizeOf<EVENT_TRACE_PROPERTIES>();
+            int nameBytes = (sessionName.Length + 1) * sizeof(char);
+            int totalSize = propsSize + nameBytes;
+
+            EVENT_TRACE_PROPERTIES* props = (EVENT_TRACE_PROPERTIES*)NativeMemory.AllocZeroed((nuint)totalSize);
+            try
+            {
+                props->Wnode.BufferSize = (uint)totalSize;
+                props->LoggerNameOffset = (uint)propsSize;
+
+                char* dest = (char*)((byte*)props + propsSize);
+                for (int i = 0; i < sessionName.Length; i++)
+                {
+                    dest[i] = sessionName[i];
+                }
+
+                dest[sessionName.Length] = '\0';
+
+                // Pass 0 for handle — ControlTraceW uses the session name when TraceHandle is 0.
+                // ERROR_WMI_INSTANCE_NOT_FOUND (0x80071069 / 4201) means the session doesn't exist; that's fine.
+                PInvoke.ControlTraceW(0, sessionName, props, Etw.EVENT_TRACE_CONTROL_STOP);
+            }
+            finally
+            {
+                NativeMemory.Free(props);
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Private streaming infrastructure
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    ///     Worker that runs on a dedicated background thread and drives <c>ProcessTrace</c>.
+    ///     Supports both file-based and real-time sources:
+    ///     <list type="bullet">
+    ///         <item>When <paramref name="realtimeSessionName" /> is non-null, opens the named session for real-time consumption.</item>
+    ///         <item>Otherwise, opens the files in <paramref name="files" />.</item>
+    ///     </list>
+    ///     For real-time sessions, cancellation is honoured by closing the trace handle, which causes
+    ///     <c>ProcessTrace</c> to return promptly rather than waiting for the next flush-timer tick.
+    /// </summary>
     private static void RunWorker(
-        List<string> list,
+        List<string>? files,
+        string? realtimeSessionName,
         EtwJsonConverterOptions opts,
         Deserializer<EtwJsonChannelWriter> deserializer,
         ChannelWriter<PooledEventBuffer> writer,
         CancellationToken cancellationToken)
     {
-        int count = list.Count;
-        EVENT_TRACE_LOGFILEW[] fileSessions = new EVENT_TRACE_LOGFILEW[count];
-        ulong[] handles = new ulong[count];
-        int[] openTraceErrors = new int[count];
+        bool isRealtime = realtimeSessionName is not null;
+        int sessionCount = isRealtime ? 1 : files!.Count;
+
+        EVENT_TRACE_LOGFILEW[] sessions = new EVENT_TRACE_LOGFILEW[sessionCount];
+        ulong[] handles = new ulong[sessionCount];
+        int[] openTraceErrors = new int[sessionCount];
+
+        // For real-time mode only: closed flag prevents double-close between the
+        // cancellation callback and the finally block.
+        int handleClosed = 0;
 
         try
         {
-            for (int i = 0; i < count; ++i)
+            for (int i = 0; i < sessionCount; ++i)
             {
                 unsafe
                 {
-                    fileSessions[i] = new EVENT_TRACE_LOGFILEW
+                    if (isRealtime)
                     {
-                        LogFileName = list[i],
-                        EventRecordCallback = deserializer.Deserialize,
-                        BufferCallback = _ => !cancellationToken.IsCancellationRequested,
-                        LogFileMode = PInvoke.PROCESS_TRACE_MODE_EVENT_RECORD
-                    };
+                        sessions[i] = new EVENT_TRACE_LOGFILEW
+                        {
+                            LoggerName = realtimeSessionName,
+                            EventRecordCallback = deserializer.Deserialize,
+                            BufferCallback = _ => !cancellationToken.IsCancellationRequested,
+                            LogFileMode = PInvoke.PROCESS_TRACE_MODE_EVENT_RECORD |
+                                          PInvoke.PROCESS_TRACE_MODE_REAL_TIME
+                        };
+                    }
+                    else
+                    {
+                        sessions[i] = new EVENT_TRACE_LOGFILEW
+                        {
+                            LogFileName = files![i],
+                            EventRecordCallback = deserializer.Deserialize,
+                            BufferCallback = _ => !cancellationToken.IsCancellationRequested,
+                            LogFileMode = PInvoke.PROCESS_TRACE_MODE_EVENT_RECORD
+                        };
 
-                    if (opts.PreserveRawTimestamps)
-                    {
-                        fileSessions[i].LogFileMode |= PInvoke.PROCESS_TRACE_MODE_RAW_TIMESTAMP;
+                        if (opts.PreserveRawTimestamps)
+                        {
+                            sessions[i].LogFileMode |= PInvoke.PROCESS_TRACE_MODE_RAW_TIMESTAMP;
+                        }
                     }
 
-                    handles[i] = Etw.OpenTrace(ref fileSessions[i]);
-                    // Capture immediately: any subsequent Win32 call would overwrite the TLS slot.
+                    handles[i] = Etw.OpenTrace(ref sessions[i]);
+                    // Capture immediately — any subsequent Win32 call overwrites the TLS slot.
                     openTraceErrors[i] = Marshal.GetLastWin32Error();
                 }
             }
 
-            for (int i = 0; i < count; ++i)
+            for (int i = 0; i < sessionCount; ++i)
             {
                 unchecked
                 {
                     if (handles[i] == (ulong)~0)
                     {
                         WIN32_ERROR error = (WIN32_ERROR)openTraceErrors[i];
-                        EtwOpenTraceException ex = new(error, list[i]);
+                        string source = isRealtime ? realtimeSessionName! : files![i];
+                        EtwOpenTraceException ex = new(error, source);
                         opts.ReportError?.Invoke("ERROR: " + ex.Message);
                         writer.TryComplete(ex);
                         return;
@@ -274,8 +532,20 @@ public static class EtwUtil
                 }
             }
 
+            // For real-time sessions, closing the handle from the cancellation callback causes
+            // ProcessTrace to return promptly without waiting for the next flush-timer tick.
+            using CancellationTokenRegistration reg = isRealtime
+                ? cancellationToken.Register(() =>
+                {
+                    if (Interlocked.Exchange(ref handleClosed, 1) == 0)
+                    {
+                        Etw.CloseTrace(handles[0]);
+                    }
+                })
+                : default;
+
             Etw.ProcessTrace(handles, (uint)handles.Length, IntPtr.Zero, IntPtr.Zero);
-            GC.KeepAlive(fileSessions);
+            GC.KeepAlive(sessions);
         }
         catch (Exception ex)
         {
@@ -284,15 +554,32 @@ public static class EtwUtil
         }
         finally
         {
-            for (int i = 0; i < count; ++i)
+            if (isRealtime)
             {
-                if (handles[i] != 0)
+                // Safe close: guard against double-close if cancellation already fired.
+                if (Interlocked.Exchange(ref handleClosed, 1) == 0)
                 {
                     unchecked
                     {
-                        if (handles[i] != (ulong)~0)
+                        if (handles[0] != 0 && handles[0] != (ulong)~0)
                         {
-                            Etw.CloseTrace(handles[i]);
+                            Etw.CloseTrace(handles[0]);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < sessionCount; ++i)
+                {
+                    if (handles[i] != 0)
+                    {
+                        unchecked
+                        {
+                            if (handles[i] != (ulong)~0)
+                            {
+                                Etw.CloseTrace(handles[i]);
+                            }
                         }
                     }
                 }
@@ -303,7 +590,8 @@ public static class EtwUtil
     }
 
     private static async IAsyncEnumerable<ReadOnlyMemory<byte>> StreamEventsAsync(
-        List<string> list,
+        List<string>? files,
+        string? realtimeSessionName,
         EtwJsonConverterOptions opts,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -333,10 +621,15 @@ public static class EtwUtil
             opts.WppDecodingContext
         );
 
-        Thread workerThread = new(() => RunWorker(list, opts, deserializer, channel.Writer, linkedCts.Token))
+        string workerName = realtimeSessionName is not null
+            ? $"EtwUtil.EnumerateRealtimeEventsAsync worker [{realtimeSessionName}]"
+            : "EtwUtil.EnumerateEventsAsync worker";
+
+        Thread workerThread = new(() =>
+            RunWorker(files, realtimeSessionName, opts, deserializer, channel.Writer, linkedCts.Token))
         {
             IsBackground = true,
-            Name = "EtwUtil.EnumerateEventsAsync worker"
+            Name = workerName
         };
         workerThread.Start();
 
@@ -344,7 +637,8 @@ public static class EtwUtil
 
         try
         {
-            await foreach (PooledEventBuffer item in channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+            await foreach (PooledEventBuffer item in channel.Reader.ReadAllAsync(cancellationToken)
+                               .ConfigureAwait(false))
             {
                 // Return previous rental before yielding the next item.
                 if (previous.HasValue)
