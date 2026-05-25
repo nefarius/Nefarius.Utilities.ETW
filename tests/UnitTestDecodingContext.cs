@@ -132,4 +132,28 @@ public class DecodingContextTests
         Assert.That(result, Is.Not.Null);
         Assert.That(result!.Opcode, Is.EqualTo("Bluetooth_Context_c149"));
     }
+
+    // -----------------------------------------------------------------------
+    // TmfFileDecodingContextType
+    // -----------------------------------------------------------------------
+
+    [Test]
+    [Category("Unit")]
+    public void TmfFileDecodingContextType_Throws_OnEmptyPath()
+    {
+        Assert.Throws<ArgumentException>(() => _ = new TmfFileDecodingContextType(string.Empty));
+    }
+
+    [Test]
+    [Category("Parse")]
+    public void TmfFileDecodingContextType_LooksUpKnownFormat()
+    {
+        DecodingContext context = new(new TmfFileDecodingContextType(
+            @".\symbols\e4b27b5e-24d0-369f-a4b5-23228e160bd2.tmf"));
+
+        TraceMessageFormat? result = context.GetTraceMessageFormatFor(KnownGuid, KnownId);
+
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.Opcode, Is.EqualTo("Bluetooth_Context_c149"));
+    }
 }
