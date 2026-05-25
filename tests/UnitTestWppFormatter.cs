@@ -516,15 +516,28 @@ public class WppFormatterTests
     }
 
     [Test]
+    public void ItemToString_FormatsWaitTime_AsDuration()
+    {
+        // %!due! uses ItemWaitTime and must produce day~h:mm:ss (same as %!delta!), not an absolute ISO timestamp
+        FunctionParameter param = MakeParam(ItemType.ItemWaitTime, index: 1);
+
+        long ms = (0L * 86400 + 0 * 3600 + 5 * 60 + 30) * 1000; // 5 min 30 sec
+        string result = WppFormatter.ItemToString(param, ms);
+
+        Assert.That(result, Is.EqualTo("0~0:05:30"));
+    }
+
+    [Test]
     public void ItemToString_FormatsTimeDelta()
     {
         FunctionParameter param = MakeParam(ItemType.ItemTimeDelta, index: 1);
 
         // 1 day, 2 hours, 3 minutes, 4 seconds = (1*86400 + 2*3600 + 3*60 + 4) * 1000 ms
+        // WPP format is day~h:mm:ss — the hours component is NOT zero-padded
         long ms = (1L * 86400 + 2 * 3600 + 3 * 60 + 4) * 1000;
         string result = WppFormatter.ItemToString(param, ms);
 
-        Assert.That(result, Is.EqualTo("1~02:03:04"));
+        Assert.That(result, Is.EqualTo("1~2:03:04"));
     }
 
     [Test]

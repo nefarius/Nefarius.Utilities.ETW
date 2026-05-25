@@ -232,15 +232,17 @@ internal static partial class WppFormatter
                 ushort hostPort = (ushort)IPAddress.NetworkToHostOrder((short)raw);
                 return hostPort.ToString();
             }
-            // Timestamp types: FILETIME Int64 → ISO-8601
+            // Absolute timestamp types: FILETIME Int64 → ISO-8601
+            // Backs %!TIMESTAMP!, %!TIME!, %!DATE!, %!datetime!, %!WAITTIME!
             case ItemType.ItemTimestamp:
-            case ItemType.ItemWaitTime:
             {
                 long ft = (long)value;
                 return DateTime.FromFileTimeUtc(ft).ToString("o");
             }
-            // Time delta stored as a LONGLONG in milliseconds, displayed as day~h:m:s
+            // Duration types: LONGLONG in milliseconds → day~h:mm:ss
+            // %!delta! (ItemTimeDelta) and %!due! (ItemWaitTime) both use this format per the WPP docs
             case ItemType.ItemTimeDelta:
+            case ItemType.ItemWaitTime:
             {
                 long ms = (long)value;
                 long totalSecs = Math.Abs(ms) / 1000;
