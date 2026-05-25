@@ -148,6 +148,24 @@ internal static class Etw
 
     internal const ULONG WNODE_FLAG_TRACED_GUID = 0x00020000;
 
+    /// <summary>Delivers events to any real-time consumer.</summary>
+    internal const ULONG EVENT_TRACE_REAL_TIME_MODE = 0x00000100;
+
+    /// <summary>Disables per-processor buffering, improving real-time consumer latency.</summary>
+    internal const ULONG EVENT_TRACE_NO_PER_PROCESSOR_BUFFERING = 0x10000000;
+
+    // EnableTraceEx2 control codes
+    internal const ULONG EVENT_CONTROL_CODE_DISABLE_PROVIDER = 0;
+    internal const ULONG EVENT_CONTROL_CODE_ENABLE_PROVIDER = 1;
+
+    // Trace level constants (evntprov.h)
+    internal const UCHAR TRACE_LEVEL_NONE = 0;
+    internal const UCHAR TRACE_LEVEL_CRITICAL = 1;
+    internal const UCHAR TRACE_LEVEL_ERROR = 2;
+    internal const UCHAR TRACE_LEVEL_WARNING = 3;
+    internal const UCHAR TRACE_LEVEL_INFORMATION = 4;
+    internal const UCHAR TRACE_LEVEL_VERBOSE = 5;
+
     [DllImport("advapi32.dll", EntryPoint = "OpenTraceW", CharSet = CharSet.Unicode, SetLastError = true)]
     [SuppressUnmanagedCodeSecurity]
     internal static extern ulong OpenTrace([In] [Out] ref EVENT_TRACE_LOGFILEW Logfile);
