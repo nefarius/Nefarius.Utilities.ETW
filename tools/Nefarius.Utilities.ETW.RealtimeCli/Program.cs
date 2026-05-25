@@ -206,9 +206,12 @@ static async Task<int> RunAsync(
             // buffered events leak out after Ctrl+C.
             if (cts.Token.IsCancellationRequested) break;
 
-            // Each buffer is a self-contained JSON object; append a newline for NDJSON.
+            // Each buffer is a self-contained JSON object; append a newline for NDJSON,
+            // then flush immediately so events appear in realtime rather than waiting
+            // for the buffer to fill.
             await stdout.WriteAsync(json, cts.Token);
             stdout.WriteByte((byte)'\n');
+            await stdout.FlushAsync(cts.Token);
         }
     }
     catch (OperationCanceledException)
