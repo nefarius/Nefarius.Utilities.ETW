@@ -143,4 +143,40 @@ public class StreamingTests
                 "OperationCanceledException must be propagated to the caller on cancellation.");
         }
     }
+
+    // -----------------------------------------------------------------------
+    // Disposal path: break without CancellationToken — worker must exit cleanly
+    // -----------------------------------------------------------------------
+
+    [Test]
+    [Category("EndToEnd")]
+    public async Task EarlyBreakWithoutCancellationDisposesCleanlyTest()
+    {
+        const string etwFilePath = @".\traces\BthPS3_0.etl";
+        const int breakAfter = 10;
+
+        DecodingContext decodingContext = new(PdbFileDecodingContextType.CreateFrom(
+            @".\symbols\BthPS3.pdb",
+            @".\symbols\BthPS3PSM.pdb"
+        ));
+
+        int received = 0;
+
+        // No CancellationTokenSource — exercises the linked-CTS disposal path that
+        // unblocks the producer when the consumer breaks early without cancelling.
+        await foreach (ReadOnlyMemory<byte> _ in EtwUtil.EnumerateEventsAsync(
+                           [etwFilePath],
+                           opts => opts.WppDecodingContext = decodingContext))
+        {
+            received++;
+            if (received >= breakAfter)
+            {
+                break;
+            }
+        }
+
+        // No OperationCanceledException expected; loop must have completed normally.
+        Assert.That(received, Is.EqualTo(breakAfter),
+            "Consumer must receive exactly the requested number of events before breaking.");
+    }
 }

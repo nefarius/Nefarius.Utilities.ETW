@@ -225,21 +225,26 @@ public static class EtwUtil
                 FullMode = BoundedChannelFullMode.Wait
             });
 
-        EtwJsonChannelWriter channelWriter = new(channel.Writer, cancellationToken);
+        // Linked source so that both the caller's token AND enumerator disposal (break /
+        // early exit without explicit cancellation) reliably unblock the worker thread.
+        CancellationTokenSource linkedCts =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        EtwJsonChannelWriter channelWriter = new(channel.Writer, linkedCts.Token);
         Deserializer<EtwJsonChannelWriter> deserializer = new(
             channelWriter,
             opts.CustomProviderManifest,
             opts.WppDecodingContext
         );
 
-        Thread workerThread = new(() => RunWorker(list, opts, deserializer, channel.Writer, cancellationToken))
+        Thread workerThread = new(() => RunWorker(list, opts, deserializer, channel.Writer, linkedCts.Token))
         {
             IsBackground = true,
             Name = "EtwUtil.EnumerateEventsAsync worker"
         };
         workerThread.Start();
 
-        return StreamEventsAsync(channel.Reader, workerThread, cancellationToken);
+        return StreamEventsAsync(channel.Reader, workerThread, linkedCts, cancellationToken);
     }
 
     private static void RunWorker(
@@ -252,6 +257,7 @@ public static class EtwUtil
         int count = list.Count;
         EVENT_TRACE_LOGFILEW[] fileSessions = new EVENT_TRACE_LOGFILEW[count];
         ulong[] handles = new ulong[count];
+        int[] openTraceErrors = new int[count];
 
         try
         {
@@ -273,6 +279,8 @@ public static class EtwUtil
                     }
 
                     handles[i] = Etw.OpenTrace(ref fileSessions[i]);
+                    // Capture immediately: any subsequent Win32 call would overwrite the TLS slot.
+                    openTraceErrors[i] = Marshal.GetLastWin32Error();
                 }
             }
 
@@ -282,7 +290,7 @@ public static class EtwUtil
                 {
                     if (handles[i] == (ulong)~0)
                     {
-                        WIN32_ERROR error = (WIN32_ERROR)Marshal.GetLastWin32Error();
+                        WIN32_ERROR error = (WIN32_ERROR)openTraceErrors[i];
                         EtwOpenTraceException ex = new(error, list[i]);
                         opts.ReportError?.Invoke("ERROR: " + ex.Message);
                         writer.TryComplete(ex);
@@ -322,6 +330,7 @@ public static class EtwUtil
     private static async IAsyncEnumerable<ReadOnlyMemory<byte>> StreamEventsAsync(
         ChannelReader<PooledEventBuffer> reader,
         Thread workerThread,
+        CancellationTokenSource linkedCts,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         PooledEventBuffer? previous = null;
@@ -348,8 +357,14 @@ public static class EtwUtil
                 ArrayPool<byte>.Shared.Return(previous.Value.Rented);
             }
 
+            // Signal the worker to stop if it is still blocked waiting on a full channel
+            // (e.g., consumer broke out early without cancelling the caller's token).
+            // This ensures ETW handles are always released promptly.
+            linkedCts.Cancel();
+
             // Wait for the worker thread to finish so handles are closed before we return.
             workerThread.Join(millisecondsTimeout: 5000);
+            linkedCts.Dispose();
         }
     }
 }

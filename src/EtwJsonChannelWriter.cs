@@ -116,7 +116,6 @@ internal sealed class EtwJsonChannelWriter : IEtwWriter
         _jsonWriter.WriteStartObject();
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteEventEnd()
     {
         _jsonWriter.WriteEndObject();
@@ -129,11 +128,21 @@ internal sealed class EtwJsonChannelWriter : IEtwWriter
         byte[] rented = ArrayPool<byte>.Shared.Rent(length);
         _bufferWriter.WrittenSpan.CopyTo(rented);
 
-        // Block the worker thread when the channel is full, applying backpressure.
-        // Pass the cancellation token so that a cancelled consumer unblocks this call
-        // rather than causing an infinite wait when the bounded channel is saturated.
-        _channelWriter.WriteAsync(new PooledEventBuffer(rented, length), _cancellationToken)
-            .AsTask().GetAwaiter().GetResult();
+        try
+        {
+            // Block the worker thread when the channel is full, applying backpressure.
+            // The cancellation token unblocks this wait when the consumer disposes or
+            // cancels so the worker is never permanently stuck on a saturated channel.
+            _channelWriter.WriteAsync(new PooledEventBuffer(rented, length), _cancellationToken)
+                .AsTask().GetAwaiter().GetResult();
+        }
+        catch
+        {
+            // Return the buffer to the pool before propagating so it is not leaked
+            // when the channel write is cancelled or the channel is completed.
+            ArrayPool<byte>.Shared.Return(rented);
+            throw;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
