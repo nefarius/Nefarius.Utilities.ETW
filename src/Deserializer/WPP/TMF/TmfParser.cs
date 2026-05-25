@@ -29,7 +29,8 @@ public static partial class TmfParser
     [GeneratedRegex(@"^\}$")]
     private static partial Regex ParamsEndRegex();
 
-    [GeneratedRegex(@"^([ -~]*), ([a-zA-Z0-9]*) *(?:\(([^)]*)\))? \-\- (\d*) *$")]
+    // Allow underscores in the type name (e.g. ItemNDIS_STATUS, ItemNDIS_OID)
+    [GeneratedRegex(@"^([ -~]*), ([a-zA-Z0-9_]*) *(?:\(([^)]*)\))? \-\- (\d*) *$")]
     private static partial Regex ParameterBodyRegex();
 
     /// <summary>
@@ -159,6 +160,7 @@ public static partial class TmfParser
             }
 
             List<FunctionParameter> parameters = [];
+            bool tmfValid = true;
 
             // start of one or more parameter blocks
             while (reader.ReadLine() is { } paramsBody)
@@ -171,25 +173,61 @@ public static partial class TmfParser
 
                 Match parameterMatch = ParameterBodyRegex().Match(paramsBody);
 
+                if (!parameterMatch.Success)
+                {
+                    continue;
+                }
+
                 string expression = parameterMatch.Groups[1].Value;
-                ItemType type = (ItemType)Enum.Parse(typeof(ItemType), parameterMatch.Groups[2].Value);
-                int varIndex = int.Parse(parameterMatch.Groups[4].Value);
+                string typeName  = parameterMatch.Groups[2].Value;
+
+                // A missing or non-numeric index means the line is structurally malformed;
+                // we cannot know the wire size of this parameter, so invalidate the whole TMF.
+                if (!int.TryParse(parameterMatch.Groups[4].Value, out int varIndex))
+                {
+                    tmfValid = false;
+                    break;
+                }
+
+                // An unrecognised ItemType means we cannot know the wire size of this parameter,
+                // so the payload cursor would be misaligned for every subsequent parameter.
+                // Discard the entire TMF rather than producing a partially-decoded parameter list
+                // that would silently corrupt downstream reads in WppEventRecord.
+                if (!Enum.TryParse(typeName, out ItemType type))
+                {
+                    tmfValid = false;
+                    break;
+                }
 
                 FunctionParameter parsed = new() { Expression = expression, Type = type, Index = varIndex };
 
-                // special case
-                if (type == ItemType.ItemListByte)
+                // List enums (ItemListByte/Short/Long) and set enums (ItemSetByte/Short/Long)
+                // carry a parenthesised comma-separated list of labels on the parameter line.
+                bool hasListItems = type is
+                    ItemType.ItemListByte or
+                    ItemType.ItemListShort or
+                    ItemType.ItemListLong or
+                    ItemType.ItemSetByte or
+                    ItemType.ItemSetShort or
+                    ItemType.ItemSetLong;
+
+                if (hasListItems && parameterMatch.Groups[3].Success)
                 {
                     string[] arrayItems = parameterMatch.Groups[3].Value.Split(',');
                     parsed = parsed with
                     {
                         ListItems = new ReadOnlyDictionary<int, string>(
-                            arrayItems.Select((value, index) => new KeyValuePair<int, string>(index, value))
+                            arrayItems.Select((value, index) => new KeyValuePair<int, string>(index, value.Trim()))
                                 .ToDictionary(pair => pair.Key, pair => pair.Value))
                     };
                 }
 
                 parameters.Add(parsed);
+            }
+
+            if (!tmfValid)
+            {
+                continue;
             }
 
             tmf.FunctionParameters = parameters.ToArray();

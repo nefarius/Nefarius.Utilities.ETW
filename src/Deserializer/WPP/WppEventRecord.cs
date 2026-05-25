@@ -26,12 +26,6 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
 
     private string SubstituteFunctionParameters(TraceMessageFormat format)
     {
-        // no parameters means it's basically a verbatim message string
-        if (!format.FunctionParameters.Any())
-        {
-            return format.MessageFormat;
-        }
-
         Dictionary<int, (FunctionParameter Parameter, object Value)> indexedParameterValues = [];
 
         foreach (FunctionParameter parameter in format.FunctionParameters)
@@ -43,6 +37,8 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
             indexedParameterValues.Add(parameter.Index, (parameter, value));
         }
 
+        // Always go through WppFormatter.Substitute so that context markers (%!FUNC!, %!LEVEL!, etc.)
+        // and the %0 STDPREFIX sentinel are resolved even when there are no positional parameters.
         return WppFormatter.Substitute(format, indexedParameterValues);
     }
 

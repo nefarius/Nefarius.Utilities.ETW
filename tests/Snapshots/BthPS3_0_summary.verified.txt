@@ -14,19 +14,19 @@
       Provider: BthPS3PSM,
       Function: BthPS3PSMEvtIoInternalDeviceControl,
       Level: TRACE_LEVEL_VERBOSE,
-      FormattedString: %0 [%!FUNC!]>> Bulk IN transfer (PipeHandle: 0xFFFF95820BE02120)
+      FormattedString: [BthPS3PSMEvtIoInternalDeviceControl]>> Bulk IN transfer (PipeHandle: 0xFFFF95820BE02120)
     },
     {
       Provider: BthPS3PSM,
       Function: BthPS3PSMEvtIoInternalDeviceControl,
       Level: TRACE_LEVEL_VERBOSE,
-      FormattedString: %0 [%!FUNC!]>> Bulk IN transfer (PipeHandle: 0xFFFF95820BE02120)
+      FormattedString: [BthPS3PSMEvtIoInternalDeviceControl]>> Bulk IN transfer (PipeHandle: 0xFFFF95820BE02120)
     },
     {
       Provider: BthPS3PSM,
       Function: BthPS3PSMEvtIoInternalDeviceControl,
       Level: TRACE_LEVEL_VERBOSE,
-      FormattedString: %0 [%!FUNC!]>> Bulk IN transfer (PipeHandle: 0xFFFF95820BE02120)
+      FormattedString: [BthPS3PSMEvtIoInternalDeviceControl]>> Bulk IN transfer (PipeHandle: 0xFFFF95820BE02120)
     }
   ]
 }
