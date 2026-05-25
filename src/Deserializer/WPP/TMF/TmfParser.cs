@@ -181,9 +181,12 @@ public static partial class TmfParser
                 string expression = parameterMatch.Groups[1].Value;
                 string typeName  = parameterMatch.Groups[2].Value;
 
+                // A missing or non-numeric index means the line is structurally malformed;
+                // we cannot know the wire size of this parameter, so invalidate the whole TMF.
                 if (!int.TryParse(parameterMatch.Groups[4].Value, out int varIndex))
                 {
-                    continue;
+                    tmfValid = false;
+                    break;
                 }
 
                 // An unrecognised ItemType means we cannot know the wire size of this parameter,
