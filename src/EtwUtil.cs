@@ -215,36 +215,11 @@ public static class EtwUtil
         EtwJsonConverterOptions opts = new();
         options?.Invoke(opts);
 
-        // Bounded channel: limits how far ahead the producer can run relative to the consumer.
-        const int channelCapacity = 256;
-        Channel<PooledEventBuffer> channel = Channel.CreateBounded<PooledEventBuffer>(
-            new BoundedChannelOptions(channelCapacity)
-            {
-                SingleWriter = true,
-                SingleReader = true,
-                FullMode = BoundedChannelFullMode.Wait
-            });
-
-        // Linked source so that both the caller's token AND enumerator disposal (break /
-        // early exit without explicit cancellation) reliably unblock the worker thread.
-        CancellationTokenSource linkedCts =
-            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-        EtwJsonChannelWriter channelWriter = new(channel.Writer, linkedCts.Token);
-        Deserializer<EtwJsonChannelWriter> deserializer = new(
-            channelWriter,
-            opts.CustomProviderManifest,
-            opts.WppDecodingContext
-        );
-
-        Thread workerThread = new(() => RunWorker(list, opts, deserializer, channel.Writer, linkedCts.Token))
-        {
-            IsBackground = true,
-            Name = "EtwUtil.EnumerateEventsAsync worker"
-        };
-        workerThread.Start();
-
-        return StreamEventsAsync(channel.Reader, workerThread, linkedCts, cancellationToken);
+        // Defer all resource creation (channel, linked CTS, deserializer, worker thread) into
+        // the async iterator so that nothing is allocated or started until MoveNextAsync is
+        // first called.  If the returned IAsyncEnumerable is never iterated, no resources are
+        // consumed and no worker thread is started.
+        return StreamEventsAsync(list, opts, cancellationToken);
     }
 
     private static void RunWorker(
@@ -328,16 +303,48 @@ public static class EtwUtil
     }
 
     private static async IAsyncEnumerable<ReadOnlyMemory<byte>> StreamEventsAsync(
-        ChannelReader<PooledEventBuffer> reader,
-        Thread workerThread,
-        CancellationTokenSource linkedCts,
+        List<string> list,
+        EtwJsonConverterOptions opts,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        // All resources are created here — inside the iterator body — so they are only
+        // allocated when MoveNextAsync is first called.  If the IAsyncEnumerable is never
+        // iterated the worker thread is never started and no ETW handles are opened.
+
+        const int channelCapacity = 256;
+        Channel<PooledEventBuffer> channel = Channel.CreateBounded<PooledEventBuffer>(
+            new BoundedChannelOptions(channelCapacity)
+            {
+                SingleWriter = true,
+                SingleReader = true,
+                FullMode = BoundedChannelFullMode.Wait
+            });
+
+        // Linked source: cancelled by either the caller's token or enumerator disposal
+        // (break / early exit without explicit cancellation) so the worker is never
+        // permanently blocked on a saturated channel.
+        CancellationTokenSource linkedCts =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        EtwJsonChannelWriter channelWriter = new(channel.Writer, linkedCts.Token);
+        Deserializer<EtwJsonChannelWriter> deserializer = new(
+            channelWriter,
+            opts.CustomProviderManifest,
+            opts.WppDecodingContext
+        );
+
+        Thread workerThread = new(() => RunWorker(list, opts, deserializer, channel.Writer, linkedCts.Token))
+        {
+            IsBackground = true,
+            Name = "EtwUtil.EnumerateEventsAsync worker"
+        };
+        workerThread.Start();
+
         PooledEventBuffer? previous = null;
 
         try
         {
-            await foreach (PooledEventBuffer item in reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+            await foreach (PooledEventBuffer item in channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
             {
                 // Return previous rental before yielding the next item.
                 if (previous.HasValue)
