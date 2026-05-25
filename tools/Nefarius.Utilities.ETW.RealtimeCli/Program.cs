@@ -7,9 +7,10 @@ using Nefarius.Utilities.ETW.Deserializer.WPP;
 // ---------------------------------------------------------------------------
 // Arguments and options
 // ---------------------------------------------------------------------------
-Argument<Guid> providerArg = new("provider-guid")
+Argument<Guid[]> providerArg = new("provider-guid")
 {
-    Description = "GUID of the ETW provider to enable (e.g. {12345678-...})."
+    Description = "One or more ETW provider GUIDs to enable (e.g. {12345678-...}). All providers share the same keyword/level filters.",
+    Arity = ArgumentArity.OneOrMore
 };
 
 Option<string> keywordsOpt = new("--keywords")
@@ -76,7 +77,7 @@ Command realtime = new(
 
 realtime.SetAction(async (ParseResult result, CancellationToken cancellationToken) =>
 {
-    Guid provider = result.GetValue(providerArg);
+    Guid[] providers = result.GetValue(providerArg)!;
     string keywordsRaw = result.GetValue(keywordsOpt)!;
     string matchAllRaw = result.GetValue(matchAllOpt)!;
     TraceEventLevel level = result.GetValue(levelOpt);
@@ -101,7 +102,7 @@ realtime.SetAction(async (ParseResult result, CancellationToken cancellationToke
     }
 
     return await RunAsync(
-        provider,
+        providers,
         matchAny,
         matchAll,
         level,
@@ -138,7 +139,7 @@ static ulong ParseKeywordMask(string raw)
 }
 
 static async Task<int> RunAsync(
-    Guid providerGuid,
+    Guid[] providerGuids,
     ulong matchAnyKeyword,
     ulong matchAllKeyword,
     TraceEventLevel level,
@@ -189,12 +190,15 @@ static async Task<int> RunAsync(
             opts.FlushTimerSeconds = flushSeconds;
         });
 
-        session.EnableProvider(providerGuid, level, matchAnyKeyword, matchAllKeyword);
+        foreach (Guid guid in providerGuids)
+        {
+            session.EnableProvider(guid, level, matchAnyKeyword, matchAllKeyword);
+        }
 
         Console.Error.WriteLine(
             $"[*] Session '{sessionName}' started. " +
-            $"Provider {{{providerGuid}}} | level={level} | " +
-            $"keywords=0x{matchAnyKeyword:X} | matchAll=0x{matchAllKeyword:X}");
+            $"Providers: {string.Join(", ", providerGuids.Select(g => $"{{{g}}}"))} | " +
+            $"level={level} | keywords=0x{matchAnyKeyword:X} | matchAll=0x{matchAllKeyword:X}");
         Console.Error.WriteLine("[*] Streaming events... (Ctrl+C to stop)");
 
         await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateRealtimeEventsAsync(

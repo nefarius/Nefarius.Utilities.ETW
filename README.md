@@ -133,7 +133,7 @@ The `tools/Nefarius.Utilities.ETW.RealtimeCli` project builds a self-contained c
 ### Usage
 
 ```
-realtimewpp realtime <provider-guid>
+realtimewpp realtime <provider-guid> [<provider-guid> ...]
     [--keywords           <hex|dec>]   # match-any mask, default 0xFFFFFFFFFFFFFFFF
     [--match-all-keywords <hex|dec>]   # match-all mask, default 0
     [--level <Critical|Error|Warning|Information|Verbose>]  # default Verbose
