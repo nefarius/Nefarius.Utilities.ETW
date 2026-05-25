@@ -29,6 +29,30 @@ contributors.*
 - Added `EtwUtil.EnumeratePdbReferences` for lightweight pre-scanning of ETL files to collect all PDB metadata
   (symbol GUIDs, ages and file names) referenced in the trace before performing a full decode — enabling
   proper multi-PDB symbol resolution via symbol servers or local paths
+- Added `EtwUtil.EnumerateEventsAsync` — a streaming `IAsyncEnumerable<ReadOnlyMemory<byte>>` API that
+  yields each decoded ETW event as a self-contained UTF-8 JSON buffer as it is produced, rather than
+  waiting for the full trace to finish; a dedicated background thread runs the blocking `ProcessTrace` call
+  and feeds a bounded channel so the consumer is naturally backpressured and can process events concurrently
+  with parsing; works well as a data source for real-time delivery scenarios such as
+  [FastEndpoints Server Sent Events](https://fast-endpoints.com/docs/server-sent-events):
+
+```csharp
+public override async Task HandleAsync(CancellationToken ct)
+{
+    await Send.EventStreamAsync("etw-event", GetEtwStream(ct), ct);
+}
+
+private async IAsyncEnumerable<object> GetEtwStream([EnumeratorCancellation] CancellationToken ct)
+{
+    await foreach (ReadOnlyMemory<byte> eventJson in EtwUtil.EnumerateEventsAsync(
+        [@"C:\traces\capture.etl"],
+        opts => opts.WppDecodingContext = myDecodingContext,
+        ct))
+    {
+        yield return JsonSerializer.Deserialize<object>(eventJson.Span)!;
+    }
+}
+```
 
 ## Known limitations
 
