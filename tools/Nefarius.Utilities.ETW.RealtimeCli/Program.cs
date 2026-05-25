@@ -5,79 +5,85 @@ using Nefarius.Utilities.ETW;
 using Nefarius.Utilities.ETW.Deserializer.WPP;
 
 // ---------------------------------------------------------------------------
-// Root command
+// Arguments and options
 // ---------------------------------------------------------------------------
-RootCommand root = new("Nefarius ETW realtime decoder — streams decoded events as NDJSON on stdout.");
+Argument<Guid> providerArg = new("provider-guid")
+{
+    Description = "GUID of the ETW provider to enable (e.g. {12345678-...})."
+};
+
+Option<string> keywordsOpt = new("--keywords")
+{
+    Description = "Match-any keyword mask. Accepts hex (0xABCD) or decimal. Default: all keywords.",
+    DefaultValueFactory = _ => "0xFFFFFFFFFFFFFFFF"
+};
+
+Option<string> matchAllOpt = new("--match-all-keywords")
+{
+    Description = "Match-all keyword mask. Accepts hex (0xABCD) or decimal. Default: disabled (0).",
+    DefaultValueFactory = _ => "0"
+};
+
+Option<TraceEventLevel> levelOpt = new("--level")
+{
+    Description = "Maximum event severity level to capture.",
+    DefaultValueFactory = _ => TraceEventLevel.Verbose
+};
+
+Option<string> sessionNameOpt = new("--session-name")
+{
+    Description = "ETW session name. Defaults to NefariusEtwCli-<pid>.",
+    DefaultValueFactory = _ => $"NefariusEtwCli-{Environment.ProcessId}"
+};
+
+Option<string[]> symbolsOpt = new("--symbols")
+{
+    Description =
+        "Path to a PDB file, TMF file, directory (searched recursively), or a glob pattern " +
+        "(e.g. C:\\Symbols\\*.pdb). Repeat the flag for multiple paths.",
+    Arity = ArgumentArity.ZeroOrMore,
+    AllowMultipleArgumentsPerToken = false
+};
+
+Option<uint> bufferSizeOpt = new("--buffer-size-kb")
+{
+    Description = "ETW buffer size in kilobytes per buffer.",
+    DefaultValueFactory = _ => 64u
+};
+
+Option<uint> flushSecondsOpt = new("--flush-seconds")
+{
+    Description = "How often (in seconds) the session flushes in-flight buffers.",
+    DefaultValueFactory = _ => 1u
+};
 
 // ---------------------------------------------------------------------------
 // 'realtime' subcommand
 // ---------------------------------------------------------------------------
 Command realtime = new(
     "realtime",
-    "Attach to a realtime ETW session, enable a provider, and stream decoded events as NDJSON on stdout.");
-
-Argument<Guid> providerArg = new(
-    "provider-guid",
-    "GUID of the ETW provider to enable (e.g. {12345678-...}).");
-
-Option<string> keywordsOpt = new(
-    "--keywords",
-    () => "0xFFFFFFFFFFFFFFFF",
-    "Match-any keyword mask. Accepts hex (0xABCD) or decimal. Default: all keywords.");
-
-Option<string> matchAllOpt = new(
-    "--match-all-keywords",
-    () => "0",
-    "Match-all keyword mask. Accepts hex (0xABCD) or decimal. Default: disabled (0).");
-
-Option<TraceEventLevel> levelOpt = new(
-    "--level",
-    () => TraceEventLevel.Verbose,
-    "Maximum event severity level to capture.");
-
-Option<string> sessionNameOpt = new(
-    "--session-name",
-    () => $"NefariusEtwCli-{Environment.ProcessId}",
-    "ETW session name. Defaults to NefariusEtwCli-<pid>.");
-
-Option<string[]> symbolsOpt = new(
-    "--symbols",
-    "Path to a PDB file, TMF file, directory (searched recursively), or a glob pattern (e.g. " +
-    "C:\\Symbols\\*.pdb). Repeat the flag for multiple paths.")
+    "Attach to a realtime ETW session, enable a provider, and stream decoded events as NDJSON on stdout.")
 {
-    Arity = ArgumentArity.ZeroOrMore,
-    AllowMultipleArgumentsPerToken = false
+    providerArg,
+    keywordsOpt,
+    matchAllOpt,
+    levelOpt,
+    sessionNameOpt,
+    symbolsOpt,
+    bufferSizeOpt,
+    flushSecondsOpt
 };
 
-Option<uint> bufferSizeOpt = new(
-    "--buffer-size-kb",
-    () => 64u,
-    "ETW buffer size in kilobytes per buffer.");
-
-Option<uint> flushSecondsOpt = new(
-    "--flush-seconds",
-    () => 1u,
-    "How often (in seconds) the session flushes in-flight buffers.");
-
-realtime.Add(providerArg);
-realtime.Add(keywordsOpt);
-realtime.Add(matchAllOpt);
-realtime.Add(levelOpt);
-realtime.Add(sessionNameOpt);
-realtime.Add(symbolsOpt);
-realtime.Add(bufferSizeOpt);
-realtime.Add(flushSecondsOpt);
-
-realtime.SetHandler(async ctx =>
+realtime.SetAction(async (ParseResult result, CancellationToken cancellationToken) =>
 {
-    Guid provider = ctx.ParseResult.GetValue(providerArg);
-    string keywordsRaw = ctx.ParseResult.GetValue(keywordsOpt)!;
-    string matchAllRaw = ctx.ParseResult.GetValue(matchAllOpt)!;
-    TraceEventLevel level = ctx.ParseResult.GetValue(levelOpt);
-    string sessionName = ctx.ParseResult.GetValue(sessionNameOpt)!;
-    string[] symbolPaths = ctx.ParseResult.GetValue(symbolsOpt) ?? [];
-    uint bufferSizeKb = ctx.ParseResult.GetValue(bufferSizeOpt);
-    uint flushSeconds = ctx.ParseResult.GetValue(flushSecondsOpt);
+    Guid provider = result.GetValue(providerArg);
+    string keywordsRaw = result.GetValue(keywordsOpt)!;
+    string matchAllRaw = result.GetValue(matchAllOpt)!;
+    TraceEventLevel level = result.GetValue(levelOpt);
+    string sessionName = result.GetValue(sessionNameOpt)!;
+    string[] symbolPaths = result.GetValue(symbolsOpt) ?? [];
+    uint bufferSizeKb = result.GetValue(bufferSizeOpt);
+    uint flushSeconds = result.GetValue(flushSecondsOpt);
 
     ulong matchAny;
     ulong matchAll;
@@ -91,11 +97,10 @@ realtime.SetHandler(async ctx =>
         Console.Error.WriteLine(
             $"[!] Invalid keyword value. Use decimal (255) or hex (0xFF). " +
             $"Got: keywords='{keywordsRaw}' match-all='{matchAllRaw}'");
-        ctx.ExitCode = 2;
-        return;
+        return 2;
     }
 
-    ctx.ExitCode = await RunAsync(
+    return await RunAsync(
         provider,
         matchAny,
         matchAll,
@@ -104,12 +109,18 @@ realtime.SetHandler(async ctx =>
         symbolPaths,
         bufferSizeKb,
         flushSeconds,
-        ctx.GetCancellationToken());
+        cancellationToken);
 });
 
-root.Add(realtime);
+// ---------------------------------------------------------------------------
+// Root command
+// ---------------------------------------------------------------------------
+RootCommand root = new("realtimewpp — Nefarius ETW realtime decoder. Streams decoded events as NDJSON on stdout.")
+{
+    realtime
+};
 
-return await root.InvokeAsync(args);
+return await root.Parse(args).InvokeAsync();
 
 // ---------------------------------------------------------------------------
 // Implementation
@@ -225,63 +236,65 @@ static DecodingContext? ResolveSymbols(string[] symbolPaths)
 
     foreach (string arg in symbolPaths)
     {
-        try
+        if (arg.Contains('*') || arg.Contains('?'))
         {
-            if (arg.Contains('*') || arg.Contains('?'))
+            // Glob pattern: split into directory root + file pattern.
+            string root = Path.GetDirectoryName(arg) ?? ".";
+            string pattern = Path.GetFileName(arg);
+
+            if (!Directory.Exists(root))
             {
-                // Glob pattern: split into directory root + file pattern.
-                string root = Path.GetDirectoryName(arg) ?? ".";
-                string pattern = Path.GetFileName(arg);
-
-                if (!Directory.Exists(root))
-                {
-                    Console.Error.WriteLine($"[!] Glob root directory not found: {root}");
-                    continue;
-                }
-
-                foreach (string file in Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories))
-                {
-                    AddSymbolFile(contexts, file);
-                }
+                Console.Error.WriteLine($"[!] Glob root directory not found: {root}");
+                continue;
             }
-            else if (Directory.Exists(arg))
-            {
-                // Directory: collect all PDB files recursively and treat the directory
-                // itself as a TMF search path (TmfFilesDirectoryDecodingContextType parses
-                // every *.tmf inside it).
-                bool anyFound = false;
 
-                foreach (string pdb in Directory.EnumerateFiles(arg, "*.pdb", SearchOption.AllDirectories))
+            foreach (string file in Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories))
+            {
+                AddSymbolFile(contexts, file);
+            }
+        }
+        else if (Directory.Exists(arg))
+        {
+            // Directory: collect all PDB files recursively and treat the directory
+            // itself as a TMF search path (TmfFilesDirectoryDecodingContextType parses
+            // every *.tmf inside it).
+            bool anyFound = false;
+
+            foreach (string pdb in Directory.EnumerateFiles(arg, "*.pdb", SearchOption.TopDirectoryOnly))
+            {
+                if (AddSymbolFile(contexts, pdb))
                 {
-                    contexts.Add(new PdbFileDecodingContextType(pdb));
                     anyFound = true;
                 }
+            }
 
-                // Only add the directory as a TMF source when it actually contains TMF files,
-                // so we don't waste time on symbol-only directories.
-                if (Directory.EnumerateFiles(arg, "*.tmf", SearchOption.AllDirectories).Any())
+            // Only add the directory as a TMF source when it actually contains TMF files,
+            // so we don't waste time on symbol-only directories.
+            if (Directory.EnumerateFiles(arg, "*.tmf", SearchOption.TopDirectoryOnly).Any())
+            {
+                try
                 {
                     contexts.Add(new TmfFilesDirectoryDecodingContextType(arg));
                     anyFound = true;
                 }
-
-                if (!anyFound)
+                catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"[!] No PDB or TMF files found in directory: {arg}");
+                    Console.Error.WriteLine($"[!] Failed to load TMF directory '{arg}': {ex.Message}");
                 }
             }
-            else if (File.Exists(arg))
+
+            if (!anyFound)
             {
-                AddSymbolFile(contexts, arg);
-            }
-            else
-            {
-                Console.Error.WriteLine($"[!] Symbol path not found: {arg}");
+                Console.Error.WriteLine($"[!] No PDB or TMF files found in directory: {arg}");
             }
         }
-        catch (Exception ex)
+        else if (File.Exists(arg))
         {
-            Console.Error.WriteLine($"[!] Failed to load symbols from '{arg}': {ex.Message}");
+            AddSymbolFile(contexts, arg);
+        }
+        else
+        {
+            Console.Error.WriteLine($"[!] Symbol path not found: {arg}");
         }
     }
 
@@ -297,21 +310,32 @@ static DecodingContext? ResolveSymbols(string[] symbolPaths)
 
 /// <summary>
 ///     Adds a single symbol file to <paramref name="contexts" /> based on its extension.
+///     Returns <see langword="true" /> if the file was loaded successfully.
 /// </summary>
-static void AddSymbolFile(List<DecodingContextType> contexts, string path)
+static bool AddSymbolFile(List<DecodingContextType> contexts, string path)
 {
     string ext = Path.GetExtension(path);
 
-    if (ext.Equals(".pdb", StringComparison.OrdinalIgnoreCase))
+    try
     {
-        contexts.Add(new PdbFileDecodingContextType(path));
-    }
-    else if (ext.Equals(".tmf", StringComparison.OrdinalIgnoreCase))
-    {
-        contexts.Add(new TmfFileDecodingContextType(path));
-    }
-    else
-    {
+        if (ext.Equals(".pdb", StringComparison.OrdinalIgnoreCase))
+        {
+            contexts.Add(new PdbFileDecodingContextType(path));
+            return true;
+        }
+
+        if (ext.Equals(".tmf", StringComparison.OrdinalIgnoreCase))
+        {
+            contexts.Add(new TmfFileDecodingContextType(path));
+            return true;
+        }
+
         Console.Error.WriteLine($"[!] Unrecognized symbol file type (expected .pdb or .tmf): {path}");
+        return false;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"[!] Failed to load '{path}': {ex.Message}");
+        return false;
     }
 }
