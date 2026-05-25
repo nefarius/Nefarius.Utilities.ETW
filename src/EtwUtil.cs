@@ -1,11 +1,15 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Threading.Channels;
 
 using Windows.Win32.Foundation;
 
 using Nefarius.Utilities.ETW.Deserializer;
 using Nefarius.Utilities.ETW.Deserializer.WPP;
+using Nefarius.Utilities.ETW.Exceptions;
 
 namespace Nefarius.Utilities.ETW;
 
@@ -156,5 +160,218 @@ public static class EtwUtil
 
         jsonWriter.Flush();
         return true;
+    }
+
+    /// <summary>
+    ///     Converts one or more .ETL files to a stream of UTF-8 JSON objects, yielding each decoded event
+    ///     as a <see cref="ReadOnlyMemory{T}">ReadOnlyMemory&lt;byte&gt;</see> as it is produced.
+    /// </summary>
+    /// <param name="inputFiles">One or more input files.</param>
+    /// <param name="options">Options to further tweak the parsing operation.</param>
+    /// <param name="cancellationToken">Token that, when cancelled, stops trace processing and completes the enumeration.</param>
+    /// <returns>
+    ///     An <see cref="IAsyncEnumerable{T}" /> of raw UTF-8 JSON buffers, one per event. Each buffer contains a
+    ///     self-contained JSON object — <c>{"Event":{"Timestamp":…,"Properties":[{…}]}}</c> — with no outer
+    ///     array wrapper. The caller may concatenate or wrap the items as needed.
+    /// </returns>
+    /// <remarks>
+    ///     <para>
+    ///         Each <see cref="ReadOnlyMemory{T}">ReadOnlyMemory&lt;byte&gt;</see> is backed by a buffer rented from
+    ///         <see cref="ArrayPool{T}.Shared" />. The buffer is valid only until the next iteration step; the library
+    ///         returns it to the pool when <c>MoveNextAsync</c> is called (i.e. at the start of the next
+    ///         <see langword="await foreach" /> loop body). Do not retain references to the memory across iterations.
+    ///     </para>
+    ///     <para>
+    ///         Trace processing runs on a dedicated background thread so the thread-pool is not blocked by the
+    ///         long-running native <c>ProcessTrace</c> call. A bounded channel with a fixed capacity couples the
+    ///         producer to the consumer, applying natural backpressure when the consumer is slower than the trace.
+    ///     </para>
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="inputFiles" /> is <see langword="null" />.</exception>
+    /// <exception cref="ArgumentException">
+    ///     One or more entries in <paramref name="inputFiles" /> are <see langword="null" />, empty, or consist only of
+    ///     whitespace.
+    /// </exception>
+    /// <exception cref="EtwOpenTraceException">
+    ///     One of the input files could not be opened by the ETW API.
+    /// </exception>
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    public static IAsyncEnumerable<ReadOnlyMemory<byte>> EnumerateEventsAsync(
+        IEnumerable<string> inputFiles,
+        Action<EtwJsonConverterOptions>? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(inputFiles);
+
+        List<string> list = inputFiles.ToList();
+        for (int i = 0; i < list.Count; i++)
+        {
+            if (string.IsNullOrWhiteSpace(list[i]))
+            {
+                throw new ArgumentException($"Entry at index {i} is null, empty, or whitespace.", nameof(inputFiles));
+            }
+        }
+
+        EtwJsonConverterOptions opts = new();
+        options?.Invoke(opts);
+
+        // Defer all resource creation (channel, linked CTS, deserializer, worker thread) into
+        // the async iterator so that nothing is allocated or started until MoveNextAsync is
+        // first called.  If the returned IAsyncEnumerable is never iterated, no resources are
+        // consumed and no worker thread is started.
+        return StreamEventsAsync(list, opts, cancellationToken);
+    }
+
+    private static void RunWorker(
+        List<string> list,
+        EtwJsonConverterOptions opts,
+        Deserializer<EtwJsonChannelWriter> deserializer,
+        ChannelWriter<PooledEventBuffer> writer,
+        CancellationToken cancellationToken)
+    {
+        int count = list.Count;
+        EVENT_TRACE_LOGFILEW[] fileSessions = new EVENT_TRACE_LOGFILEW[count];
+        ulong[] handles = new ulong[count];
+        int[] openTraceErrors = new int[count];
+
+        try
+        {
+            for (int i = 0; i < count; ++i)
+            {
+                unsafe
+                {
+                    fileSessions[i] = new EVENT_TRACE_LOGFILEW
+                    {
+                        LogFileName = list[i],
+                        EventRecordCallback = deserializer.Deserialize,
+                        BufferCallback = _ => !cancellationToken.IsCancellationRequested,
+                        LogFileMode = PInvoke.PROCESS_TRACE_MODE_EVENT_RECORD
+                    };
+
+                    if (opts.PreserveRawTimestamps)
+                    {
+                        fileSessions[i].LogFileMode |= PInvoke.PROCESS_TRACE_MODE_RAW_TIMESTAMP;
+                    }
+
+                    handles[i] = Etw.OpenTrace(ref fileSessions[i]);
+                    // Capture immediately: any subsequent Win32 call would overwrite the TLS slot.
+                    openTraceErrors[i] = Marshal.GetLastWin32Error();
+                }
+            }
+
+            for (int i = 0; i < count; ++i)
+            {
+                unchecked
+                {
+                    if (handles[i] == (ulong)~0)
+                    {
+                        WIN32_ERROR error = (WIN32_ERROR)openTraceErrors[i];
+                        EtwOpenTraceException ex = new(error, list[i]);
+                        opts.ReportError?.Invoke("ERROR: " + ex.Message);
+                        writer.TryComplete(ex);
+                        return;
+                    }
+                }
+            }
+
+            Etw.ProcessTrace(handles, (uint)handles.Length, IntPtr.Zero, IntPtr.Zero);
+            GC.KeepAlive(fileSessions);
+        }
+        catch (Exception ex)
+        {
+            writer.TryComplete(ex);
+            return;
+        }
+        finally
+        {
+            for (int i = 0; i < count; ++i)
+            {
+                if (handles[i] != 0)
+                {
+                    unchecked
+                    {
+                        if (handles[i] != (ulong)~0)
+                        {
+                            Etw.CloseTrace(handles[i]);
+                        }
+                    }
+                }
+            }
+        }
+
+        writer.TryComplete();
+    }
+
+    private static async IAsyncEnumerable<ReadOnlyMemory<byte>> StreamEventsAsync(
+        List<string> list,
+        EtwJsonConverterOptions opts,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // All resources are created here — inside the iterator body — so they are only
+        // allocated when MoveNextAsync is first called.  If the IAsyncEnumerable is never
+        // iterated the worker thread is never started and no ETW handles are opened.
+
+        const int channelCapacity = 256;
+        Channel<PooledEventBuffer> channel = Channel.CreateBounded<PooledEventBuffer>(
+            new BoundedChannelOptions(channelCapacity)
+            {
+                SingleWriter = true,
+                SingleReader = true,
+                FullMode = BoundedChannelFullMode.Wait
+            });
+
+        // Linked source: cancelled by either the caller's token or enumerator disposal
+        // (break / early exit without explicit cancellation) so the worker is never
+        // permanently blocked on a saturated channel.
+        CancellationTokenSource linkedCts =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        EtwJsonChannelWriter channelWriter = new(channel.Writer, linkedCts.Token);
+        Deserializer<EtwJsonChannelWriter> deserializer = new(
+            channelWriter,
+            opts.CustomProviderManifest,
+            opts.WppDecodingContext
+        );
+
+        Thread workerThread = new(() => RunWorker(list, opts, deserializer, channel.Writer, linkedCts.Token))
+        {
+            IsBackground = true,
+            Name = "EtwUtil.EnumerateEventsAsync worker"
+        };
+        workerThread.Start();
+
+        PooledEventBuffer? previous = null;
+
+        try
+        {
+            await foreach (PooledEventBuffer item in channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+            {
+                // Return previous rental before yielding the next item.
+                if (previous.HasValue)
+                {
+                    ArrayPool<byte>.Shared.Return(previous.Value.Rented);
+                }
+
+                previous = item;
+                yield return item.Memory;
+            }
+        }
+        finally
+        {
+            // Return the last rental, if any.
+            if (previous.HasValue)
+            {
+                ArrayPool<byte>.Shared.Return(previous.Value.Rented);
+            }
+
+            // Signal the worker to stop if it is still blocked waiting on a full channel
+            // (e.g., consumer broke out early without cancelling the caller's token).
+            // This ensures ETW handles are always released promptly.
+            linkedCts.Cancel();
+
+            // Wait for the worker thread to finish so handles are closed before we return.
+            workerThread.Join(millisecondsTimeout: 5000);
+            linkedCts.Dispose();
+        }
     }
 }
