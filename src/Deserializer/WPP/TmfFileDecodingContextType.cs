@@ -32,6 +32,8 @@ public sealed class TmfFileDecodingContextType()
     /// <returns>One or more <see cref="TmfFileDecodingContextType" />s.</returns>
     public static IList<DecodingContextType> CreateFrom(params IList<string> pathList)
     {
+        ArgumentNullException.ThrowIfNull(pathList, nameof(pathList));
+
         return pathList.Select(DecodingContextType (path) => new TmfFileDecodingContextType(path)).ToList();
     }
 }
