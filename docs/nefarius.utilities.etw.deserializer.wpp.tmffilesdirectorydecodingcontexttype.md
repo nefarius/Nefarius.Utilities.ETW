@@ -2,7 +2,8 @@
 
 Namespace: Nefarius.Utilities.ETW.Deserializer.WPP
 
-A [TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFFILE](./windows.win32.system.diagnostics.etw.tdh_context_type.md#tdh_context_wpp_tmffile) wrapper for use with [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md).
+A [TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFSEARCHPATH](./windows.win32.system.diagnostics.etw.tdh_context_type.md#tdh_context_wpp_tmfsearchpath) wrapper for use with
+ [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md).
 
 ```csharp
 public sealed class TmfFilesDirectoryDecodingContextType : DecodingContextType
@@ -28,7 +29,8 @@ public IEnumerable<TraceMessageFormat> TraceMessageFormats { get; protected set;
 
 ### <a id="constructors-.ctor"/>**TmfFilesDirectoryDecodingContextType()**
 
-A [TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFFILE](./windows.win32.system.diagnostics.etw.tdh_context_type.md#tdh_context_wpp_tmffile) wrapper for use with [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md).
+A [TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFSEARCHPATH](./windows.win32.system.diagnostics.etw.tdh_context_type.md#tdh_context_wpp_tmfsearchpath) wrapper for use with
+ [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md).
 
 ```csharp
 public TmfFilesDirectoryDecodingContextType()

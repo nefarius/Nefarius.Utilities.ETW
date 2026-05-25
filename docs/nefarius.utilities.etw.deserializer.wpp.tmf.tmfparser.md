@@ -48,3 +48,20 @@ The directory to search in.
 #### Returns
 
 A collection of extracted [TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md) entries.
+
+### <a id="methods-parsefile"/>**ParseFile(String)**
+
+Parses a single `.TMF` file.
+
+```csharp
+public static IEnumerable<TraceMessageFormat> ParseFile(string path)
+```
+
+#### Parameters
+
+`path` [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+The path to a `.tmf` file.
+
+#### Returns
+
+A collection of extracted [TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md) entries.
