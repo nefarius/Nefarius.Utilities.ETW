@@ -46,6 +46,16 @@
     </ItemGroup>
 
     <ItemGroup>
+        <!--
+            Smx.PDBSharp is pinned to 1.0.0-alpha4 because no stable release exists on NuGet.org
+            as of May 2026; alpha4 is the latest published version. No known security advisories
+            were found against this version. The same version is used by the sibling project
+            WinDbgSymbolsCachingProxy (https://github.com/nefarius/WinDbgSymbolsCachingProxy).
+
+            Upgrade plan: revisit when the author publishes a stable 1.x release. At that point
+            bump this reference, re-run the build and smoke tests, and remove this comment.
+            Owner: project maintainer (@nefarius). Target: as soon as a stable release is tagged.
+        -->
         <PackageReference Include="Smx.PDBSharp" Version="1.0.0-alpha4" />
         <PackageReference Include="System.CommandLine" Version="2.0.5" />
         <PackageReference Include="MinVer" Version="7.0.0">
