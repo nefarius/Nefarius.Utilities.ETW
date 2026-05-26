@@ -6,7 +6,7 @@
 [![NuGet Version](https://img.shields.io/nuget/v/Nefarius.Utilities.ETW.CLI)](https://www.nuget.org/packages/Nefarius.Utilities.ETW.CLI/)
 [![NuGet](https://img.shields.io/nuget/dt/Nefarius.Utilities.ETW.CLI)](https://www.nuget.org/packages/Nefarius.Utilities.ETW.CLI/)
 
-A .NET global tool (`etwutils`) that wraps the realtime ETW API of [Nefarius.Utilities.ETW](https://www.nuget.org/packages/Nefarius.Utilities.ETW/) and writes decoded events as **NDJSON** or **plain tab-separated** text on `stdout`, making it trivial to pipe into `jq`, `grep`, log aggregators, or any line-oriented consumer.
+A .NET global tool (`etwutils`) that wraps the ETW API of [Nefarius.Utilities.ETW](https://www.nuget.org/packages/Nefarius.Utilities.ETW/) and writes decoded events as **NDJSON** or **plain tab-separated** text, making it trivial to pipe into `jq`, `grep`, log aggregators, or any line-oriented consumer. Supports both **realtime** capture and **offline** `.etl` file decoding.
 
 > **Admin required.** ETW session creation requires an elevated process.
 
@@ -19,6 +19,58 @@ dotnet tool install -g Nefarius.Utilities.ETW.CLI
 This makes the `etwutils` command available on `PATH`. Requires the .NET 8, 9, or 10 **SDK** on Windows (`dotnet tool` is an SDK feature, not available with the runtime-only install).
 
 ## Commands
+
+### `parse`
+
+Decode one or more offline `.etl` files and emit events as NDJSON or plain TSV to **stdout** (all inputs time-merged by ETW) or to **per-file output** in a target directory.
+
+```text
+etwutils parse <etl-path> [<etl-path> ...]
+    [--out-dir          <path>]        # per-file output dir; default: stream to stdout
+    [--symbols          <path>] ...    # PDB / TMF / dir / glob, loaded unconditionally
+    [--symbols-search   <path>] ...    # dirs/globs searched only for PDBs the trace references
+    [--symbol-server    <url>]         # symbol store root URL (SymSrv-compatible)
+    [--symbol-cache     <path>]        # local symstore-layout cache; default below
+    [--format           <ndjson|plain>]# default ndjson
+    [--color            <auto|always|never>]  # plain stdout only; default auto
+    [--preserve-raw-timestamps]        # apply PROCESS_TRACE_MODE_RAW_TIMESTAMP
+```
+
+`<etl-path>` accepts individual `.etl` files, directories (top-level `*.etl` enumeration), and glob patterns (e.g. `C:\Traces\*.etl`). Multiple paths are accepted and deduplicated.
+
+#### Output modes
+
+| Mode | How to activate | Output naming |
+|------|-----------------|---------------|
+| Stdout (default) | omit `--out-dir` | all inputs merged, written to stdout |
+| Per-file | `--out-dir <path>` | `trace.etl` → `<path>/trace.ndjson` (or `.tsv`) |
+
+#### WPP symbol auto-discovery
+
+When `--symbols-search`, `--symbol-server`, or `--symbol-cache` is supplied (or `_NT_SYMBOL_PATH` provides a server or cache), the tool runs a **pre-scan** of the input files with `EnumeratePdbReferences` and resolves each referenced PDB in order:
+
+1. **Local cache** — `<cache>/<pdbname>/<GUID><AGE>/<pdbname>` (SymSrv-compatible layout).
+2. **Search paths** — first case-insensitive filename match in `--symbols-search` directories.
+3. **Symbol server** — `GET <url>/<pdbname>/<GUID><AGE>/<pdbname>`; downloaded atomically into the cache.
+
+Unresolved PDBs log a `[!]` warning and are non-fatal; affected WPP events fall back to a `GUID=...` placeholder.
+
+##### Default cache directory
+
+`%LOCALAPPDATA%\Nefarius\etwutils\symcache` (created on demand). Override with `--symbol-cache`.
+
+##### `_NT_SYMBOL_PATH` fallback
+
+When neither `--symbol-server` nor `--symbol-cache` is passed, the tool reads the first parseable segment of the `_NT_SYMBOL_PATH` environment variable (the same variable consumed by WinDbg/DbgHelp):
+
+| Segment form | Effect |
+|---|---|
+| `srv*<cache>*<url>` | sets both cache and server |
+| `srv*<url>` | sets server; uses default cache |
+| `cache*<dir>` | sets cache only |
+| anything else | prints a notice and is ignored |
+
+> **Tip:** [WinDbgSymbolsCachingProxy](https://github.com/nefarius/WinDbgSymbolsCachingProxy) is a ready-made caching proxy that speaks the same SymSrv protocol. Point `--symbol-server` (or `_NT_SYMBOL_PATH`) at `https://symbols.nefarius.at/download/symbols` to use the public instance, or self-host your own.
 
 ### `realtime`
 
@@ -53,6 +105,62 @@ etwutils inspect-pdb <path> [<path> ...]
 Lists every `WPP_DEFINE_CONTROL_GUID` found, along with the control name and declared `WPP_DEFINE_BIT` flag names. Accepts the same path forms as `--symbols` (PDB files, directories, glob patterns). TMF files are silently ignored.
 
 ## Examples
+
+### Offline `.etl` parsing
+
+Decode a single trace file and stream events as NDJSON to stdout:
+
+```bash
+etwutils parse BthPS3_0.etl | jq .
+```
+
+Decode multiple files, time-merging their events, with WPP symbols loaded from a PDB:
+
+```bash
+etwutils parse trace1.etl trace2.etl --symbols C:\Symbols\MyDriver.pdb | jq .
+```
+
+Decode every `.etl` in a directory and write one output file each to a target directory:
+
+```bash
+etwutils parse C:\Traces\ --out-dir C:\Decoded --symbols C:\Symbols\MyDriver.pdb
+# stderr:
+# [*] Resolved 3 .etl file(s).
+# [*] trace1.etl -> C:\Decoded\trace1.ndjson
+#     1,234 event(s) written.
+# ...
+```
+
+Plain TSV per-file output:
+
+```bash
+etwutils parse C:\Traces\ --out-dir C:\Decoded --format plain
+```
+
+Auto-discover and download PDB symbols from a symbol server, then decode:
+
+```bash
+etwutils parse BthPS3_0.etl \
+    --symbol-server https://symbols.nefarius.at/download/symbols \
+    --symbols-search C:\Symbols | jq .
+# stderr:
+# [*] Resolved 1 .etl file(s).
+# [*] Auto-discovery: resolving 2 PDB reference(s)...
+#     [cache ] BthPS3.pdb
+#     [server] BthPS3PSM.pdb <- https://symbols.nefarius.at/download/symbols/bthps3psm.pdb/...
+# [*] Auto-discovery complete: 2/2 resolved (1 cache, 0 local, 1 downloaded, 0 unresolved).
+# [*] Streaming 1 .etl file(s) to stdout...
+```
+
+Using `_NT_SYMBOL_PATH` (already set for WinDbg):
+
+```bash
+# _NT_SYMBOL_PATH=srv*C:\symbols*https://msdl.microsoft.com/download/symbols
+etwutils parse BthPS3_0.etl --symbols-search C:\Symbols
+# The cache and server are picked up automatically from _NT_SYMBOL_PATH.
+```
+
+### Realtime capture
 
 Capture all events from a provider and pretty-print them with `jq`:
 
