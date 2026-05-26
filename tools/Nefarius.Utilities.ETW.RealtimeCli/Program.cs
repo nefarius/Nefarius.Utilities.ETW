@@ -610,7 +610,10 @@ static string? ValidateGlobPattern(string globArg)
     // The last segment is the filename pattern passed to Directory.EnumerateFiles as
     // searchPattern. "**" and empty are not valid searchPattern values and would throw
     // ArgumentException at runtime; reject them here with a clear message.
-    string lastSeg = segments.Length > 0 ? segments[^1] : string.Empty;
+    // Use Path.GetFileName rather than segments[^1] so that a trailing separator
+    // (e.g. "C:\Symbols\*.pdb\") is detected: Split(..., RemoveEmptyEntries) silently
+    // drops the trailing empty segment, but Path.GetFileName returns "" in that case.
+    string lastSeg = Path.GetFileName(globArg);
     if (lastSeg == "**" || lastSeg.Length == 0)
     {
         return $"[!] Glob pattern '{globArg}' has no filename component. " +
