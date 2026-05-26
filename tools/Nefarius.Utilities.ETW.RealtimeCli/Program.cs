@@ -168,6 +168,12 @@ inspectPdb.SetAction((ParseResult result) =>
     {
         if (arg.Contains('*') || arg.Contains('?'))
         {
+            if (ValidateGlobPattern(arg) is string validationError)
+            {
+                Console.Error.WriteLine(validationError);
+                continue;
+            }
+
             string root = NormalizeGlobRoot(arg);
             string pattern = Path.GetFileName(arg);
             bool recurse = arg.Contains("**");
@@ -449,8 +455,14 @@ static (DecodingContext? Context, List<DecodingContextType> ContextTypes) Resolv
         {
             // Glob pattern: split into directory root + file pattern.
             // Recurse only when the caller explicitly uses ** in the pattern.
-            // NormalizeGlobRoot strips any wildcard-containing directory segments
-            // (e.g. "C:\Symbols\**\*.pdb" → root "C:\Symbols") so Directory.Exists succeeds.
+            // NormalizeGlobRoot strips the standalone ** segment so Directory.Exists succeeds.
+            // Reject before calling NormalizeGlobRoot so no filter is silently lost.
+            if (ValidateGlobPattern(arg) is string validationError)
+            {
+                Console.Error.WriteLine(validationError);
+                continue;
+            }
+
             string root = NormalizeGlobRoot(arg);
             string pattern = Path.GetFileName(arg);
             bool recurse = arg.Contains("**");
@@ -560,6 +572,39 @@ static bool AddSymbolFile(List<DecodingContextType> contexts, string path)
         Console.Error.WriteLine($"[!] Failed to load '{path}': {ex.Message}");
         return false;
     }
+}
+
+/// <summary>
+///     Validates that a glob pattern does not contain wildcard characters inside any directory
+///     segment except the standalone <c>**</c> recursion marker.
+///     Returns a non-null, ready-to-print error message when the pattern is invalid;
+///     returns <see langword="null" /> when the pattern is acceptable.
+/// </summary>
+/// <remarks>
+///     Allowed: <c>C:\Symbols\*.pdb</c> (filename wildcard) and
+///     <c>C:\Symbols\**\*.pdb</c> (standalone <c>**</c> recursion marker).
+///     Rejected: <c>C:\Sym*\*.pdb</c> or <c>C:\Symbols\sub?\*.pdb</c>
+///     (wildcards in a non-terminal, non-<c>**</c> directory segment).
+/// </remarks>
+static string? ValidateGlobPattern(string globArg)
+{
+    string[] segments = globArg.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
+
+    // Every segment except the last is a directory segment.
+    for (int i = 0; i < segments.Length - 1; i++)
+    {
+        string seg = segments[i];
+        if (seg == "**") { continue; } // recursion marker — explicitly allowed
+
+        if (seg.Contains('*') || seg.Contains('?'))
+        {
+            return $"[!] Wildcard in directory segment '{seg}' is not supported in '{globArg}'. " +
+                   $"Use a filename-only wildcard (e.g. *.pdb) or '**' for recursion " +
+                   $"(e.g. Symbols\\**\\*.pdb).";
+        }
+    }
+
+    return null;
 }
 
 /// <summary>
