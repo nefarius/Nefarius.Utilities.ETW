@@ -199,20 +199,20 @@ etwutils realtime \
     --symbols "C:\Symbols\**\*.pdb"
 ```
 
-Stream events in human-friendly plain format (colourised Level when stdout is a TTY):
+Stream events in human-friendly plain format (colorized Level when stdout is a TTY):
 
 ```bash
 etwutils realtime --symbols C:\Symbols\MyDriver.pdb --format plain
 # 2026-05-26T14:51:23.1234567+02:00	BthPS3TraceGuid	TRACE_LEVEL_INFORMATION	Device arrived: USB\VID_054C&PID_09CC
 ```
 
-Pipe plain output into `column` for aligned columns (disables colour automatically):
+Pipe plain output into `column` for aligned columns (disables color automatically):
 
 ```bash
 etwutils realtime --symbols C:\Symbols\MyDriver.pdb --format plain | column -t -s $'\t'
 ```
 
-Force colour off even on a TTY:
+Force color off even on a TTY:
 
 ```bash
 etwutils realtime --symbols C:\Symbols\MyDriver.pdb --format plain --color never
@@ -271,7 +271,7 @@ etwutils realtime --symbols C:\Symbols\MyDriver.pdb | jq .
 
 Embedded tabs and newlines in the message are escaped to `\t` and `\n` so each event always occupies exactly one output line.
 
-When stdout is a TTY (and `NO_COLOR` is not set), the Level column is automatically colourised: Critical/Fatal → bright red, Error → red, Warning → yellow, Information → cyan, Verbose → gray. Colour is suppressed automatically when piping. Use `--color always|never` to override.
+When stdout is a TTY (and `NO_COLOR` is not set), the Level column is automatically colorized: Critical/Fatal → bright red, Error → red, Warning → yellow, Information → cyan, Verbose → gray. Color is suppressed automatically when piping. Use `--color always|never` to override.
 
 ```text
 2026-05-26T14:51:23.1234567+02:00	BthPS3TraceGuid	TRACE_LEVEL_INFORMATION	Device arrived: USB\VID_054C&PID_09CC
