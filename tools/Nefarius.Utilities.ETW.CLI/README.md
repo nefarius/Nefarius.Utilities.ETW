@@ -34,6 +34,9 @@ etwutils parse <etl-path> [<etl-path> ...]
     [--format           <ndjson|plain>]# default ndjson
     [--color            <auto|always|never>]  # plain stdout only; default auto
     [--preserve-raw-timestamps]        # apply PROCESS_TRACE_MODE_RAW_TIMESTAMP
+    [--columns          <list>]        # plain only: comma-separated column tokens; default Timestamp,Provider,Level,Message
+    [--header]                         # plain only: emit a TSV header line first
+    [--filter           <expression>]  # plain only: DynamicExpresso predicate to drop events
 ```
 
 `<etl-path>` accepts individual `.etl` files, directories (top-level `*.etl` enumeration), and glob patterns (e.g. `C:\Traces\*.etl`). Multiple paths are accepted and deduplicated.
@@ -87,6 +90,9 @@ etwutils realtime [<provider-guid> ...]
     [--flush-seconds  <n>]             # flush interval, default 1
     [--format <ndjson|plain>]          # output format, default ndjson
     [--color  <auto|always|never>]     # colorize Level column (plain only), default auto
+    [--columns <list>]                 # plain only: comma-separated column tokens; default Timestamp,Provider,Level,Message
+    [--header]                         # plain only: emit a TSV header line first
+    [--filter <expression>]            # plain only: DynamicExpresso predicate to drop events
 ```
 
 `provider-guid` is **optional**. When omitted, the tool reads the `WPP_DEFINE_CONTROL_GUID` declarations embedded in the PDB files passed to `--symbols` and uses those as the provider list. Explicit GUIDs always take precedence; PDB-derived GUIDs are not added on top of explicit ones.
@@ -135,6 +141,29 @@ Plain TSV per-file output:
 
 ```bash
 etwutils parse C:\Traces\ --out-dir C:\Decoded --format plain
+```
+
+Parse with custom column order and a header row:
+
+```bash
+etwutils parse BthPS3_0.etl --symbols C:\Symbols\BthPS3.pdb \
+    --format plain --columns Timestamp,Level,Function,Message --header
+```
+
+Filter to only errors and above, drop a noisy provider:
+
+```bash
+etwutils parse BthPS3_0.etl --symbols C:\Symbols\BthPS3.pdb \
+    --format plain \
+    --filter "LevelNumber <= 3 && LevelNumber > 0 && Provider != \"BthPS3PSM\""
+```
+
+Select specific columns and filter by message prefix, with a header, written to per-file TSV:
+
+```bash
+etwutils parse C:\Traces\ --out-dir C:\Decoded \
+    --format plain --columns Timestamp,Pid,Level,Message --header \
+    --filter "Message.StartsWith(\"[BthPS3\")"
 ```
 
 Auto-discover and download PDB symbols from a symbol server, then decode:
@@ -212,6 +241,21 @@ Force color off even on a TTY:
 etwutils realtime --symbols C:\Symbols\MyDriver.pdb --format plain --color never
 ```
 
+Select a custom column set (Timestamp, Pid, Function, Message) and add a header line:
+
+```bash
+etwutils realtime --symbols C:\Symbols\MyDriver.pdb --format plain \
+    --columns Timestamp,Pid,Function,Message --header
+```
+
+Show only errors and warnings in realtime, and output just timestamp and message:
+
+```bash
+etwutils realtime --symbols C:\Symbols\MyDriver.pdb --format plain \
+    --columns Timestamp,Message \
+    --filter "LevelNumber <= 3 && LevelNumber > 0"
+```
+
 List provider GUIDs embedded in a PDB (plain, human-readable — includes control name and bit flags):
 
 ```text
@@ -254,22 +298,68 @@ etwutils realtime --symbols C:\Symbols\MyDriver.pdb | jq .
 
 ### Plain (tab-separated)
 
-`--format plain` writes one event per line to `stdout` as four tab-separated columns:
+`--format plain` writes one event per line to `stdout` as tab-separated columns. By default four columns are emitted; use `--columns` to change the set and order.
 
-| Column | Content |
-|--------|---------|
-| Timestamp | Local time in ISO-8601 with UTC offset, e.g. `2026-05-26T14:51:23.1234567+02:00` |
-| Provider | WPP provider friendly name (`GuidName`), or the first segment of the TDH event name for non-WPP events |
-| Level | WPP level string (`TRACE_LEVEL_INFORMATION`, etc.) or `-` for non-WPP events |
-| Message | WPP formatted message, or a compact JSON representation of the raw properties for non-WPP events |
+#### Default columns
 
-Embedded tabs and newlines in the message are escaped to `\t` and `\n` so each event always occupies exactly one output line.
+| Column token | Content |
+|---|---|
+| `Timestamp` | Local time in ISO-8601 with UTC offset, e.g. `2026-05-26T14:51:23.1234567+02:00` |
+| `Provider` | WPP provider friendly name (`GuidName`), or the first segment of the TDH event name for non-WPP events |
+| `Level` | WPP level string (`TRACE_LEVEL_INFORMATION`, etc.) or `-` for non-WPP events |
+| `Message` | WPP formatted message, or a compact JSON representation of the raw properties for non-WPP events |
 
-When stdout is a TTY (and `NO_COLOR` is not set), the Level column is automatically colorized: Critical/Fatal → bright red, Error → red, Warning → yellow, Information → cyan, Verbose → gray. Color is suppressed automatically when piping. Use `--color always|never` to override.
+#### Available column tokens
+
+All tokens below are available to both `--columns` and `--filter`.
+
+| Token | Type | Content | WPP-only |
+|---|---|---|---|
+| `Timestamp` | string | Local ISO-8601 timestamp with UTC offset | no |
+| `Provider` | string | WPP `GuidName` or first TDH event name segment | no |
+| `ProviderGuid` | string | Provider GUID in `D` format | no |
+| `Level` | string | WPP `LevelName` or `-` for non-WPP events | no |
+| `LevelNumber` | int | Numeric level 1 (Critical) … 5 (Verbose); 0 when unknown | no |
+| `Message` | string | WPP `FormattedString` or compact JSON of raw properties | no |
+| `EventName` | string | Full TDH event name (`Provider/Task/Opcode`) or `WPP` | no |
+| `EventId` | int | Event Id from the event header | no |
+| `Pid` | int | Process identifier | no |
+| `Tid` | int | Thread identifier | no |
+| `Cpu` | int | Processor number | no |
+| `ActivityId` | string | Activity GUID or empty | no |
+| `RelatedActivityId` | string | Related-activity GUID or empty | no |
+| `Function` | string | WPP `FunctionName` | yes |
+| `Component` | string | WPP `ComponentName` | yes |
+| `SubComponent` | string | WPP `SubComponentName` | yes |
+| `Flags` | string | WPP `FlagsName` | yes |
+
+Embedded tabs and newlines in every cell value are escaped to `\t` and `\n` so each event always occupies exactly one output line.
+
+When stdout is a TTY (and `NO_COLOR` is not set), the `Level` column (when present) is automatically colorized: Critical/Fatal → bright red, Error → red, Warning → yellow, Information → cyan, Verbose → gray. Color is suppressed automatically when piping. Use `--color always|never` to override.
 
 ```text
 2026-05-26T14:51:23.1234567+02:00	BthPS3TraceGuid	TRACE_LEVEL_INFORMATION	Device arrived: USB\VID_054C&PID_09CC
 2026-05-26T14:51:23.5678901+02:00	BthPS3TraceGuid	TRACE_LEVEL_VERBOSE	  ConnectRequest: handle=0x0003
+```
+
+#### Filter expression language
+
+`--filter` accepts a C#-like boolean expression evaluated per event by [DynamicExpresso](https://github.com/dynamicexpresso/DynamicExpresso). Events for which the expression returns `false` are silently dropped. Parse errors abort startup with exit code 2; per-event evaluation errors are logged to stderr and drop the event (non-fatal).
+
+All column tokens listed above are available as identifiers directly in the expression (no prefix needed):
+
+```text
+# Skip all events from a specific provider
+--filter "Provider != \"BthPS3PSM\""
+
+# Only show errors and above (LevelNumber <= 3 covers Critical, Error, Warning)
+--filter "LevelNumber <= 3 && LevelNumber > 0"
+
+# Keep only events whose message starts with a specific string
+--filter "Message.StartsWith(\"[BthPS3\")"
+
+# Combine conditions
+--filter "Provider == \"BthPS3\" && !Message.Contains(\"Verbose\")"
 ```
 
 ## Known limitations
