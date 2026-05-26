@@ -19,7 +19,7 @@ contributors.*
 - Replaced P/Invoke code with [source generators](https://github.com/microsoft/CsWin32)
 - Changed namespace to `Nefarius.Utilities.ETW` to avoid conflicts with the origin library
 - Added support for [WPP Software Tracing](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/wpp-software-tracing) decoding
-  - Supports `.PDB` files as a decoding source
+  - Supports `.PDB` files as a decoding source — WPP provider GUIDs (ETW trace control GUIDs) are automatically extracted from `TMC:` annotations in the PDB symbol stream so no manual GUID lookup is required
   - Supports `.TMF` files as a decoding source
   - Full support for all [WPP extended format specification strings](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-)
     (`%!FUNC!`, `%!LEVEL!`, `%!FLAGS!`, `%!IPADDR!`, `%!TIMESTAMP!`, `%!delta!`, `%!due!`, `%!GUID!`,
@@ -133,15 +133,26 @@ The `tools/Nefarius.Utilities.ETW.RealtimeCli` project builds a self-contained c
 ### Usage
 
 ```text
-realtimewpp realtime <provider-guid> [<provider-guid> ...]
+realtimewpp realtime [<provider-guid> ...]
     [--keywords           <hex|dec>]   # match-any mask, default 0xFFFFFFFFFFFFFFFF
     [--match-all-keywords <hex|dec>]   # match-all mask, default 0
     [--level <Critical|Error|Warning|Information|Verbose>]  # default Verbose
     [--session-name <name>]            # default NefariusEtwCli-<pid>
-    [--symbols <path>] ...             # repeatable; literal file, directory, or glob
+    [--symbols <path>] ...             # repeatable; PDB file, directory, or glob
     [--buffer-size-kb <n>]             # ETW buffer size, default 64
     [--flush-seconds  <n>]             # flush interval, default 1
 ```
+
+`provider-guid` is **optional**. When omitted, the tool reads the `WPP_DEFINE_CONTROL_GUID` declarations embedded in the PDB files passed to `--symbols` and uses those as the provider list. Explicit GUIDs always take precedence; PDB-derived GUIDs are not added on top of explicit ones.
+
+> **Note:** Auto-derivation requires **PDB files**. TMF files do not contain the WPP control GUID (they only hold per-call-site message format data). If `--symbols` points to a directory or glob that contains only TMF files, you must also supply `provider-guid` explicitly.
+
+```text
+realtimewpp inspect-pdb <path> [<path> ...]
+    [--format <plain|ndjson>]          # output format, default plain
+```
+
+Parses one or more PDB files and lists every WPP provider GUID (`WPP_DEFINE_CONTROL_GUID`) found, along with the control name and declared `WPP_DEFINE_BIT` flag names. No ETW session is started. Accepts the same path forms as `--symbols` (PDB files, directories, glob patterns). TMF files are silently ignored.
 
 ### Examples
 
@@ -150,6 +161,13 @@ Capture all events from a provider and pretty-print them with `jq`:
 ```bash
 # Replace the GUID below with the actual provider GUID you want to trace.
 realtimewpp realtime {12345678-1234-1234-1234-1234567890AB} | jq .
+```
+
+Auto-derive the provider GUID from a PDB and stream all events:
+
+```bash
+# The control GUID is extracted from WPP_DEFINE_CONTROL_GUID in the PDB.
+realtimewpp realtime --symbols C:\Symbols\MyDriver.pdb | jq .
 ```
 
 Capture only errors and warnings, with WPP symbol files loaded from a directory:
@@ -161,12 +179,32 @@ realtimewpp realtime {12345678-1234-1234-1234-1234567890AB} \
     --symbols C:\Symbols\TMFs\
 ```
 
-Glob expansion — load every PDB from an entire symbol tree:
+Glob expansion — load every PDB from an entire symbol tree, auto-derive all providers:
 
 ```bash
-realtimewpp realtime {12345678-1234-1234-1234-1234567890AB} \
+realtimewpp realtime \
     --keywords 0xFFFFFFFF --level Verbose \
     --symbols "C:\Symbols\**\*.pdb"
+```
+
+List provider GUIDs embedded in a PDB (plain, human-readable — includes control name and bit flags):
+
+```text
+realtimewpp inspect-pdb C:\Symbols\MyDriver.pdb
+
+{37DCD579-E844-4C80-9C8B-A10850B6FAC6}  BthPS3TraceGuid                 (BthPS3.pdb, 9 bit flags)
+    MYDRIVER_ALL_INFO
+    TRACE_DRIVER
+    TRACE_DEVICE
+    TRACE_QUEUE
+    ...
+```
+
+List provider GUIDs as NDJSON for use in a script:
+
+```bash
+realtimewpp inspect-pdb C:\Symbols\MyDriver.pdb --format ndjson | jq .
+# { "guid": "{37DCD579-...}", "name": "BthPS3TraceGuid", "bitFlags": ["MYDRIVER_ALL_INFO", ...], "source": "BthPS3.pdb" }
 ```
 
 ### NDJSON contract
@@ -179,12 +217,12 @@ Each line written to `stdout` is a self-contained JSON object. Status and error 
 {"EventName":"ProcessStop","ProcessId":1234, ...}
 
 // stderr — human-readable status (never mixed into stdout)
-[*] Session 'NefariusEtwCli-9876' started. Provider {12345678-...} | level=Verbose | keywords=0xFFFFFFFF
+[*] Session 'NefariusEtwCli-9876' started. Providers (auto-derived from symbols): {37DCD579-...} | level=Verbose | keywords=0xFFFFFFFF
 [*] Streaming events... (Ctrl+C to stop)
 [*] Done.
 
 # Example pipeline
-realtimewpp realtime {12345678-1234-1234-1234-1234567890AB} | jq .
+realtimewpp realtime --symbols C:\Symbols\MyDriver.pdb | jq .
 ```
 
 ## Known limitations

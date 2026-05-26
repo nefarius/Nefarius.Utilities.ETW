@@ -15,6 +15,8 @@ public sealed class DecodingContext
 
     private readonly ReadOnlyDictionary<TraceMessageFormatLookupKey, TraceMessageFormat> _lookup;
 
+    private readonly IReadOnlyCollection<Guid> _providerGuids;
+
     /// <summary>
     ///     New decoding context instance.
     /// </summary>
@@ -29,7 +31,23 @@ public sealed class DecodingContext
             .Distinct()
             .ToDictionary(key => new TraceMessageFormatLookupKey(key.MessageGuid, key.Id), value => value)
             .AsReadOnly();
+
+        // Aggregate the real WPP control GUIDs across all underlying sources.
+        // TMF-only sources return an empty enumerable from ProviderGuids so they are
+        // silently skipped; only PdbFileDecodingContextType contributes entries.
+        _providerGuids = _decodingTypes
+            .SelectMany(t => t.ProviderGuids)
+            .Distinct()
+            .ToArray();
     }
+
+    /// <summary>
+    ///     The deduplicated union of all WPP trace control GUIDs (= ETW provider GUIDs) across every
+    ///     underlying <see cref="DecodingContextType" />.  Each GUID corresponds to one
+    ///     <c>WPP_DEFINE_CONTROL_GUID</c> declaration found in the loaded PDB files.
+    ///     The collection is empty when the context was built from TMF files only.
+    /// </summary>
+    public IReadOnlyCollection<Guid> ProviderGuids => _providerGuids;
 
     internal TraceMessageFormat? GetTraceMessageFormatFor(Guid? messageGuid, int id)
     {
