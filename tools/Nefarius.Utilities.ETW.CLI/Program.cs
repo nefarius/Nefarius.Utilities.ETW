@@ -8,6 +8,8 @@ using Nefarius.Utilities.ETW;
 using Nefarius.Utilities.ETW.Deserializer.WPP;
 using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
+using Smx.PDBSharp;
+
 // ---------------------------------------------------------------------------
 // Arguments and options
 // ---------------------------------------------------------------------------
@@ -969,6 +971,9 @@ static (string? Server, string Cache) ResolveSymbolStoreConfig(string? cliServer
     string? ntSymPath = Environment.GetEnvironmentVariable("_NT_SYMBOL_PATH");
     if (!string.IsNullOrWhiteSpace(ntSymPath))
     {
+        string? symbolServer = null;
+        string  symbolCache  = defaultCache;
+
         foreach (string segment in ntSymPath.Split(';', StringSplitOptions.RemoveEmptyEntries))
         {
             string   seg   = segment.Trim();
@@ -980,10 +985,11 @@ static (string? Server, string Cache) ResolveSymbolStoreConfig(string? cliServer
                 Uri.TryCreate(parts[2], UriKind.Absolute, out Uri? u1) &&
                 (u1.Scheme == Uri.UriSchemeHttp || u1.Scheme == Uri.UriSchemeHttps))
             {
-                string resolvedCache = string.IsNullOrWhiteSpace(parts[1]) ? defaultCache : parts[1];
+                symbolCache  = string.IsNullOrWhiteSpace(parts[1]) ? defaultCache : parts[1];
+                symbolServer = parts[2];
                 Console.Error.WriteLine(
-                    $"[*] _NT_SYMBOL_PATH: cache='{resolvedCache}', server='{parts[2]}'");
-                return (parts[2], resolvedCache);
+                    $"[*] _NT_SYMBOL_PATH: cache='{symbolCache}', server='{symbolServer}'");
+                continue;
             }
 
             // cache*<dir>
@@ -991,8 +997,9 @@ static (string? Server, string Cache) ResolveSymbolStoreConfig(string? cliServer
                 parts[0].Equals("cache", StringComparison.OrdinalIgnoreCase) &&
                 !string.IsNullOrWhiteSpace(parts[1]))
             {
-                Console.Error.WriteLine($"[*] _NT_SYMBOL_PATH: cache='{parts[1]}'");
-                return (null, parts[1]);
+                symbolCache = parts[1];
+                Console.Error.WriteLine($"[*] _NT_SYMBOL_PATH: cache='{symbolCache}'");
+                continue;
             }
 
             // srv*<url>
@@ -1001,15 +1008,17 @@ static (string? Server, string Cache) ResolveSymbolStoreConfig(string? cliServer
                 Uri.TryCreate(parts[1], UriKind.Absolute, out Uri? u2) &&
                 (u2.Scheme == Uri.UriSchemeHttp || u2.Scheme == Uri.UriSchemeHttps))
             {
-                Console.Error.WriteLine($"[*] _NT_SYMBOL_PATH: server='{parts[1]}'");
-                return (parts[1], defaultCache);
+                symbolServer = parts[1];
+                Console.Error.WriteLine($"[*] _NT_SYMBOL_PATH: server='{symbolServer}'");
+                continue;
             }
 
             Console.Error.WriteLine(
                 $"[*] Ignoring complex _NT_SYMBOL_PATH segment '{seg}'. " +
                 "Use --symbol-server / --symbol-cache for explicit control.");
-            break;
         }
+
+        return (symbolServer, symbolCache);
     }
 
     return (null, defaultCache);
@@ -1085,14 +1094,48 @@ static List<string> ResolveEtlInputs(string[] rawArgs)
 }
 
 /// <summary>
-///     Searches <paramref name="searchPaths" /> (directories recursively, globs) for a PDB
-///     whose filename matches <paramref name="pdbFileName" /> case-insensitively.
-///     Returns the first match or <see langword="null" />.
+///     Attempts to read the GUID and Age from a PDB file using <c>Smx.PDBSharp</c>.
+///     Supports Big-format (modern) PDBs only. Returns <see langword="null" /> on any failure.
 /// </summary>
-static string? FindPdbInSearchPaths(string[] searchPaths, string pdbFileName)
+static (Guid Guid, int Age)? TryReadPdbIdentity(string path)
+{
+    try
+    {
+        using PDBFile pdb = PDBFile.Open(path);
+        if (pdb.Type != PDBType.Big) return null;
+
+        DBIReader    dbi       = pdb.Services.GetService<DBIReader>();
+        PdbStreamReader pdbStr = pdb.Services.GetService<PdbStreamReader>();
+
+        if (dbi is null || pdbStr is null) return null;
+        if (dbi.Header is not DBIHeaderNew hdr) return null;
+        if (pdbStr.NewSignature is not Guid guid) return null;
+
+        return (guid, (int)hdr.Age);
+    }
+    catch
+    {
+        return null;
+    }
+}
+
+/// <summary>
+///     Searches <paramref name="searchPaths" /> (directories recursively, globs) for a PDB
+///     whose filename matches <paramref name="pdbFileName" /> case-insensitively <em>and</em>
+///     whose embedded GUID and Age match <paramref name="expectedGuid" /> /
+///     <paramref name="expectedAge" />.  Returns the first verified match or
+///     <see langword="null" />.
+/// </summary>
+static string? FindPdbInSearchPaths(
+    string[] searchPaths,
+    string   pdbFileName,
+    Guid     expectedGuid,
+    int      expectedAge)
 {
     foreach (string arg in searchPaths)
     {
+        IEnumerable<string> candidates;
+
         if (arg.Contains('*') || arg.Contains('?'))
         {
             if (ValidateGlobPattern(arg) is not null) continue;
@@ -1101,22 +1144,30 @@ static string? FindPdbInSearchPaths(string[] searchPaths, string pdbFileName)
             string pattern = Path.GetFileName(arg);
             if (!Directory.Exists(root)) continue;
 
-            bool recurse = arg.Contains("**");
-            SearchOption search = recurse ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+            bool         recurse = arg.Contains("**");
+            SearchOption search  = recurse ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
 
-            foreach (string file in Directory.EnumerateFiles(root, pattern, search))
-            {
-                if (Path.GetFileName(file).Equals(pdbFileName, StringComparison.OrdinalIgnoreCase))
-                    return file;
-            }
+            candidates = Directory.EnumerateFiles(root, pattern, search);
         }
         else if (Directory.Exists(arg))
         {
-            foreach (string file in Directory.EnumerateFiles(arg, "*.pdb", SearchOption.AllDirectories))
-            {
-                if (Path.GetFileName(file).Equals(pdbFileName, StringComparison.OrdinalIgnoreCase))
-                    return file;
-            }
+            candidates = Directory.EnumerateFiles(arg, "*.pdb", SearchOption.AllDirectories);
+        }
+        else
+        {
+            continue;
+        }
+
+        foreach (string file in candidates)
+        {
+            if (!Path.GetFileName(file).Equals(pdbFileName, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            (Guid Guid, int Age)? id = TryReadPdbIdentity(file);
+            if (id is null) continue;
+            if (id.Value.Guid != expectedGuid || id.Value.Age != expectedAge) continue;
+
+            return file;
         }
     }
 
@@ -1194,7 +1245,7 @@ static async Task<List<DecodingContextType>> ResolveAutoSymbolsAsync(
         // 2. Local search
         if (hasSearchPaths)
         {
-            string? found = FindPdbInSearchPaths(searchPaths, pdbFileName);
+            string? found = FindPdbInSearchPaths(searchPaths, pdbFileName, pdb.Guid, pdb.Age);
             if (found is not null)
             {
                 try
@@ -1444,7 +1495,7 @@ static async Task<int> RunParsePerFileAsync(
                                    },
                                    cancellationToken))
                 {
-                    await WritePlainLineAsync(json, writer, false, cancellationToken);
+                    await WritePlainLineAsync(json, writer, false, cancellationToken, flush: false);
                     eventCount++;
                 }
 
@@ -1668,7 +1719,8 @@ static async Task WritePlainLineAsync(
     ReadOnlyMemory<byte> json,
     StreamWriter writer,
     bool useColor,
-    CancellationToken cancellationToken)
+    CancellationToken cancellationToken,
+    bool flush = true)
 {
     string? line;
     try
@@ -1688,7 +1740,8 @@ static async Task WritePlainLineAsync(
     }
 
     await writer.WriteLineAsync(line.AsMemory(), cancellationToken);
-    await writer.FlushAsync(cancellationToken);
+    if (flush)
+        await writer.FlushAsync(cancellationToken);
 }
 
 // ---------------------------------------------------------------------------
