@@ -1,16 +1,21 @@
 using System.CommandLine;
 using System.Globalization;
+using System.Text.Json;
 
 using Nefarius.Utilities.ETW;
 using Nefarius.Utilities.ETW.Deserializer.WPP;
+using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
 // ---------------------------------------------------------------------------
 // Arguments and options
 // ---------------------------------------------------------------------------
 Argument<Guid[]> providerArg = new("provider-guid")
 {
-    Description = "One or more ETW provider GUIDs to enable (e.g. {12345678-...}). All providers share the same keyword/level filters.",
-    Arity = ArgumentArity.OneOrMore
+    Description =
+        "One or more ETW provider GUIDs to enable (e.g. {12345678-...}). " +
+        "When omitted, provider GUIDs are auto-derived from any PDB files passed to --symbols. " +
+        "All providers share the same keyword/level filters.",
+    Arity = ArgumentArity.ZeroOrMore
 };
 
 Option<string> keywordsOpt = new("--keywords")
@@ -77,7 +82,7 @@ Command realtime = new(
 
 realtime.SetAction(async (ParseResult result, CancellationToken cancellationToken) =>
 {
-    Guid[] providers = result.GetValue(providerArg)!;
+    Guid[] explicitProviders = result.GetValue(providerArg) ?? [];
     string keywordsRaw = result.GetValue(keywordsOpt)!;
     string matchAllRaw = result.GetValue(matchAllOpt)!;
     TraceEventLevel level = result.GetValue(levelOpt);
@@ -102,7 +107,7 @@ realtime.SetAction(async (ParseResult result, CancellationToken cancellationToke
     }
 
     return await RunAsync(
-        providers,
+        explicitProviders,
         matchAny,
         matchAll,
         level,
@@ -114,11 +119,164 @@ realtime.SetAction(async (ParseResult result, CancellationToken cancellationToke
 });
 
 // ---------------------------------------------------------------------------
+// 'inspect-pdb' subcommand
+// ---------------------------------------------------------------------------
+Argument<string[]> inspectPathsArg = new("path")
+{
+    Description =
+        "One or more paths to .pdb files, directories (searched for *.pdb), " +
+        "or glob patterns (e.g. C:\\Symbols\\*.pdb). TMF files are ignored as they do not " +
+        "contain WPP control GUID information.",
+    Arity = ArgumentArity.OneOrMore
+};
+
+Option<string> inspectFormatOpt = new("--format")
+{
+    Description = "Output format: 'plain' (default) or 'ndjson'.",
+    DefaultValueFactory = _ => "plain"
+};
+
+Command inspectPdb = new(
+    "inspect-pdb",
+    "Parse one or more PDB files and list the WPP provider GUIDs (control GUIDs) embedded in " +
+    "them via TMC: annotations. No ETW session is created. Output goes to stdout; status messages " +
+    "go to stderr.")
+{
+    inspectPathsArg,
+    inspectFormatOpt
+};
+
+inspectPdb.SetAction((ParseResult result) =>
+{
+    string[] paths = result.GetValue(inspectPathsArg)!;
+    string formatValue = result.GetValue(inspectFormatOpt)!;
+
+    if (!formatValue.Equals("plain", StringComparison.OrdinalIgnoreCase) &&
+        !formatValue.Equals("ndjson", StringComparison.OrdinalIgnoreCase))
+    {
+        Console.Error.WriteLine(
+            $"[!] Unknown --format value '{formatValue}'. Expected 'plain' or 'ndjson'.");
+        return 1;
+    }
+
+    bool useNdjson = formatValue.Equals("ndjson", StringComparison.OrdinalIgnoreCase);
+
+    // Collect PDB contexts only — TMF sources never carry a control GUID.
+    List<PdbFileDecodingContextType> pdbContexts = [];
+
+    foreach (string arg in paths)
+    {
+        if (arg.Contains('*') || arg.Contains('?'))
+        {
+            if (ValidateGlobPattern(arg) is string validationError)
+            {
+                Console.Error.WriteLine(validationError);
+                continue;
+            }
+
+            string root = NormalizeGlobRoot(arg);
+            string pattern = Path.GetFileName(arg);
+            bool recurse = arg.Contains("**");
+            SearchOption search = recurse ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+
+            if (!Directory.Exists(root))
+            {
+                Console.Error.WriteLine($"[!] Glob root directory not found: {root}");
+                continue;
+            }
+
+            foreach (string file in Directory.EnumerateFiles(root, pattern, search))
+            {
+                TryAddPdb(pdbContexts, file);
+            }
+        }
+        else if (Directory.Exists(arg))
+        {
+            bool any = false;
+            foreach (string pdb in Directory.EnumerateFiles(arg, "*.pdb", SearchOption.TopDirectoryOnly))
+            {
+                if (TryAddPdb(pdbContexts, pdb)) { any = true; }
+            }
+
+            if (!any)
+            {
+                Console.Error.WriteLine($"[!] No PDB files found in directory: {arg}");
+            }
+        }
+        else if (File.Exists(arg))
+        {
+            TryAddPdb(pdbContexts, arg);
+        }
+        else
+        {
+            Console.Error.WriteLine($"[!] Path not found: {arg}");
+        }
+    }
+
+    if (pdbContexts.Count == 0)
+    {
+        Console.Error.WriteLine("[!] No PDB files could be loaded.");
+        return 1;
+    }
+
+    // Collect all TMC records across every loaded PDB.
+    List<WppTraceControl> allControls = pdbContexts
+        .SelectMany(ctx => ctx.WppTraceControls)
+        .DistinctBy(c => c.ControlGuid)
+        .OrderBy(c => c.Name)
+        .ThenBy(c => c.ControlGuid)
+        .ToList();
+
+    if (allControls.Count == 0)
+    {
+        Console.Error.WriteLine(
+            "[!] No WPP control GUIDs (TMC: annotations) found in the supplied PDB files. " +
+            "The PDB must have been compiled with WPP tracing enabled.");
+        return 1;
+    }
+
+    if (useNdjson)
+    {
+        JsonSerializerOptions jsonOpts = new() { WriteIndented = false };
+        foreach (WppTraceControl ctrl in allControls)
+        {
+            string json = JsonSerializer.Serialize(new
+            {
+                guid = ctrl.ControlGuid.ToString("B").ToUpperInvariant(),
+                name = ctrl.Name,
+                bitFlags = ctrl.BitFlags,
+                source = ctrl.OriginalSymbolFileName ?? string.Empty
+            }, jsonOpts);
+            Console.WriteLine(json);
+        }
+    }
+    else
+    {
+        foreach (WppTraceControl ctrl in allControls)
+        {
+            string source = ctrl.OriginalSymbolFileName ?? "unknown";
+            Console.WriteLine(
+                $"{ctrl.ControlGuid.ToString("B").ToUpperInvariant(),-42}  " +
+                $"{ctrl.Name,-30}  " +
+                $"({source}, {ctrl.BitFlags.Count} bit flags)");
+
+            foreach (string flag in ctrl.BitFlags)
+            {
+                Console.WriteLine($"    {flag}");
+            }
+        }
+    }
+
+    return 0;
+});
+
+// ---------------------------------------------------------------------------
 // Root command
 // ---------------------------------------------------------------------------
 RootCommand root = new("realtimewpp — Nefarius ETW realtime decoder. Streams decoded events as NDJSON on stdout.")
 {
-    realtime
+    realtime,
+    inspectPdb
 };
 
 return await root.Parse(args).InvokeAsync();
@@ -139,7 +297,7 @@ static ulong ParseKeywordMask(string raw)
 }
 
 static async Task<int> RunAsync(
-    Guid[] providerGuids,
+    Guid[] explicitProviderGuids,
     ulong matchAnyKeyword,
     ulong matchAllKeyword,
     TraceEventLevel level,
@@ -149,8 +307,45 @@ static async Task<int> RunAsync(
     uint flushSeconds,
     CancellationToken cancellationToken)
 {
-    // Resolve --symbols paths into a DecodingContext (null when no symbols supplied).
-    DecodingContext? decodingContext = ResolveSymbols(symbolPaths);
+    // Resolve --symbols paths into a DecodingContext and the raw context list.
+    (DecodingContext? decodingContext, List<DecodingContextType> contextTypes) = ResolveSymbols(symbolPaths);
+
+    // Determine the final provider list: explicit args take precedence; fall back to WPP control
+    // GUIDs extracted from TMC: annotations in the PDB files.
+    Guid[] providerGuids;
+    bool autoderived = false;
+    if (explicitProviderGuids.Length > 0)
+    {
+        providerGuids = explicitProviderGuids;
+    }
+    else
+    {
+        providerGuids = contextTypes
+            .SelectMany(t => t.ProviderGuids)
+            .Distinct()
+            .ToArray();
+        autoderived = providerGuids.Length > 0;
+    }
+
+    if (providerGuids.Length == 0)
+    {
+        if (symbolPaths.Length > 0)
+        {
+            Console.Error.WriteLine(
+                "[!] No provider GUIDs could be derived from the supplied --symbols paths. " +
+                "Only PDB files carry WPP control GUID information (TMC: annotations). " +
+                "TMF files alone are not sufficient — either pass a PDB file or supply the " +
+                "provider-guid argument explicitly.");
+        }
+        else
+        {
+            Console.Error.WriteLine(
+                "[!] No provider GUIDs available. Supply at least one provider-guid argument, " +
+                "or pass --symbols with one or more PDB files containing WPP annotations.");
+        }
+
+        return 2;
+    }
 
     // Build a linked CTS so both Ctrl+C and the caller's token can cancel.
     using CancellationTokenSource cts =
@@ -195,9 +390,10 @@ static async Task<int> RunAsync(
             session.EnableProvider(guid, level, matchAnyKeyword, matchAllKeyword);
         }
 
+        string providerSource = autoderived ? "auto-derived from symbols" : "explicit";
         Console.Error.WriteLine(
             $"[*] Session '{sessionName}' started. " +
-            $"Providers: {string.Join(", ", providerGuids.Select(g => $"{{{g}}}"))} | " +
+            $"Providers ({providerSource}): {string.Join(", ", providerGuids.Select(g => $"{{{g}}}"))} | " +
             $"level={level} | keywords=0x{matchAnyKeyword:X} | matchAll=0x{matchAllKeyword:X}");
         Console.Error.WriteLine("[*] Streaming events... (Ctrl+C to stop)");
 
@@ -239,18 +435,19 @@ static async Task<int> RunAsync(
 }
 
 /// <summary>
-///     Converts the raw <c>--symbols</c> arguments into a <see cref="DecodingContext" />.
-///     Returns <see langword="null" /> when no symbol paths were supplied, which disables
-///     WPP message formatting (raw events are still decoded via TDH/manifest).
+///     Converts the raw <c>--symbols</c> arguments into a <see cref="DecodingContext" /> and the
+///     underlying list of <see cref="DecodingContextType" />s.
+///     Returns a <see langword="null" /> context when no symbol paths were supplied or none could
+///     be loaded, which disables WPP message formatting (raw events are still decoded via TDH/manifest).
 /// </summary>
-static DecodingContext? ResolveSymbols(string[] symbolPaths)
+static (DecodingContext? Context, List<DecodingContextType> ContextTypes) ResolveSymbols(string[] symbolPaths)
 {
+    List<DecodingContextType> contexts = [];
+
     if (symbolPaths.Length == 0)
     {
-        return null;
+        return (null, contexts);
     }
-
-    List<DecodingContextType> contexts = [];
 
     foreach (string arg in symbolPaths)
     {
@@ -258,7 +455,15 @@ static DecodingContext? ResolveSymbols(string[] symbolPaths)
         {
             // Glob pattern: split into directory root + file pattern.
             // Recurse only when the caller explicitly uses ** in the pattern.
-            string root = Path.GetDirectoryName(arg) ?? ".";
+            // NormalizeGlobRoot strips the standalone ** segment so Directory.Exists succeeds.
+            // Reject before calling NormalizeGlobRoot so no filter is silently lost.
+            if (ValidateGlobPattern(arg) is string validationError)
+            {
+                Console.Error.WriteLine(validationError);
+                continue;
+            }
+
+            string root = NormalizeGlobRoot(arg);
             string pattern = Path.GetFileName(arg);
             bool recurse = arg.Contains("**");
             SearchOption search = recurse ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
@@ -276,12 +481,11 @@ static DecodingContext? ResolveSymbols(string[] symbolPaths)
         }
         else if (Directory.Exists(arg))
         {
-            // Directory: collect all PDB files recursively and treat the directory
-            // itself as a TMF search path (TmfFilesDirectoryDecodingContextType parses
-            // every *.tmf inside it).
+            // Directory: collect all PDB files recursively (AllDirectories so subdirectories
+            // are included — each PDB is loaded individually so recursion is safe).
             bool anyFound = false;
 
-            foreach (string pdb in Directory.EnumerateFiles(arg, "*.pdb", SearchOption.TopDirectoryOnly))
+            foreach (string pdb in Directory.EnumerateFiles(arg, "*.pdb", SearchOption.AllDirectories))
             {
                 if (AddSymbolFile(contexts, pdb))
                 {
@@ -289,19 +493,25 @@ static DecodingContext? ResolveSymbols(string[] symbolPaths)
                 }
             }
 
-            // Only add the directory as a TMF source when it actually contains TMF files,
-            // so we don't waste time on symbol-only directories.
-            if (Directory.EnumerateFiles(arg, "*.tmf", SearchOption.TopDirectoryOnly).Any())
+            // For TMF: TmfFilesDirectoryDecodingContextType scans a flat directory, so add
+            // each directory that *directly* contains .tmf files as a separate source.
+            // Using AllDirectories in the file search lets us discover TMF dirs in subdirs too.
+            IEnumerable<string> tmfDirs = Directory
+                .EnumerateFiles(arg, "*.tmf", SearchOption.AllDirectories)
+                .Select(f => Path.GetDirectoryName(f)!)
+                .Distinct();
+
+            foreach (string tmfDir in tmfDirs)
             {
                 try
                 {
-                    contexts.Add(new TmfFilesDirectoryDecodingContextType(arg));
-                    Console.Error.WriteLine($"    + {arg} (TMF directory)");
+                    contexts.Add(new TmfFilesDirectoryDecodingContextType(tmfDir));
+                    Console.Error.WriteLine($"    + {tmfDir} (TMF directory)");
                     anyFound = true;
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"[!] Failed to load TMF directory '{arg}': {ex.Message}");
+                    Console.Error.WriteLine($"[!] Failed to load TMF directory '{tmfDir}': {ex.Message}");
                 }
             }
 
@@ -323,11 +533,11 @@ static DecodingContext? ResolveSymbols(string[] symbolPaths)
     if (contexts.Count == 0)
     {
         Console.Error.WriteLine("[!] No symbol files could be loaded; WPP messages will not be decoded.");
-        return null;
+        return (null, contexts);
     }
 
     Console.Error.WriteLine($"[*] Loaded {contexts.Count} symbol source(s) for WPP decoding.");
-    return new DecodingContext(contexts);
+    return (new DecodingContext(contexts), contexts);
 }
 
 /// <summary>
@@ -356,6 +566,107 @@ static bool AddSymbolFile(List<DecodingContextType> contexts, string path)
 
         Console.Error.WriteLine($"[!] Unrecognized symbol file type (expected .pdb or .tmf): {path}");
         return false;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"[!] Failed to load '{path}': {ex.Message}");
+        return false;
+    }
+}
+
+/// <summary>
+///     Validates that a glob pattern does not contain wildcard characters inside any directory
+///     segment except the standalone <c>**</c> recursion marker.
+///     Returns a non-null, ready-to-print error message when the pattern is invalid;
+///     returns <see langword="null" /> when the pattern is acceptable.
+/// </summary>
+/// <remarks>
+///     Allowed: <c>C:\Symbols\*.pdb</c> (filename wildcard) and
+///     <c>C:\Symbols\**\*.pdb</c> (standalone <c>**</c> recursion marker).
+///     Rejected: <c>C:\Sym*\*.pdb</c> or <c>C:\Symbols\sub?\*.pdb</c>
+///     (wildcards in a non-terminal, non-<c>**</c> directory segment).
+///     Also rejected: <c>C:\Symbols\**</c> or a trailing separator — patterns
+///     with no filename component produce an invalid <c>searchPattern</c> for
+///     <see cref="Directory.EnumerateFiles" />.
+/// </remarks>
+static string? ValidateGlobPattern(string globArg)
+{
+    string[] segments = globArg.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
+
+    // Every segment except the last is a directory segment.
+    for (int i = 0; i < segments.Length - 1; i++)
+    {
+        string seg = segments[i];
+        if (seg == "**") { continue; } // recursion marker — explicitly allowed
+
+        if (seg.Contains('*') || seg.Contains('?'))
+        {
+            return $"[!] Wildcard in directory segment '{seg}' is not supported in '{globArg}'. " +
+                   $"Use a filename-only wildcard (e.g. *.pdb) or '**' for recursion " +
+                   $"(e.g. Symbols\\**\\*.pdb).";
+        }
+    }
+
+    // The last segment is the filename pattern passed to Directory.EnumerateFiles as
+    // searchPattern. "**" and empty are not valid searchPattern values and would throw
+    // ArgumentException at runtime; reject them here with a clear message.
+    // Use Path.GetFileName rather than segments[^1] so that a trailing separator
+    // (e.g. "C:\Symbols\*.pdb\") is detected: Split(..., RemoveEmptyEntries) silently
+    // drops the trailing empty segment, but Path.GetFileName returns "" in that case.
+    string lastSeg = Path.GetFileName(globArg);
+    if (lastSeg == "**" || lastSeg.Length == 0)
+    {
+        return $"[!] Glob pattern '{globArg}' has no filename component. " +
+               $"Use a filename wildcard (e.g. *.pdb) or '**' with a filename " +
+               $"(e.g. Symbols\\**\\*.pdb).";
+    }
+
+    return null;
+}
+
+/// <summary>
+///     Returns the last path-directory segment of <paramref name="globArg" /> that does not
+///     contain any wildcard characters (<c>*</c> or <c>?</c>).
+///     For example, <c>C:\Symbols\**\*.pdb</c> yields <c>C:\Symbols</c> rather than
+///     <c>C:\Symbols\**</c>, which allows <see cref="Directory.Exists" /> to succeed.
+/// </summary>
+static string NormalizeGlobRoot(string globArg)
+{
+    string? dir = Path.GetDirectoryName(globArg);
+    if (string.IsNullOrEmpty(dir)) return ".";
+
+    while (dir.Contains('*') || dir.Contains('?'))
+    {
+        string? parent = Path.GetDirectoryName(dir);
+        if (parent is null || parent.Length == 0 || parent == dir)
+        {
+            return ".";
+        }
+
+        dir = parent;
+    }
+
+    return dir;
+}
+
+/// <summary>
+///     Attempts to parse a file as a PDB and add it to the <paramref name="pdbContexts" /> list.
+///     Only accepts files with a <c>.pdb</c> extension; silently skips anything else.
+///     Returns <see langword="true" /> if the file was loaded successfully.
+/// </summary>
+static bool TryAddPdb(List<PdbFileDecodingContextType> pdbContexts, string path)
+{
+    if (!Path.GetExtension(path).Equals(".pdb", StringComparison.OrdinalIgnoreCase))
+    {
+        return false;
+    }
+
+    try
+    {
+        PdbFileDecodingContextType ctx = new(path);
+        pdbContexts.Add(ctx);
+        Console.Error.WriteLine($"    + {path}");
+        return true;
     }
     catch (Exception ex)
     {

@@ -13,6 +13,11 @@ public class DecodingContextTests
     private static readonly Guid KnownGuid = Guid.Parse("e4b27b5e-24d0-369f-a4b5-23228e160bd2");
     private const int KnownId = 12;
 
+    // WPP control GUIDs from the TMC: S_ANNOTATION records in the test PDBs.
+    // Verified from tests/symbols/BthPS3.pdb-cvdump.txt and BthPS3PSM.pdb-cvdump.txt.
+    private static readonly Guid BthPS3ControlGuid = Guid.Parse("37dcd579-e844-4c80-9c8b-a10850b6fac6");
+    private static readonly Guid BthPS3PsmControlGuid = Guid.Parse("586aa8b1-53a6-404f-9b3e-14483e514a2c");
+
     // -----------------------------------------------------------------------
     // DecodingContext constructor guards
     // -----------------------------------------------------------------------
@@ -155,5 +160,175 @@ public class DecodingContextTests
 
         Assert.That(result, Is.Not.Null);
         Assert.That(result!.Opcode, Is.EqualTo("Bluetooth_Context_c149"));
+    }
+
+    // -----------------------------------------------------------------------
+    // WppTraceControl / TMC: extraction — PdbFileDecodingContextType
+    // -----------------------------------------------------------------------
+
+    [Test]
+    [Category("Parse")]
+    public void PdbFileDecodingContextType_WppTraceControls_ContainsBthPS3ControlGuid()
+    {
+        PdbFileDecodingContextType ctx = new(@".\symbols\BthPS3.pdb");
+
+        Assert.That(ctx.WppTraceControls.Select(c => c.ControlGuid),
+            Does.Contain(BthPS3ControlGuid));
+    }
+
+    [Test]
+    [Category("Parse")]
+    public void PdbFileDecodingContextType_WppTraceControls_HasCorrectName()
+    {
+        PdbFileDecodingContextType ctx = new(@".\symbols\BthPS3.pdb");
+
+        WppTraceControl? ctrl = ctx.WppTraceControls
+            .FirstOrDefault(c => c.ControlGuid == BthPS3ControlGuid);
+
+        Assert.That(ctrl, Is.Not.Null);
+        Assert.That(ctrl!.Name, Is.EqualTo("BthPS3TraceGuid"));
+    }
+
+    [Test]
+    [Category("Parse")]
+    public void PdbFileDecodingContextType_WppTraceControls_HasExpectedBitFlags()
+    {
+        PdbFileDecodingContextType ctx = new(@".\symbols\BthPS3.pdb");
+
+        WppTraceControl? ctrl = ctx.WppTraceControls
+            .FirstOrDefault(c => c.ControlGuid == BthPS3ControlGuid);
+
+        Assert.That(ctrl, Is.Not.Null);
+        // The first four flag names are documented in the cvdump.
+        Assert.That(ctrl!.BitFlags, Does.Contain("MYDRIVER_ALL_INFO"));
+        Assert.That(ctrl.BitFlags, Does.Contain("TRACE_DRIVER"));
+        Assert.That(ctrl.BitFlags, Does.Contain("TRACE_DEVICE"));
+        Assert.That(ctrl.BitFlags, Does.Contain("TRACE_QUEUE"));
+    }
+
+    [Test]
+    [Category("Parse")]
+    public void PdbFileDecodingContextType_ProviderGuids_ContainsBthPS3ControlGuid()
+    {
+        PdbFileDecodingContextType ctx = new(@".\symbols\BthPS3.pdb");
+
+        Assert.That(ctx.ProviderGuids, Does.Contain(BthPS3ControlGuid));
+    }
+
+    // -----------------------------------------------------------------------
+    // EnumerateProviderGuids static helper
+    // -----------------------------------------------------------------------
+
+    [Test]
+    [Category("Parse")]
+    public void EnumerateProviderGuids_ReturnsBthPS3ControlGuid()
+    {
+        IReadOnlyCollection<Guid> guids =
+            PdbFileDecodingContextType.EnumerateProviderGuids(@".\symbols\BthPS3.pdb");
+
+        Assert.That(guids, Does.Contain(BthPS3ControlGuid));
+    }
+
+    [Test]
+    [Category("Parse")]
+    public void EnumerateProviderGuids_ReturnsBthPS3PsmControlGuid()
+    {
+        IReadOnlyCollection<Guid> guids =
+            PdbFileDecodingContextType.EnumerateProviderGuids(@".\symbols\BthPS3PSM.pdb");
+
+        Assert.That(guids, Does.Contain(BthPS3PsmControlGuid));
+    }
+
+    [Test]
+    [Category("Parse")]
+    public void EnumerateProviderGuids_ReturnsDistinctGuids()
+    {
+        IReadOnlyCollection<Guid> guids =
+            PdbFileDecodingContextType.EnumerateProviderGuids(@".\symbols\BthPS3.pdb");
+
+        Assert.That(guids.Count, Is.EqualTo(guids.Distinct().Count()));
+    }
+
+    [Test]
+    [Category("Unit")]
+    public void EnumerateProviderGuids_Throws_OnEmptyPath()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            PdbFileDecodingContextType.EnumerateProviderGuids(string.Empty));
+    }
+
+    // -----------------------------------------------------------------------
+    // EnumerateTraceControls static helper
+    // -----------------------------------------------------------------------
+
+    [Test]
+    [Category("Parse")]
+    public void EnumerateTraceControls_ReturnsSingleEntryForBthPS3()
+    {
+        IReadOnlyCollection<WppTraceControl> controls =
+            PdbFileDecodingContextType.EnumerateTraceControls(@".\symbols\BthPS3.pdb");
+
+        Assert.That(controls, Has.Count.EqualTo(1));
+        Assert.That(controls.Single().ControlGuid, Is.EqualTo(BthPS3ControlGuid));
+        Assert.That(controls.Single().Name, Is.EqualTo("BthPS3TraceGuid"));
+    }
+
+    [Test]
+    [Category("Unit")]
+    public void EnumerateTraceControls_Throws_OnEmptyPath()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            PdbFileDecodingContextType.EnumerateTraceControls(string.Empty));
+    }
+
+    // -----------------------------------------------------------------------
+    // DecodingContext.ProviderGuids — correct TMC-based values
+    // -----------------------------------------------------------------------
+
+    [Test]
+    [Category("Parse")]
+    public void DecodingContext_ProviderGuids_ContainsBothControlGuids()
+    {
+        IList<DecodingContextType> types = PdbFileDecodingContextType
+            .CreateFrom(@".\symbols\BthPS3.pdb", @".\symbols\BthPS3PSM.pdb");
+        DecodingContext context = new(types);
+
+        Assert.That(context.ProviderGuids, Does.Contain(BthPS3ControlGuid));
+        Assert.That(context.ProviderGuids, Does.Contain(BthPS3PsmControlGuid));
+    }
+
+    [Test]
+    [Category("Parse")]
+    public void DecodingContext_ProviderGuids_IsDistinct()
+    {
+        IList<DecodingContextType> types = PdbFileDecodingContextType
+            .CreateFrom(@".\symbols\BthPS3.pdb", @".\symbols\BthPS3PSM.pdb");
+        DecodingContext context = new(types);
+
+        Assert.That(context.ProviderGuids.Count,
+            Is.EqualTo(context.ProviderGuids.Distinct().Count()));
+    }
+
+    [Test]
+    [Category("Parse")]
+    public void DecodingContext_ProviderGuids_IsEmpty_ForTmfOnlyContext()
+    {
+        // TMF files don't contain TMC: records — provider GUIDs cannot be derived from them.
+        IList<DecodingContextType> tmfTypes =
+            TmfFilesDirectoryDecodingContextType.CreateFrom(@".\symbols");
+        DecodingContext context = new(tmfTypes);
+
+        Assert.That(context.ProviderGuids, Is.Empty);
+    }
+
+    [Test]
+    [Category("Parse")]
+    public void DecodingContext_ProviderGuids_DoesNotContainTmfMessageHashGuid()
+    {
+        // KnownGuid (e4b27b5e-...) is a per-source-file TMF message hash, not a control GUID.
+        DecodingContext context =
+            new(PdbFileDecodingContextType.CreateFrom(@".\symbols\BthPS3.pdb"));
+
+        Assert.That(context.ProviderGuids, Does.Not.Contain(KnownGuid));
     }
 }
