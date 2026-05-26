@@ -124,16 +124,26 @@ await foreach (ReadOnlyMemory<byte> eventJson in EtwUtil.EnumerateRealtimeEvents
 - **WPP decoding** in realtime mode requires a pre-built `DecodingContext`. The file-based `EnumeratePdbReferences` pre-scan only works on `.etl` files, not on live sessions. Build the `DecodingContext` from known `.pdb` or `.tmf` paths before starting the session.
 - **Kernel-mode providers / NT Kernel Logger** are not supported in this release.
 
-## Realtime CLI (`realtimewpp`)
+## CLI (`etwutils`)
 
-The `tools/Nefarius.Utilities.ETW.RealtimeCli` project builds a self-contained command-line tool (`realtimewpp`) that wraps the realtime API and writes decoded events as **NDJSON** on `stdout`, making it trivial to pipe into `jq`, `grep`, log aggregators, or any line-oriented consumer.
+The `tools/Nefarius.Utilities.ETW.CLI` project builds a .NET global tool (`etwutils`) that wraps the realtime API and writes decoded events as **NDJSON** on `stdout`, making it trivial to pipe into `jq`, `grep`, log aggregators, or any line-oriented consumer.
 
 > **Admin required.** ETW session creation requires an elevated process.
+
+### Installation
+
+Install as a global .NET tool from nuget.org:
+
+```text
+dotnet tool install -g Nefarius.Utilities.ETW.CLI
+```
+
+This makes the `etwutils` command available on `PATH`. Requires the .NET 8, 9, or 10 runtime on Windows.
 
 ### Usage
 
 ```text
-realtimewpp realtime [<provider-guid> ...]
+etwutils realtime [<provider-guid> ...]
     [--keywords           <hex|dec>]   # match-any mask, default 0xFFFFFFFFFFFFFFFF
     [--match-all-keywords <hex|dec>]   # match-all mask, default 0
     [--level <Critical|Error|Warning|Information|Verbose>]  # default Verbose
@@ -148,7 +158,7 @@ realtimewpp realtime [<provider-guid> ...]
 > **Note:** Auto-derivation requires **PDB files**. TMF files do not contain the WPP control GUID (they only hold per-call-site message format data). If `--symbols` points to a directory or glob that contains only TMF files, you must also supply `provider-guid` explicitly.
 
 ```text
-realtimewpp inspect-pdb <path> [<path> ...]
+etwutils inspect-pdb <path> [<path> ...]
     [--format <plain|ndjson>]          # output format, default plain
 ```
 
@@ -160,20 +170,20 @@ Capture all events from a provider and pretty-print them with `jq`:
 
 ```bash
 # Replace the GUID below with the actual provider GUID you want to trace.
-realtimewpp realtime {12345678-1234-1234-1234-1234567890AB} | jq .
+etwutils realtime {12345678-1234-1234-1234-1234567890AB} | jq .
 ```
 
 Auto-derive the provider GUID from a PDB and stream all events:
 
 ```bash
 # The control GUID is extracted from WPP_DEFINE_CONTROL_GUID in the PDB.
-realtimewpp realtime --symbols C:\Symbols\MyDriver.pdb | jq .
+etwutils realtime --symbols C:\Symbols\MyDriver.pdb | jq .
 ```
 
 Capture only errors and warnings, with WPP symbol files loaded from a directory:
 
 ```bash
-realtimewpp realtime {12345678-1234-1234-1234-1234567890AB} \
+etwutils realtime {12345678-1234-1234-1234-1234567890AB} \
     --level Warning \
     --symbols C:\Symbols\MyDriver.pdb \
     --symbols C:\Symbols\TMFs\
@@ -182,7 +192,7 @@ realtimewpp realtime {12345678-1234-1234-1234-1234567890AB} \
 Glob expansion — load every PDB from an entire symbol tree, auto-derive all providers:
 
 ```bash
-realtimewpp realtime \
+etwutils realtime \
     --keywords 0xFFFFFFFF --level Verbose \
     --symbols "C:\Symbols\**\*.pdb"
 ```
@@ -190,7 +200,7 @@ realtimewpp realtime \
 List provider GUIDs embedded in a PDB (plain, human-readable — includes control name and bit flags):
 
 ```text
-realtimewpp inspect-pdb C:\Symbols\MyDriver.pdb
+etwutils inspect-pdb C:\Symbols\MyDriver.pdb
 
 {37DCD579-E844-4C80-9C8B-A10850B6FAC6}  BthPS3TraceGuid                 (BthPS3.pdb, 9 bit flags)
     MYDRIVER_ALL_INFO
@@ -203,7 +213,7 @@ realtimewpp inspect-pdb C:\Symbols\MyDriver.pdb
 List provider GUIDs as NDJSON for use in a script:
 
 ```bash
-realtimewpp inspect-pdb C:\Symbols\MyDriver.pdb --format ndjson | jq .
+etwutils inspect-pdb C:\Symbols\MyDriver.pdb --format ndjson | jq .
 # { "guid": "{37DCD579-...}", "name": "BthPS3TraceGuid", "bitFlags": ["MYDRIVER_ALL_INFO", ...], "source": "BthPS3.pdb" }
 ```
 
@@ -222,7 +232,7 @@ Each line written to `stdout` is a self-contained JSON object. Status and error 
 [*] Done.
 
 # Example pipeline
-realtimewpp realtime --symbols C:\Symbols\MyDriver.pdb | jq .
+etwutils realtime --symbols C:\Symbols\MyDriver.pdb | jq .
 ```
 
 ## Known limitations

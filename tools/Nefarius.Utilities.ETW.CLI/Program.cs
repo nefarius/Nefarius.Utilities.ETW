@@ -273,7 +273,7 @@ inspectPdb.SetAction((ParseResult result) =>
 // ---------------------------------------------------------------------------
 // Root command
 // ---------------------------------------------------------------------------
-RootCommand root = new("realtimewpp — Nefarius ETW realtime decoder. Streams decoded events as NDJSON on stdout.")
+RootCommand root = new("etwutils — Nefarius ETW realtime decoder. Streams decoded events as NDJSON on stdout.")
 {
     realtime,
     inspectPdb

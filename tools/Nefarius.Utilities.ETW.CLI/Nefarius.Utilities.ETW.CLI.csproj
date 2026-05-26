@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+        <AssemblyName>etwutils</AssemblyName>
+        <RootNamespace>Nefarius.Utilities.ETW.CLI</RootNamespace>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+
+        <IsPackable>true</IsPackable>
+        <PackAsTool>true</PackAsTool>
+        <ToolCommandName>etwutils</ToolCommandName>
+        <PackageId>Nefarius.Utilities.ETW.CLI</PackageId>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/nefarius/Nefarius.Utilities.ETW</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/nefarius/Nefarius.Utilities.ETW</PackageProjectUrl>
+        <Description>Cross-tooling CLI for the Nefarius.Utilities.ETW library: realtime ETW capture and PDB/WPP inspection, streaming NDJSON to stdout.</Description>
+        <PackageTags>etw;wpp;tracing;cli;dotnet-tool;ndjson</PackageTags>
+
+        <MinVerTagPrefix>v</MinVerTagPrefix>
+
+        <!-- NU1702: expected false-positive when AssetTargetFallback bridges bare TFMs to
+             their -windows8.0 counterparts (required because PackAsTool rejects platform TFMs). -->
+        <NoWarn>$(NoWarn);NU1702</NoWarn>
+
+        <!-- The library only ships windows TFMs; tell NuGet to accept them as fallbacks
+             for the bare net* TFMs required by PackAsTool. Each TFM is mapped to its
+             version-matched windows counterpart to avoid NU1702 cross-version warnings. -->
+        <AssetTargetFallback Condition="'$(TargetFramework)' == 'net8.0'">$(AssetTargetFallback);net8.0-windows8.0</AssetTargetFallback>
+        <AssetTargetFallback Condition="'$(TargetFramework)' == 'net9.0'">$(AssetTargetFallback);net9.0-windows8.0</AssetTargetFallback>
+        <AssetTargetFallback Condition="'$(TargetFramework)' == 'net10.0'">$(AssetTargetFallback);net10.0-windows8.0</AssetTargetFallback>
+    </PropertyGroup>
+
+    <Import Project="$(MSBuildThisFileDirectory)..\..\CommonProjectProperties.targets" />
+
+    <ItemGroup>
+        <PackageReference Include="System.CommandLine" Version="2.0.5" />
+        <PackageReference Include="MinVer" Version="7.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\Nefarius.Utilities.ETW.csproj" />
+    </ItemGroup>
+
+</Project>

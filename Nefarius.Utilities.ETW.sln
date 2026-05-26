@@ -26,7 +26,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nefarius.Utilities.ETW.Benc
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{B8D4E6F2-3A1C-4D9E-8B7F-2C5A0E9D1234}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nefarius.Utilities.ETW.RealtimeCli", "tools\Nefarius.Utilities.ETW.RealtimeCli\Nefarius.Utilities.ETW.RealtimeCli.csproj", "{7F3A1B5E-9C2D-4F8A-B3E6-1D5C7A2F9B04}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nefarius.Utilities.ETW.CLI", "tools\Nefarius.Utilities.ETW.CLI\Nefarius.Utilities.ETW.CLI.csproj", "{7F3A1B5E-9C2D-4F8A-B3E6-1D5C7A2F9B04}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
