@@ -63,12 +63,27 @@ Option<uint> flushSecondsOpt = new("--flush-seconds")
     DefaultValueFactory = _ => 1u
 };
 
+Option<string> realtimeFormatOpt = new("--format")
+{
+    Description = "Output format: 'ndjson' (default) streams one JSON object per line; " +
+                  "'plain' emits tab-separated Timestamp/Provider/Level/Message columns.",
+    DefaultValueFactory = _ => "ndjson"
+};
+
+Option<string> colorOpt = new("--color")
+{
+    Description = "Colorize the Level column in plain mode. " +
+                  "'auto' (default) enables color when stdout is a TTY and NO_COLOR is unset; " +
+                  "'always' forces color; 'never' disables it.",
+    DefaultValueFactory = _ => "auto"
+};
+
 // ---------------------------------------------------------------------------
 // 'realtime' subcommand
 // ---------------------------------------------------------------------------
 Command realtime = new(
     "realtime",
-    "Attach to a realtime ETW session, enable a provider, and stream decoded events as NDJSON on stdout.")
+    "Attach to a realtime ETW session, enable a provider, and stream decoded events on stdout.")
 {
     providerArg,
     keywordsOpt,
@@ -77,7 +92,9 @@ Command realtime = new(
     sessionNameOpt,
     symbolsOpt,
     bufferSizeOpt,
-    flushSecondsOpt
+    flushSecondsOpt,
+    realtimeFormatOpt,
+    colorOpt
 };
 
 realtime.SetAction(async (ParseResult result, CancellationToken cancellationToken) =>
@@ -90,6 +107,28 @@ realtime.SetAction(async (ParseResult result, CancellationToken cancellationToke
     string[] symbolPaths = result.GetValue(symbolsOpt) ?? [];
     uint bufferSizeKb = result.GetValue(bufferSizeOpt);
     uint flushSeconds = result.GetValue(flushSecondsOpt);
+    string formatRaw = result.GetValue(realtimeFormatOpt)!;
+    string colorRaw = result.GetValue(colorOpt)!;
+
+    if (!formatRaw.Equals("ndjson", StringComparison.OrdinalIgnoreCase) &&
+        !formatRaw.Equals("plain", StringComparison.OrdinalIgnoreCase))
+    {
+        Console.Error.WriteLine(
+            $"[!] Unknown --format value '{formatRaw}'. Expected 'ndjson' or 'plain'.");
+        return 2;
+    }
+
+    if (!colorRaw.Equals("auto", StringComparison.OrdinalIgnoreCase) &&
+        !colorRaw.Equals("always", StringComparison.OrdinalIgnoreCase) &&
+        !colorRaw.Equals("never", StringComparison.OrdinalIgnoreCase))
+    {
+        Console.Error.WriteLine(
+            $"[!] Unknown --color value '{colorRaw}'. Expected 'auto', 'always', or 'never'.");
+        return 2;
+    }
+
+    bool usePlain = formatRaw.Equals("plain", StringComparison.OrdinalIgnoreCase);
+    bool useColor = usePlain && ResolveColor(colorRaw);
 
     ulong matchAny;
     ulong matchAll;
@@ -115,6 +154,8 @@ realtime.SetAction(async (ParseResult result, CancellationToken cancellationToke
         symbolPaths,
         bufferSizeKb,
         flushSeconds,
+        usePlain,
+        useColor,
         cancellationToken);
 });
 
@@ -305,6 +346,8 @@ static async Task<int> RunAsync(
     string[] symbolPaths,
     uint bufferSizeKb,
     uint flushSeconds,
+    bool usePlain,
+    bool useColor,
     CancellationToken cancellationToken)
 {
     // Resolve --symbols paths into a DecodingContext and the raw context list.
@@ -373,9 +416,18 @@ static async Task<int> RunAsync(
     // Remove any orphan session from a previous crash before we start.
     EtwUtil.StopOrphanSession(sessionName);
 
-    // Write a buffered stdout stream so high-frequency events aren't flushed
-    // one byte at a time through the console interop layer.
-    Stream stdout = new BufferedStream(Console.OpenStandardOutput(), 65536);
+    // Choose output writer based on format.
+    // NDJSON: raw byte BufferedStream for maximum throughput.
+    // Plain: StreamWriter (UTF-8, 64 KB) for text formatting.
+    Stream? ndjsonOut = usePlain ? null : new BufferedStream(Console.OpenStandardOutput(), 65536);
+    StreamWriter? plainOut = usePlain
+        ? new StreamWriter(Console.OpenStandardOutput(), new System.Text.UTF8Encoding(false), 65536)
+        : null;
+
+    if (usePlain && useColor)
+    {
+        TryEnableWindowsVt();
+    }
 
     try
     {
@@ -406,12 +458,19 @@ static async Task<int> RunAsync(
             // buffered events leak out after Ctrl+C.
             if (cts.Token.IsCancellationRequested) break;
 
-            // Each buffer is a self-contained JSON object; append a newline for NDJSON,
-            // then flush immediately so events appear in realtime rather than waiting
-            // for the buffer to fill.
-            await stdout.WriteAsync(json, cts.Token);
-            stdout.WriteByte((byte)'\n');
-            await stdout.FlushAsync(cts.Token);
+            if (usePlain)
+            {
+                await WritePlainLineAsync(json, plainOut!, useColor, cts.Token);
+            }
+            else
+            {
+                // Each buffer is a self-contained JSON object; append a newline for NDJSON,
+                // then flush immediately so events appear in realtime rather than waiting
+                // for the buffer to fill.
+                await ndjsonOut!.WriteAsync(json, cts.Token);
+                ndjsonOut.WriteByte((byte)'\n');
+                await ndjsonOut.FlushAsync(cts.Token);
+            }
         }
     }
     catch (OperationCanceledException)
@@ -426,8 +485,17 @@ static async Task<int> RunAsync(
     finally
     {
         // Flush remaining bytes regardless of how we exited.
-        await stdout.FlushAsync(CancellationToken.None);
-        await stdout.DisposeAsync();
+        if (usePlain)
+        {
+            await plainOut!.FlushAsync(CancellationToken.None);
+            await plainOut.DisposeAsync();
+        }
+        else
+        {
+            await ndjsonOut!.FlushAsync(CancellationToken.None);
+            await ndjsonOut.DisposeAsync();
+        }
+
         Console.Error.WriteLine("[*] Done.");
     }
 
@@ -673,4 +741,223 @@ static bool TryAddPdb(List<PdbFileDecodingContextType> pdbContexts, string path)
         Console.Error.WriteLine($"[!] Failed to load '{path}': {ex.Message}");
         return false;
     }
+}
+
+/// <summary>
+///     Resolves whether ANSI colour should be active based on the <c>--color</c> option,
+///     the <c>NO_COLOR</c> environment variable, and whether stdout is redirected.
+/// </summary>
+static bool ResolveColor(string colorOpt)
+{
+    if (colorOpt.Equals("always", StringComparison.OrdinalIgnoreCase)) return true;
+    if (colorOpt.Equals("never", StringComparison.OrdinalIgnoreCase)) return false;
+
+    // auto: honour NO_COLOR (https://no-color.org/) and piped stdout.
+    string? noColor = Environment.GetEnvironmentVariable("NO_COLOR");
+    if (!string.IsNullOrEmpty(noColor)) return false;
+    if (Console.IsOutputRedirected) return false;
+    return true;
+}
+
+/// <summary>
+///     Enables ANSI/VT escape processing on Windows consoles (conhost) so that legacy
+///     hosts render colour sequences correctly. No-op on non-Windows and on failure.
+/// </summary>
+static void TryEnableWindowsVt()
+{
+    if (!OperatingSystem.IsWindows()) return;
+
+    try
+    {
+        IntPtr handle = NativeConsole.GetStdHandle(-11); // STD_OUTPUT_HANDLE
+        if (handle == IntPtr.Zero || handle == new IntPtr(-1)) return;
+        if (!NativeConsole.GetConsoleMode(handle, out uint mode)) return;
+        NativeConsole.SetConsoleMode(handle, mode | 0x0004u); // ENABLE_VIRTUAL_TERMINAL_PROCESSING
+    }
+    catch
+    {
+        // Non-fatal: modern terminals already have VT enabled.
+    }
+}
+
+/// <summary>
+///     Maps a WPP level name string to its ANSI SGR open/close pair.
+///     Returns <c>(null, null)</c> when no colour should be applied.
+/// </summary>
+static (string? Open, string? Reset) LevelColor(string levelName)
+{
+    const string reset = "\x1b[0m";
+    ReadOnlySpan<char> s = levelName.AsSpan();
+
+    if (s.IndexOf("CRITICAL", StringComparison.OrdinalIgnoreCase) >= 0 ||
+        s.IndexOf("FATAL", StringComparison.OrdinalIgnoreCase) >= 0)
+        return ("\x1b[1;91m", reset);
+
+    if (s.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0)
+        return ("\x1b[31m", reset);
+
+    if (s.IndexOf("WARN", StringComparison.OrdinalIgnoreCase) >= 0)
+        return ("\x1b[33m", reset);
+
+    if (s.IndexOf("INFO", StringComparison.OrdinalIgnoreCase) >= 0)
+        return ("\x1b[36m", reset);
+
+    if (s.IndexOf("VERBOSE", StringComparison.OrdinalIgnoreCase) >= 0)
+        return ("\x1b[90m", reset);
+
+    return (null, null);
+}
+
+/// <summary>
+///     Parses one NDJSON event buffer and returns a tab-separated plain-text line.
+///     Returns <see langword="null" /> on parse failure (caller should log to stderr).
+/// </summary>
+static string? FormatPlainLine(ReadOnlyMemory<byte> jsonBytes, bool useColor)
+{
+    JsonDocument doc;
+    try
+    {
+        doc = JsonDocument.Parse(jsonBytes);
+    }
+    catch (JsonException)
+    {
+        return null;
+    }
+
+    using (doc)
+    {
+        JsonElement root = doc.RootElement;
+        if (!root.TryGetProperty("Event", out JsonElement evt))
+            return null;
+
+        // --- Timestamp ---
+        string timestamp = "-";
+        if (evt.TryGetProperty("Timestamp", out JsonElement tsEl) &&
+            tsEl.TryGetInt64(out long ticks))
+        {
+            try
+            {
+                timestamp = DateTime.FromFileTimeUtc(ticks)
+                    .ToLocalTime()
+                    .ToString("o", CultureInfo.InvariantCulture);
+            }
+            catch
+            {
+                timestamp = ticks.ToString(CultureInfo.InvariantCulture);
+            }
+        }
+
+        // --- Detect WPP (Name == "WPP") ---
+        bool isWpp = evt.TryGetProperty("Name", out JsonElement nameEl) &&
+                     nameEl.GetString() == "WPP";
+
+        string provider = "-";
+        string levelName = "-";
+        string message = "-";
+
+        if (isWpp &&
+            evt.TryGetProperty("Properties", out JsonElement propsArr) &&
+            propsArr.ValueKind == JsonValueKind.Array &&
+            propsArr.GetArrayLength() > 0)
+        {
+            JsonElement p = propsArr[0];
+
+            if (p.TryGetProperty("GuidName", out JsonElement gn))
+                provider = gn.GetString() ?? "-";
+
+            if (p.TryGetProperty("LevelName", out JsonElement ln))
+                levelName = ln.GetString() ?? "-";
+
+            if (p.TryGetProperty("FormattedString", out JsonElement fs))
+                message = fs.GetString() ?? "-";
+        }
+        else
+        {
+            // Non-WPP: derive provider from the Name field ("Provider/Task/Opcode") or ProviderGuid.
+            if (evt.TryGetProperty("Name", out JsonElement evtName))
+            {
+                string? full = evtName.GetString();
+                if (!string.IsNullOrEmpty(full))
+                {
+                    int slash = full.IndexOf('/');
+                    provider = slash > 0 ? full[..slash] : full;
+                }
+            }
+
+            if (provider == "-" && evt.TryGetProperty("ProviderGuid", out JsonElement pg))
+                provider = pg.GetString() ?? "-";
+
+            // Best-effort: serialize the Properties array as compact JSON.
+            if (evt.TryGetProperty("Properties", out JsonElement rawProps))
+                message = rawProps.GetRawText();
+        }
+
+        // Escape tabs and embedded newlines so each event stays on one line.
+        message = message.Replace("\t", "\\t").Replace("\r\n", "\\n").Replace("\n", "\\n").Replace("\r", "\\n");
+
+        // Optionally colourise the level column.
+        string levelColumn;
+        if (useColor && levelName != "-")
+        {
+            (string? open, string? reset) = LevelColor(levelName);
+            levelColumn = open is not null
+                ? $"{open}{levelName}{reset}"
+                : levelName;
+        }
+        else
+        {
+            levelColumn = levelName;
+        }
+
+        return $"{timestamp}\t{provider}\t{levelColumn}\t{message}";
+    }
+}
+
+/// <summary>
+///     Formats one event as a plain TSV line and writes it to <paramref name="writer" />.
+/// </summary>
+static async Task WritePlainLineAsync(
+    ReadOnlyMemory<byte> json,
+    StreamWriter writer,
+    bool useColor,
+    CancellationToken cancellationToken)
+{
+    string? line;
+    try
+    {
+        line = FormatPlainLine(json, useColor);
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"[!] Plain format decode error: {ex.Message}");
+        return;
+    }
+
+    if (line is null)
+    {
+        Console.Error.WriteLine("[!] Plain format decode error: could not parse event JSON.");
+        return;
+    }
+
+    await writer.WriteLineAsync(line.AsMemory(), cancellationToken);
+    await writer.FlushAsync(cancellationToken);
+}
+
+// ---------------------------------------------------------------------------
+// Native interop — Windows console VT processing
+// ---------------------------------------------------------------------------
+
+/// <summary>
+///     Minimal P/Invoke surface for enabling ANSI/VT escape sequences on Windows.
+/// </summary>
+internal static class NativeConsole
+{
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern IntPtr GetStdHandle(int nStdHandle);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool GetConsoleMode(IntPtr hConsoleHandle, out uint lpMode);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
 }
