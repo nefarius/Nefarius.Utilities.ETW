@@ -221,35 +221,36 @@ internal static class PlainOutput
                 new Parameter("Flags",             typeof(string)),
             ];
 
-            // Parse the expression into a Lambda.
+            // Parse the expression into a Lambda, constraining the return type to bool so that
+            // non-boolean expressions (e.g. "Provider" alone) are caught at startup rather than
+            // silently coercing to false at runtime.
             Lambda parsed = interpreter.Parse(expression, propertyParams);
-
-            // Cast to Func<...17 string/int args..., bool> by using LambdaExpression.Compile.
-            // Instead of building a 17-arg delegate we compile to an object delegate and call
-            // it via DynamicExpresso's Invoke method, unpacking the PlainEvent properties.
-            Func<PlainEvent, bool> predicate = (PlainEvent evt) =>
+            if (parsed.ReturnType != typeof(bool))
             {
-                object? result = parsed.Invoke(
-                    evt.Timestamp,
-                    evt.Provider,
-                    evt.ProviderGuid,
-                    evt.Level,
-                    evt.LevelNumber,
-                    evt.Message,
-                    evt.EventName,
-                    evt.EventId,
-                    evt.Pid,
-                    evt.Tid,
-                    evt.Cpu,
-                    evt.ActivityId,
-                    evt.RelatedActivityId,
-                    evt.Function,
-                    evt.Component,
-                    evt.SubComponent,
-                    evt.Flags
-                );
-                return result is true;
-            };
+                error = $"[!] Filter expression must return bool but inferred {parsed.ReturnType.Name}. " +
+                        "Wrap the expression in a comparison, e.g. Provider == \"Foo\".";
+                return null;
+            }
+
+            Func<PlainEvent, bool> predicate = (PlainEvent evt) => (bool)parsed.Invoke(
+                evt.Timestamp,
+                evt.Provider,
+                evt.ProviderGuid,
+                evt.Level,
+                evt.LevelNumber,
+                evt.Message,
+                evt.EventName,
+                evt.EventId,
+                evt.Pid,
+                evt.Tid,
+                evt.Cpu,
+                evt.ActivityId,
+                evt.RelatedActivityId,
+                evt.Function,
+                evt.Component,
+                evt.SubComponent,
+                evt.Flags
+            )!;
 
             error = null;
             return predicate;
@@ -384,6 +385,20 @@ internal static class PlainOutput
                 // Message: compact JSON of the Properties array.
                 if (evt.TryGetProperty("Properties", out JsonElement rawProps))
                     message = rawProps.GetRawText();
+
+                // For non-WPP events the ETW header level is not currently emitted by EtwJsonWriter,
+                // so levelName and levelNumber stay at their defaults ("-" / 0). If a future schema
+                // version adds a top-level "Level" integer or "LevelName" string, pick it up here.
+                if (evt.TryGetProperty("LevelName", out JsonElement nlEl))
+                {
+                    levelName   = nlEl.GetString() ?? "-";
+                    levelNumber = DeriveLevelNumber(levelName);
+                }
+                else if (evt.TryGetProperty("Level", out JsonElement nLvlEl) &&
+                         nLvlEl.TryGetInt32(out int rawLevel) && rawLevel > 0)
+                {
+                    levelNumber = rawLevel <= 5 ? rawLevel : 0;
+                }
             }
 
             // Escape embedded tabs and newlines in every string field.

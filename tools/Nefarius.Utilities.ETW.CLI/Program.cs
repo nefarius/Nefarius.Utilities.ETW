@@ -1745,38 +1745,14 @@ static async Task<bool> WritePlainLineAsync(
     CancellationToken cancellationToken,
     bool flush = true)
 {
-    PlainOutput.PlainEvent? evt;
-    try
-    {
-        evt = PlainOutput.Decode(json);
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"[!] Plain format decode error: {ex.Message}");
+    // Decode failures and filter evaluation exceptions are propagated as fatal errors so the
+    // caller's outer try-catch logs them and returns exit code 1. A filter returning false
+    // is a normal, non-fatal drop and still returns false here.
+    PlainOutput.PlainEvent evt = PlainOutput.Decode(json)
+        ?? throw new InvalidOperationException("Could not parse event JSON.");
+
+    if (filter is not null && !filter(evt))
         return false;
-    }
-
-    if (evt is null)
-    {
-        Console.Error.WriteLine("[!] Plain format decode error: could not parse event JSON.");
-        return false;
-    }
-
-    if (filter is not null)
-    {
-        bool pass;
-        try
-        {
-            pass = filter(evt);
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[!] Filter evaluation error (event dropped): {ex.Message}");
-            return false;
-        }
-
-        if (!pass) return false;
-    }
 
     string line = PlainOutput.FormatLine(evt, columns, useColor);
     await writer.WriteLineAsync(line.AsMemory(), cancellationToken);

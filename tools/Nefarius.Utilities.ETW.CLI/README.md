@@ -253,7 +253,7 @@ Show only errors and warnings in realtime, and output just timestamp and message
 ```bash
 etwutils realtime --symbols C:\Symbols\MyDriver.pdb --format plain \
     --columns Timestamp,Message \
-    --filter "LevelNumber <= 3 && LevelNumber > 0"
+    --filter "LevelNumber == 2 || LevelNumber == 3"
 ```
 
 List provider GUIDs embedded in a PDB (plain, human-readable — includes control name and bit flags):
@@ -335,7 +335,7 @@ All tokens below are available to both `--columns` and `--filter`.
 
 Embedded tabs and newlines in every cell value are escaped to `\t` and `\n` so each event always occupies exactly one output line.
 
-When stdout is a TTY (and `NO_COLOR` is not set), the `Level` column (when present) is automatically colorized: Critical/Fatal → bright red, Error → red, Warning → yellow, Information → cyan, Verbose → gray. Color is suppressed automatically when piping. Use `--color always|never` to override.
+When stdout is a TTY (and `NO_COLOR` is not set), the `Level` column (when present) is automatically colorized: Critical → bright red, Error → red, Warning → yellow, Information → cyan, Verbose → gray. Level strings containing "Fatal" are also treated as Critical severity. Color is suppressed automatically when piping. Use `--color always|never` to override.
 
 ```text
 2026-05-26T14:51:23.1234567+02:00	BthPS3TraceGuid	TRACE_LEVEL_INFORMATION	Device arrived: USB\VID_054C&PID_09CC
