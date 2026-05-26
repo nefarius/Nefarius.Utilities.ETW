@@ -344,19 +344,34 @@ When stdout is a TTY (and `NO_COLOR` is not set), the `Level` column (when prese
 
 #### Filter expression language
 
-`--filter` accepts a C#-like boolean expression evaluated per event by [DynamicExpresso](https://github.com/dynamicexpresso/DynamicExpresso). Events for which the expression returns `false` are silently dropped. Parse errors abort startup with exit code 2; per-event evaluation errors are logged to stderr and drop the event (non-fatal).
+`--filter` accepts a C#-like boolean expression evaluated per event by [DynamicExpresso](https://github.com/dynamicexpresso/DynamicExpresso). Events for which the expression returns `false` are silently dropped. Parse errors abort startup with exit code 2; per-event evaluation errors are fatal.
 
-All column tokens listed above are available as identifiers directly in the expression (no prefix needed):
+All column tokens listed above are available as identifiers directly in the expression (no prefix needed). In addition, the raw WPP JSON property names are accepted as aliases so you can use either form interchangeably:
+
+| Raw WPP name | Alias for |
+|---|---|
+| `GuidName` | `Provider` |
+| `LevelName` | `Level` |
+| `FormattedString` | `Message` |
+| `FunctionName` | `Function` |
+| `ComponentName` | `Component` |
+| `SubComponentName` | `SubComponent` |
+| `FlagsName` | `Flags` |
 
 ```text
-# Skip all events from a specific provider
+# Skip all events from a specific provider (column token or WPP alias both work)
 --filter "Provider != \"BthPS3PSM\""
+--filter "GuidName != \"BthPS3PSM\""
 
-# Only show errors and above (LevelNumber <= 3 covers Critical, Error, Warning)
---filter "LevelNumber <= 3 && LevelNumber > 0"
+# Only show errors and warnings (Error=2, Warning=3)
+--filter "LevelNumber == 2 || LevelNumber == 3"
 
 # Keep only events whose message starts with a specific string
 --filter "Message.StartsWith(\"[BthPS3\")"
+--filter "FormattedString.StartsWith(\"[BthPS3\")"
+
+# Filter by WPP function name
+--filter "FunctionName.StartsWith(\"EvtUdecx\")"
 
 # Combine conditions
 --filter "Provider == \"BthPS3\" && !Message.Contains(\"Verbose\")"
