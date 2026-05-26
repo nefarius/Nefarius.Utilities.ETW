@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text.Json;
 
 using Nefarius.Utilities.ETW;
+using Nefarius.Utilities.ETW.CLI;
 using Nefarius.Utilities.ETW.Deserializer.WPP;
 using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
@@ -82,6 +83,26 @@ Option<string> colorOpt = new("--color")
     DefaultValueFactory = _ => "auto"
 };
 
+Option<string?> realtimeColumnsOpt = new("--columns")
+{
+    Description =
+        $"Comma-separated column tokens for plain output. Known tokens: {PlainOutput.KnownColumnNames}. " +
+        "Default: Timestamp,Provider,Level,Message. Ignored when --format is not plain."
+};
+
+Option<bool> realtimeHeaderOpt = new("--header")
+{
+    Description = "Emit a TSV header line as the first output line (plain mode only). Ignored when --format is not plain."
+};
+
+Option<string?> realtimeFilterOpt = new("--filter")
+{
+    Description =
+        "DynamicExpresso predicate; events for which the expression returns false are skipped (plain mode only). " +
+        $"Available identifiers: {PlainOutput.KnownColumnNames}. " +
+        "Example: Provider != \"Foo\" && Message.StartsWith(\"Bar\"). Ignored when --format is not plain."
+};
+
 // ---------------------------------------------------------------------------
 // 'realtime' subcommand
 // ---------------------------------------------------------------------------
@@ -98,7 +119,10 @@ Command realtime = new(
     bufferSizeOpt,
     flushSecondsOpt,
     realtimeFormatOpt,
-    colorOpt
+    colorOpt,
+    realtimeColumnsOpt,
+    realtimeHeaderOpt,
+    realtimeFilterOpt
 };
 
 realtime.SetAction(async (ParseResult result, CancellationToken cancellationToken) =>
@@ -113,6 +137,9 @@ realtime.SetAction(async (ParseResult result, CancellationToken cancellationToke
     uint flushSeconds = result.GetValue(flushSecondsOpt);
     string formatRaw = result.GetValue(realtimeFormatOpt)!;
     string colorRaw = result.GetValue(colorOpt)!;
+    string? columnsRaw = result.GetValue(realtimeColumnsOpt);
+    bool emitHeader = result.GetValue(realtimeHeaderOpt);
+    string? filterExpr = result.GetValue(realtimeFilterOpt);
 
     if (!formatRaw.Equals("ndjson", StringComparison.OrdinalIgnoreCase) &&
         !formatRaw.Equals("plain", StringComparison.OrdinalIgnoreCase))
@@ -133,6 +160,39 @@ realtime.SetAction(async (ParseResult result, CancellationToken cancellationToke
 
     bool usePlain = formatRaw.Equals("plain", StringComparison.OrdinalIgnoreCase);
     bool useColor = usePlain && ResolveColor(colorRaw);
+
+    // Warn when plain-only flags are supplied alongside --format ndjson.
+    if (!usePlain && (columnsRaw is not null || emitHeader || filterExpr is not null))
+    {
+        Console.Error.WriteLine(
+            "[*] Warning: --columns, --header, and --filter are only active with --format plain; " +
+            "they are ignored for ndjson output.");
+    }
+
+    // Resolve column list.
+    IReadOnlyList<PlainOutput.ColumnSpec> columns = PlainOutput.DefaultColumns;
+    if (usePlain && columnsRaw is not null)
+    {
+        IReadOnlyList<PlainOutput.ColumnSpec>? parsed = PlainOutput.ParseColumns(columnsRaw, out string? colError);
+        if (parsed is null)
+        {
+            Console.Error.WriteLine(colError);
+            return 2;
+        }
+        columns = parsed;
+    }
+
+    // Compile filter predicate.
+    Func<PlainOutput.PlainEvent, bool>? filter = null;
+    if (usePlain && filterExpr is not null)
+    {
+        filter = PlainOutput.CompileFilter(filterExpr, out string? filterError);
+        if (filter is null)
+        {
+            Console.Error.WriteLine(filterError);
+            return 2;
+        }
+    }
 
     ulong matchAny;
     ulong matchAll;
@@ -160,6 +220,9 @@ realtime.SetAction(async (ParseResult result, CancellationToken cancellationToke
         flushSeconds,
         usePlain,
         useColor,
+        columns,
+        emitHeader,
+        filter,
         cancellationToken);
 });
 
@@ -390,6 +453,26 @@ Option<bool> parsePreserveRawTimestampsOpt = new("--preserve-raw-timestamps")
     Description = "Apply PROCESS_TRACE_MODE_RAW_TIMESTAMP when processing the trace."
 };
 
+Option<string?> parseColumnsOpt = new("--columns")
+{
+    Description =
+        $"Comma-separated column tokens for plain output. Known tokens: {PlainOutput.KnownColumnNames}. " +
+        "Default: Timestamp,Provider,Level,Message. Ignored when --format is not plain."
+};
+
+Option<bool> parseHeaderOpt = new("--header")
+{
+    Description = "Emit a TSV header line as the first output line (plain mode only). Ignored when --format is not plain."
+};
+
+Option<string?> parseFilterOpt = new("--filter")
+{
+    Description =
+        "DynamicExpresso predicate; events for which the expression returns false are skipped (plain mode only). " +
+        $"Available identifiers: {PlainOutput.KnownColumnNames}. " +
+        "Example: Provider != \"Foo\" && Message.StartsWith(\"Bar\"). Ignored when --format is not plain."
+};
+
 // ---------------------------------------------------------------------------
 // 'parse' subcommand
 // ---------------------------------------------------------------------------
@@ -408,7 +491,10 @@ Command parse = new(
     parseSymbolCacheOpt,
     parseFormatOpt,
     parseColorOpt,
-    parsePreserveRawTimestampsOpt
+    parsePreserveRawTimestampsOpt,
+    parseColumnsOpt,
+    parseHeaderOpt,
+    parseFilterOpt
 };
 
 parse.SetAction(async (ParseResult result, CancellationToken cancellationToken) =>
@@ -422,6 +508,9 @@ parse.SetAction(async (ParseResult result, CancellationToken cancellationToken) 
     string   formatRaw         = result.GetValue(parseFormatOpt)!;
     string   colorRaw          = result.GetValue(parseColorOpt)!;
     bool     preserveRaw       = result.GetValue(parsePreserveRawTimestampsOpt);
+    string?  columnsRaw        = result.GetValue(parseColumnsOpt);
+    bool     emitHeader        = result.GetValue(parseHeaderOpt);
+    string?  filterExpr        = result.GetValue(parseFilterOpt);
 
     // --- Validate format / color ---
     if (!formatRaw.Equals("ndjson", StringComparison.OrdinalIgnoreCase) &&
@@ -471,6 +560,39 @@ parse.SetAction(async (ParseResult result, CancellationToken cancellationToken) 
         TryEnableWindowsVt();
     }
 
+    // Warn when plain-only flags are supplied alongside --format ndjson.
+    if (!usePlain && (columnsRaw is not null || emitHeader || filterExpr is not null))
+    {
+        Console.Error.WriteLine(
+            "[*] Warning: --columns, --header, and --filter are only active with --format plain; " +
+            "they are ignored for ndjson output.");
+    }
+
+    // Resolve column list.
+    IReadOnlyList<PlainOutput.ColumnSpec> columns = PlainOutput.DefaultColumns;
+    if (usePlain && columnsRaw is not null)
+    {
+        IReadOnlyList<PlainOutput.ColumnSpec>? parsedCols = PlainOutput.ParseColumns(columnsRaw, out string? colError);
+        if (parsedCols is null)
+        {
+            Console.Error.WriteLine(colError);
+            return 2;
+        }
+        columns = parsedCols;
+    }
+
+    // Compile filter predicate.
+    Func<PlainOutput.PlainEvent, bool>? filter = null;
+    if (usePlain && filterExpr is not null)
+    {
+        filter = PlainOutput.CompileFilter(filterExpr, out string? filterError);
+        if (filter is null)
+        {
+            Console.Error.WriteLine(filterError);
+            return 2;
+        }
+    }
+
     // --- Resolve ETL inputs ---
     List<string> etlFiles = ResolveEtlInputs(etlPathArgs);
     if (etlFiles.Count == 0)
@@ -514,11 +636,13 @@ parse.SetAction(async (ParseResult result, CancellationToken cancellationToken) 
     if (outDir is not null)
     {
         return await RunParsePerFileAsync(
-            etlFiles, outDir, decodingContext, usePlain, preserveRaw, cancellationToken);
+            etlFiles, outDir, decodingContext, usePlain, preserveRaw,
+            columns, emitHeader, filter, cancellationToken);
     }
 
     return await RunParseStdoutAsync(
-        etlFiles, decodingContext, usePlain, useColor, preserveRaw, cancellationToken);
+        etlFiles, decodingContext, usePlain, useColor, preserveRaw,
+        columns, emitHeader, filter, cancellationToken);
 });
 
 // ---------------------------------------------------------------------------
@@ -559,6 +683,9 @@ static async Task<int> RunAsync(
     uint flushSeconds,
     bool usePlain,
     bool useColor,
+    IReadOnlyList<PlainOutput.ColumnSpec> columns,
+    bool emitHeader,
+    Func<PlainOutput.PlainEvent, bool>? filter,
     CancellationToken cancellationToken)
 {
     // Resolve --symbols paths into a DecodingContext and the raw context list.
@@ -660,6 +787,12 @@ static async Task<int> RunAsync(
             $"level={level} | keywords=0x{matchAnyKeyword:X} | matchAll=0x{matchAllKeyword:X}");
         Console.Error.WriteLine("[*] Streaming events... (Ctrl+C to stop)");
 
+        if (usePlain && emitHeader)
+        {
+            await plainOut!.WriteLineAsync(PlainOutput.FormatHeader(columns).AsMemory(), cts.Token);
+            await plainOut.FlushAsync(cts.Token);
+        }
+
         await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateRealtimeEventsAsync(
                            sessionName,
                            o => o.WppDecodingContext = decodingContext,
@@ -671,7 +804,7 @@ static async Task<int> RunAsync(
 
             if (usePlain)
             {
-                await WritePlainLineAsync(json, plainOut!, useColor, cts.Token);
+                await WritePlainLineAsync(json, plainOut!, useColor, columns, filter, cts.Token);
             }
             else
             {
@@ -1335,6 +1468,9 @@ static async Task<int> RunParseStdoutAsync(
     bool usePlain,
     bool useColor,
     bool preserveRawTimestamps,
+    IReadOnlyList<PlainOutput.ColumnSpec> columns,
+    bool emitHeader,
+    Func<PlainOutput.PlainEvent, bool>? filter,
     CancellationToken cancellationToken)
 {
     using CancellationTokenSource cts =
@@ -1363,6 +1499,12 @@ static async Task<int> RunParseStdoutAsync(
 
     try
     {
+        if (usePlain && emitHeader)
+        {
+            await plainOut!.WriteLineAsync(PlainOutput.FormatHeader(columns).AsMemory(), cts.Token);
+            await plainOut.FlushAsync(cts.Token);
+        }
+
         await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateEventsAsync(
                            etlFiles,
                            o =>
@@ -1376,7 +1518,7 @@ static async Task<int> RunParseStdoutAsync(
 
             if (usePlain)
             {
-                await WritePlainLineAsync(json, plainOut!, useColor, cts.Token);
+                await WritePlainLineAsync(json, plainOut!, useColor, columns, filter, cts.Token);
             }
             else
             {
@@ -1425,6 +1567,9 @@ static async Task<int> RunParsePerFileAsync(
     DecodingContext? decodingContext,
     bool usePlain,
     bool preserveRawTimestamps,
+    IReadOnlyList<PlainOutput.ColumnSpec> columns,
+    bool emitHeader,
+    Func<PlainOutput.PlainEvent, bool>? filter,
     CancellationToken cancellationToken)
 {
     string ext = usePlain ? ".tsv" : ".ndjson";
@@ -1486,6 +1631,11 @@ static async Task<int> RunParsePerFileAsync(
                 await using StreamWriter writer =
                     new(fileStream, new System.Text.UTF8Encoding(false), 65536);
 
+                if (emitHeader)
+                {
+                    await writer.WriteLineAsync(PlainOutput.FormatHeader(columns).AsMemory(), cancellationToken);
+                }
+
                 await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateEventsAsync(
                                    [etl],
                                    o =>
@@ -1495,8 +1645,9 @@ static async Task<int> RunParsePerFileAsync(
                                    },
                                    cancellationToken))
                 {
-                    await WritePlainLineAsync(json, writer, false, cancellationToken, flush: false);
-                    eventCount++;
+                    bool written = await WritePlainLineAsync(
+                        json, writer, false, columns, filter, cancellationToken, flush: false);
+                    if (written) eventCount++;
                 }
 
                 await writer.FlushAsync(cancellationToken);
@@ -1580,168 +1731,34 @@ static void TryEnableWindowsVt()
 }
 
 /// <summary>
-///     Maps a WPP level name string to its ANSI SGR open/close pair.
-///     Returns <c>(null, null)</c> when no colour should be applied.
+///     Decodes one NDJSON event buffer, optionally filters it, formats it as a plain TSV line,
+///     and writes it to <paramref name="writer" />.
+///     Returns <see langword="true" /> when the event was written, <see langword="false" /> when
+///     it was dropped (filtered out, decode failure, or filter evaluation error).
 /// </summary>
-static (string? Open, string? Reset) LevelColor(string levelName)
-{
-    const string reset = "\x1b[0m";
-    ReadOnlySpan<char> s = levelName.AsSpan();
-
-    if (s.IndexOf("CRITICAL", StringComparison.OrdinalIgnoreCase) >= 0 ||
-        s.IndexOf("FATAL", StringComparison.OrdinalIgnoreCase) >= 0)
-        return ("\x1b[1;91m", reset);
-
-    if (s.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0)
-        return ("\x1b[31m", reset);
-
-    if (s.IndexOf("WARN", StringComparison.OrdinalIgnoreCase) >= 0)
-        return ("\x1b[33m", reset);
-
-    if (s.IndexOf("INFO", StringComparison.OrdinalIgnoreCase) >= 0)
-        return ("\x1b[36m", reset);
-
-    if (s.IndexOf("VERBOSE", StringComparison.OrdinalIgnoreCase) >= 0)
-        return ("\x1b[90m", reset);
-
-    return (null, null);
-}
-
-/// <summary>
-///     Parses one NDJSON event buffer and returns a tab-separated plain-text line.
-///     Returns <see langword="null" /> on parse failure (caller should log to stderr).
-/// </summary>
-static string? FormatPlainLine(ReadOnlyMemory<byte> jsonBytes, bool useColor)
-{
-    JsonDocument doc;
-    try
-    {
-        doc = JsonDocument.Parse(jsonBytes);
-    }
-    catch (JsonException)
-    {
-        return null;
-    }
-
-    using (doc)
-    {
-        JsonElement root = doc.RootElement;
-        if (!root.TryGetProperty("Event", out JsonElement evt))
-            return null;
-
-        // --- Timestamp ---
-        string timestamp = "-";
-        if (evt.TryGetProperty("Timestamp", out JsonElement tsEl) &&
-            tsEl.TryGetInt64(out long ticks))
-        {
-            try
-            {
-                timestamp = DateTime.FromFileTimeUtc(ticks)
-                    .ToLocalTime()
-                    .ToString("o", CultureInfo.InvariantCulture);
-            }
-            catch
-            {
-                timestamp = ticks.ToString(CultureInfo.InvariantCulture);
-            }
-        }
-
-        // --- Detect WPP (Name == "WPP") ---
-        bool isWpp = evt.TryGetProperty("Name", out JsonElement nameEl) &&
-                     nameEl.GetString() == "WPP";
-
-        string provider = "-";
-        string levelName = "-";
-        string message = "-";
-
-        if (isWpp &&
-            evt.TryGetProperty("Properties", out JsonElement propsArr) &&
-            propsArr.ValueKind == JsonValueKind.Array &&
-            propsArr.GetArrayLength() > 0)
-        {
-            JsonElement p = propsArr[0];
-
-            if (p.TryGetProperty("GuidName", out JsonElement gn))
-                provider = gn.GetString() ?? "-";
-
-            if (p.TryGetProperty("LevelName", out JsonElement ln))
-                levelName = ln.GetString() ?? "-";
-
-            if (p.TryGetProperty("FormattedString", out JsonElement fs))
-                message = fs.GetString() ?? "-";
-        }
-        else
-        {
-            // Non-WPP: derive provider from the Name field ("Provider/Task/Opcode") or ProviderGuid.
-            if (evt.TryGetProperty("Name", out JsonElement evtName))
-            {
-                string? full = evtName.GetString();
-                if (!string.IsNullOrEmpty(full))
-                {
-                    int slash = full.IndexOf('/');
-                    provider = slash > 0 ? full[..slash] : full;
-                }
-            }
-
-            if (provider == "-" && evt.TryGetProperty("ProviderGuid", out JsonElement pg))
-                provider = pg.GetString() ?? "-";
-
-            // Best-effort: serialize the Properties array as compact JSON.
-            if (evt.TryGetProperty("Properties", out JsonElement rawProps))
-                message = rawProps.GetRawText();
-        }
-
-        // Escape tabs and embedded newlines so each event stays on one line.
-        message = message.Replace("\t", "\\t").Replace("\r\n", "\\n").Replace("\n", "\\n").Replace("\r", "\\n");
-
-        // Optionally colourise the level column.
-        string levelColumn;
-        if (useColor && levelName != "-")
-        {
-            (string? open, string? reset) = LevelColor(levelName);
-            levelColumn = open is not null
-                ? $"{open}{levelName}{reset}"
-                : levelName;
-        }
-        else
-        {
-            levelColumn = levelName;
-        }
-
-        return $"{timestamp}\t{provider}\t{levelColumn}\t{message}";
-    }
-}
-
-/// <summary>
-///     Formats one event as a plain TSV line and writes it to <paramref name="writer" />.
-/// </summary>
-static async Task WritePlainLineAsync(
+static async Task<bool> WritePlainLineAsync(
     ReadOnlyMemory<byte> json,
     StreamWriter writer,
     bool useColor,
+    IReadOnlyList<PlainOutput.ColumnSpec> columns,
+    Func<PlainOutput.PlainEvent, bool>? filter,
     CancellationToken cancellationToken,
     bool flush = true)
 {
-    string? line;
-    try
-    {
-        line = FormatPlainLine(json, useColor);
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"[!] Plain format decode error: {ex.Message}");
-        return;
-    }
+    // Decode failures and filter evaluation exceptions are propagated as fatal errors so the
+    // caller's outer try-catch logs them and returns exit code 1. A filter returning false
+    // is a normal, non-fatal drop and still returns false here.
+    PlainOutput.PlainEvent evt = PlainOutput.Decode(json)
+        ?? throw new InvalidOperationException("Could not parse event JSON.");
 
-    if (line is null)
-    {
-        Console.Error.WriteLine("[!] Plain format decode error: could not parse event JSON.");
-        return;
-    }
+    if (filter is not null && !filter(evt))
+        return false;
 
+    string line = PlainOutput.FormatLine(evt, columns, useColor);
     await writer.WriteLineAsync(line.AsMemory(), cancellationToken);
     if (flush)
         await writer.FlushAsync(cancellationToken);
+    return true;
 }
 
 // ---------------------------------------------------------------------------
