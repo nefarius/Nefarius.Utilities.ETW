@@ -1,5 +1,7 @@
 using System.CommandLine;
 using System.Globalization;
+using System.Net.Http;
+using System.Reflection;
 using System.Text.Json;
 
 using Nefarius.Utilities.ETW;
@@ -312,12 +314,219 @@ inspectPdb.SetAction((ParseResult result) =>
 });
 
 // ---------------------------------------------------------------------------
+// 'parse' subcommand – arguments and options
+// ---------------------------------------------------------------------------
+Argument<string[]> parseEtlPathsArg = new("etl-path")
+{
+    Description =
+        "One or more .etl files, directories (top-level *.etl), or glob patterns " +
+        "(e.g. C:\\Traces\\*.etl). Repeat for multiple paths.",
+    Arity = ArgumentArity.OneOrMore
+};
+
+Option<string?> parseOutDirOpt = new("--out-dir")
+{
+    Description =
+        "Write each input .etl to an equally-named file " +
+        "(e.g. trace.etl → trace.ndjson or trace.tsv) in this directory " +
+        "instead of streaming all events merged to stdout."
+};
+
+Option<string[]> parseSymbolsOpt = new("--symbols")
+{
+    Description =
+        "Path to a PDB file, TMF file, directory (searched recursively), or a glob pattern. " +
+        "Repeat the flag for multiple paths. These are loaded unconditionally.",
+    Arity = ArgumentArity.ZeroOrMore,
+    AllowMultipleArgumentsPerToken = false
+};
+
+Option<string[]> parseSymbolsSearchOpt = new("--symbols-search")
+{
+    Description =
+        "Directories or glob patterns searched for PDBs that the trace actually references. " +
+        "Resolved via a pre-scan of the .etl files. Repeat for multiple paths.",
+    Arity = ArgumentArity.ZeroOrMore,
+    AllowMultipleArgumentsPerToken = false
+};
+
+Option<string?> parseSymbolServerOpt = new("--symbol-server")
+{
+    Description =
+        "Microsoft-style symbol store root URL " +
+        "(e.g. https://msdl.microsoft.com/download/symbols or " +
+        "https://symbols.nefarius.at/download/symbols). " +
+        "Unresolved PDBs are downloaded and cached atomically."
+};
+
+Option<string?> parseSymbolCacheOpt = new("--symbol-cache")
+{
+    Description =
+        "Local symstore-layout cache directory. " +
+        "Defaults to %LOCALAPPDATA%\\Nefarius\\etwutils\\symcache. " +
+        "Falls back to _NT_SYMBOL_PATH when this flag and --symbol-server are both absent."
+};
+
+Option<string> parseFormatOpt = new("--format")
+{
+    Description = "Output format: 'ndjson' (default) streams one JSON object per line; " +
+                  "'plain' emits tab-separated Timestamp/Provider/Level/Message columns.",
+    DefaultValueFactory = _ => "ndjson"
+};
+
+Option<string> parseColorOpt = new("--color")
+{
+    Description =
+        "Colorize the Level column in plain stdout mode. " +
+        "'auto' (default) enables color when stdout is a TTY and NO_COLOR is unset; " +
+        "'always' forces color; 'never' disables it. Ignored in per-file (--out-dir) mode.",
+    DefaultValueFactory = _ => "auto"
+};
+
+Option<bool> parsePreserveRawTimestampsOpt = new("--preserve-raw-timestamps")
+{
+    Description = "Apply PROCESS_TRACE_MODE_RAW_TIMESTAMP when processing the trace."
+};
+
+// ---------------------------------------------------------------------------
+// 'parse' subcommand
+// ---------------------------------------------------------------------------
+Command parse = new(
+    "parse",
+    "Decode one or more offline .etl files and emit events as NDJSON (or plain TSV) " +
+    "to stdout (events time-merged across all inputs) or to per-file output in a " +
+    "target directory (--out-dir). WPP symbols are resolved automatically when " +
+    "--symbols-search or --symbol-server is supplied.")
+{
+    parseEtlPathsArg,
+    parseOutDirOpt,
+    parseSymbolsOpt,
+    parseSymbolsSearchOpt,
+    parseSymbolServerOpt,
+    parseSymbolCacheOpt,
+    parseFormatOpt,
+    parseColorOpt,
+    parsePreserveRawTimestampsOpt
+};
+
+parse.SetAction(async (ParseResult result, CancellationToken cancellationToken) =>
+{
+    string[] etlPathArgs       = result.GetValue(parseEtlPathsArg) ?? [];
+    string?  outDir            = result.GetValue(parseOutDirOpt);
+    string[] symbolPaths       = result.GetValue(parseSymbolsOpt) ?? [];
+    string[] symbolSearchPaths = result.GetValue(parseSymbolsSearchOpt) ?? [];
+    string?  symbolServer      = result.GetValue(parseSymbolServerOpt);
+    string?  symbolCache       = result.GetValue(parseSymbolCacheOpt);
+    string   formatRaw         = result.GetValue(parseFormatOpt)!;
+    string   colorRaw          = result.GetValue(parseColorOpt)!;
+    bool     preserveRaw       = result.GetValue(parsePreserveRawTimestampsOpt);
+
+    // --- Validate format / color ---
+    if (!formatRaw.Equals("ndjson", StringComparison.OrdinalIgnoreCase) &&
+        !formatRaw.Equals("plain", StringComparison.OrdinalIgnoreCase))
+    {
+        Console.Error.WriteLine(
+            $"[!] Unknown --format value '{formatRaw}'. Expected 'ndjson' or 'plain'.");
+        return 2;
+    }
+
+    if (!colorRaw.Equals("auto", StringComparison.OrdinalIgnoreCase) &&
+        !colorRaw.Equals("always", StringComparison.OrdinalIgnoreCase) &&
+        !colorRaw.Equals("never", StringComparison.OrdinalIgnoreCase))
+    {
+        Console.Error.WriteLine(
+            $"[!] Unknown --color value '{colorRaw}'. Expected 'auto', 'always', or 'never'.");
+        return 2;
+    }
+
+    // --- Validate --symbol-server ---
+    if (symbolServer is not null)
+    {
+        if (!Uri.TryCreate(symbolServer, UriKind.Absolute, out Uri? parsedUri) ||
+            (parsedUri.Scheme != Uri.UriSchemeHttp && parsedUri.Scheme != Uri.UriSchemeHttps))
+        {
+            Console.Error.WriteLine(
+                $"[!] --symbol-server must be an absolute http(s) URL. Got: '{symbolServer}'");
+            return 2;
+        }
+    }
+
+    // --- Validate --out-dir ---
+    if (outDir is not null && File.Exists(outDir))
+    {
+        Console.Error.WriteLine(
+            $"[!] --out-dir '{outDir}' already exists as a file, not a directory.");
+        return 2;
+    }
+
+    bool usePlain = formatRaw.Equals("plain", StringComparison.OrdinalIgnoreCase);
+
+    // Color only applies to plain stdout mode; per-file and NDJSON ignore it.
+    bool useColor = usePlain && outDir is null && ResolveColor(colorRaw);
+
+    if (useColor)
+    {
+        TryEnableWindowsVt();
+    }
+
+    // --- Resolve ETL inputs ---
+    List<string> etlFiles = ResolveEtlInputs(etlPathArgs);
+    if (etlFiles.Count == 0)
+    {
+        Console.Error.WriteLine("[!] No .etl files found for the given inputs.");
+        return 1;
+    }
+
+    Console.Error.WriteLine($"[*] Resolved {etlFiles.Count} .etl file(s).");
+
+    // --- Resolve explicit --symbols (unconditional, same as 'realtime') ---
+    (_, List<DecodingContextType> explicitTypes) = ResolveSymbols(symbolPaths);
+
+    // --- Determine effective symbol-store config (CLI flags → _NT_SYMBOL_PATH → defaults) ---
+    (string? effectiveServer, string effectiveCache) = ResolveSymbolStoreConfig(symbolServer, symbolCache);
+
+    // Auto-discovery is triggered when any symbol source is active.
+    bool runAutoDiscovery = symbolSearchPaths.Length > 0
+                            || effectiveServer is not null
+                            || symbolCache is not null;
+
+    List<DecodingContextType> autoTypes = [];
+    if (runAutoDiscovery)
+    {
+        string assemblyVersion =
+            Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion ?? "0.0.0";
+
+        using HttpClient http = new() { Timeout = TimeSpan.FromSeconds(30) };
+        http.DefaultRequestHeaders.UserAgent.ParseAdd($"etwutils/{assemblyVersion}");
+
+        autoTypes = await ResolveAutoSymbolsAsync(
+            etlFiles, symbolSearchPaths, effectiveServer, effectiveCache, http, cancellationToken);
+    }
+
+    // Merge explicit + auto into one DecodingContext.
+    List<DecodingContextType> allTypes = [..explicitTypes, ..autoTypes];
+    DecodingContext? decodingContext = allTypes.Count > 0 ? new DecodingContext(allTypes) : null;
+
+    if (outDir is not null)
+    {
+        return await RunParsePerFileAsync(
+            etlFiles, outDir, decodingContext, usePlain, preserveRaw, cancellationToken);
+    }
+
+    return await RunParseStdoutAsync(
+        etlFiles, decodingContext, usePlain, useColor, preserveRaw, cancellationToken);
+});
+
+// ---------------------------------------------------------------------------
 // Root command
 // ---------------------------------------------------------------------------
-RootCommand root = new("etwutils — Nefarius ETW realtime decoder. Streams decoded events as NDJSON on stdout.")
+RootCommand root = new("etwutils — ETW event decoder and offline trace parser. Stream realtime events or decode .etl files as NDJSON on stdout.")
 {
     realtime,
-    inspectPdb
+    inspectPdb,
+    parse
 };
 
 return await root.Parse(args).InvokeAsync();
@@ -741,6 +950,545 @@ static bool TryAddPdb(List<PdbFileDecodingContextType> pdbContexts, string path)
         Console.Error.WriteLine($"[!] Failed to load '{path}': {ex.Message}");
         return false;
     }
+}
+
+/// <summary>
+///     Resolves the effective symbol-store server URL and local cache directory from CLI flags
+///     or <c>_NT_SYMBOL_PATH</c> when both CLI flags are absent.
+///     Supports <c>srv*cache*url</c>, <c>srv*url</c>, and <c>cache*dir</c> segments.
+/// </summary>
+static (string? Server, string Cache) ResolveSymbolStoreConfig(string? cliServer, string? cliCache)
+{
+    string defaultCache = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Nefarius", "etwutils", "symcache");
+
+    if (cliServer is not null || cliCache is not null)
+        return (cliServer, cliCache ?? defaultCache);
+
+    string? ntSymPath = Environment.GetEnvironmentVariable("_NT_SYMBOL_PATH");
+    if (!string.IsNullOrWhiteSpace(ntSymPath))
+    {
+        foreach (string segment in ntSymPath.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string   seg   = segment.Trim();
+            string[] parts = seg.Split('*');
+
+            // srv*<cache>*<url>
+            if (parts.Length == 3 &&
+                parts[0].Equals("srv", StringComparison.OrdinalIgnoreCase) &&
+                Uri.TryCreate(parts[2], UriKind.Absolute, out Uri? u1) &&
+                (u1.Scheme == Uri.UriSchemeHttp || u1.Scheme == Uri.UriSchemeHttps))
+            {
+                string resolvedCache = string.IsNullOrWhiteSpace(parts[1]) ? defaultCache : parts[1];
+                Console.Error.WriteLine(
+                    $"[*] _NT_SYMBOL_PATH: cache='{resolvedCache}', server='{parts[2]}'");
+                return (parts[2], resolvedCache);
+            }
+
+            // cache*<dir>
+            if (parts.Length == 2 &&
+                parts[0].Equals("cache", StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(parts[1]))
+            {
+                Console.Error.WriteLine($"[*] _NT_SYMBOL_PATH: cache='{parts[1]}'");
+                return (null, parts[1]);
+            }
+
+            // srv*<url>
+            if (parts.Length == 2 &&
+                parts[0].Equals("srv", StringComparison.OrdinalIgnoreCase) &&
+                Uri.TryCreate(parts[1], UriKind.Absolute, out Uri? u2) &&
+                (u2.Scheme == Uri.UriSchemeHttp || u2.Scheme == Uri.UriSchemeHttps))
+            {
+                Console.Error.WriteLine($"[*] _NT_SYMBOL_PATH: server='{parts[1]}'");
+                return (parts[1], defaultCache);
+            }
+
+            Console.Error.WriteLine(
+                $"[*] Ignoring complex _NT_SYMBOL_PATH segment '{seg}'. " +
+                "Use --symbol-server / --symbol-cache for explicit control.");
+            break;
+        }
+    }
+
+    return (null, defaultCache);
+}
+
+/// <summary>
+///     Expands the raw <c>etl-path</c> argument values into a deduplicated, ordered list of
+///     absolute .etl file paths. Accepts files, directories (top-level <c>*.etl</c>), and
+///     glob patterns.
+/// </summary>
+static List<string> ResolveEtlInputs(string[] rawArgs)
+{
+    Dictionary<string, string> seen = new(StringComparer.OrdinalIgnoreCase);
+
+    foreach (string arg in rawArgs)
+    {
+        if (arg.Contains('*') || arg.Contains('?'))
+        {
+            if (ValidateGlobPattern(arg) is string validationError)
+            {
+                Console.Error.WriteLine(validationError);
+                continue;
+            }
+
+            string root    = NormalizeGlobRoot(arg);
+            string pattern = Path.GetFileName(arg);
+            bool   recurse = arg.Contains("**");
+            SearchOption search = recurse ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+
+            if (!Directory.Exists(root))
+            {
+                Console.Error.WriteLine($"[!] Glob root directory not found: {root}");
+                continue;
+            }
+
+            foreach (string file in Directory.EnumerateFiles(root, pattern, search))
+            {
+                if (!file.EndsWith(".etl", StringComparison.OrdinalIgnoreCase)) continue;
+                string full = Path.GetFullPath(file);
+                seen.TryAdd(full, full);
+            }
+        }
+        else if (Directory.Exists(arg))
+        {
+            bool any = false;
+            foreach (string file in Directory.EnumerateFiles(arg, "*.etl", SearchOption.TopDirectoryOnly))
+            {
+                string full = Path.GetFullPath(file);
+                if (seen.TryAdd(full, full)) any = true;
+            }
+
+            if (!any)
+                Console.Error.WriteLine($"[!] No .etl files found in directory: {arg}");
+        }
+        else if (File.Exists(arg))
+        {
+            if (!arg.EndsWith(".etl", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.Error.WriteLine($"[!] '{arg}' does not have a .etl extension; skipping.");
+                continue;
+            }
+
+            string full = Path.GetFullPath(arg);
+            seen.TryAdd(full, full);
+        }
+        else
+        {
+            Console.Error.WriteLine($"[!] Input path not found: {arg}");
+        }
+    }
+
+    return [..seen.Values];
+}
+
+/// <summary>
+///     Searches <paramref name="searchPaths" /> (directories recursively, globs) for a PDB
+///     whose filename matches <paramref name="pdbFileName" /> case-insensitively.
+///     Returns the first match or <see langword="null" />.
+/// </summary>
+static string? FindPdbInSearchPaths(string[] searchPaths, string pdbFileName)
+{
+    foreach (string arg in searchPaths)
+    {
+        if (arg.Contains('*') || arg.Contains('?'))
+        {
+            if (ValidateGlobPattern(arg) is not null) continue;
+
+            string root    = NormalizeGlobRoot(arg);
+            string pattern = Path.GetFileName(arg);
+            if (!Directory.Exists(root)) continue;
+
+            bool recurse = arg.Contains("**");
+            SearchOption search = recurse ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+
+            foreach (string file in Directory.EnumerateFiles(root, pattern, search))
+            {
+                if (Path.GetFileName(file).Equals(pdbFileName, StringComparison.OrdinalIgnoreCase))
+                    return file;
+            }
+        }
+        else if (Directory.Exists(arg))
+        {
+            foreach (string file in Directory.EnumerateFiles(arg, "*.pdb", SearchOption.AllDirectories))
+            {
+                if (Path.GetFileName(file).Equals(pdbFileName, StringComparison.OrdinalIgnoreCase))
+                    return file;
+            }
+        }
+    }
+
+    return null;
+}
+
+/// <summary>
+///     Pre-scans the given .etl files with <see cref="EtwUtil.EnumeratePdbReferences" />, then
+///     resolves each <see cref="PdbMetaData" /> against (1) the local symbol cache,
+///     (2) the <paramref name="searchPaths" /> directories, and (3) a remote symbol server.
+///     Unresolved references are logged to stderr and are non-fatal.
+/// </summary>
+static async Task<List<DecodingContextType>> ResolveAutoSymbolsAsync(
+    List<string> etlFiles,
+    string[] searchPaths,
+    string? symbolServerUrl,
+    string symbolCacheDir,
+    HttpClient http,
+    CancellationToken cancellationToken)
+{
+    List<DecodingContextType> result = [];
+    int fromCache = 0, fromLocal = 0, fromServer = 0, unresolved = 0;
+
+    IReadOnlyCollection<PdbMetaData> refs;
+    try
+    {
+        refs = EtwUtil.EnumeratePdbReferences(etlFiles);
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"[!] PDB pre-scan failed: {ex.GetType().Name}: {ex.Message}");
+        return result;
+    }
+
+    if (refs.Count == 0)
+    {
+        Console.Error.WriteLine("[*] Auto-discovery: no PDB references found in the trace(s).");
+        return result;
+    }
+
+    Console.Error.WriteLine(
+        $"[*] Auto-discovery: resolving {refs.Count} PDB reference(s)...");
+    Directory.CreateDirectory(symbolCacheDir);
+
+    bool hasServer      = !string.IsNullOrWhiteSpace(symbolServerUrl);
+    bool hasSearchPaths = searchPaths.Length > 0;
+
+    foreach (PdbMetaData pdb in refs)
+    {
+        if (cancellationToken.IsCancellationRequested) break;
+
+        string pdbFileName = Path.GetFileName(pdb.PdbName);
+
+        // PdbMetaData.IndexPrefix uses '/' separators; convert for the local file system.
+        string indexPath     = pdb.IndexPrefix.Replace('/', Path.DirectorySeparatorChar);
+        string cacheFilePath = Path.GetFullPath(Path.Combine(symbolCacheDir, indexPath));
+
+        // 1. Cache lookup
+        if (File.Exists(cacheFilePath))
+        {
+            try
+            {
+                result.Add(new PdbFileDecodingContextType(cacheFilePath));
+                Console.Error.WriteLine($"    [cache ] {pdbFileName}");
+                fromCache++;
+                continue;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(
+                    $"[!] Cached PDB '{cacheFilePath}' could not be loaded: {ex.Message}");
+            }
+        }
+
+        // 2. Local search
+        if (hasSearchPaths)
+        {
+            string? found = FindPdbInSearchPaths(searchPaths, pdbFileName);
+            if (found is not null)
+            {
+                try
+                {
+                    result.Add(new PdbFileDecodingContextType(found));
+                    Console.Error.WriteLine($"    [local ] {pdbFileName} <- {found}");
+                    fromLocal++;
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine(
+                        $"[!] Local PDB '{found}' could not be loaded: {ex.Message}");
+                }
+            }
+        }
+
+        // 3. Symbol-server download
+        if (hasServer)
+        {
+            // IndexPrefix already uses '/' so it is safe to embed in a URL directly.
+            string url     = $"{symbolServerUrl!.TrimEnd('/')}/{pdb.IndexPrefix}";
+            string tmpPath = cacheFilePath + ".tmp";
+
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(cacheFilePath)!);
+
+                using HttpResponseMessage response =
+                    await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                              .ConfigureAwait(false);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    Console.Error.WriteLine($"    [404   ] {pdbFileName}");
+                }
+                else
+                {
+                    response.EnsureSuccessStatusCode();
+
+                    await using (FileStream tmp = new(tmpPath, FileMode.Create, FileAccess.Write,
+                                     FileShare.None, 65536, useAsync: true))
+                    {
+                        await response.Content.CopyToAsync(tmp, cancellationToken)
+                                      .ConfigureAwait(false);
+                    }
+
+                    File.Move(tmpPath, cacheFilePath, overwrite: true);
+
+                    result.Add(new PdbFileDecodingContextType(cacheFilePath));
+                    Console.Error.WriteLine($"    [server] {pdbFileName} <- {url}");
+                    fromServer++;
+                    continue;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(
+                    $"[!] Failed to download '{pdbFileName}': {ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
+        // 4. Unresolved (non-fatal – WPP events fall back to GUID=... placeholder)
+        Console.Error.WriteLine(
+            $"    [miss  ] {pdbFileName} (guid={pdb.Guid:D}, age={pdb.Age})");
+        unresolved++;
+    }
+
+    Console.Error.WriteLine(
+        $"[*] Auto-discovery complete: {result.Count}/{refs.Count} resolved " +
+        $"({fromCache} cache, {fromLocal} local, {fromServer} downloaded, {unresolved} unresolved).");
+
+    return result;
+}
+
+/// <summary>
+///     Parses all <paramref name="etlFiles" /> as a single time-merged stream and writes
+///     events to stdout as NDJSON or plain TSV.
+/// </summary>
+static async Task<int> RunParseStdoutAsync(
+    List<string> etlFiles,
+    DecodingContext? decodingContext,
+    bool usePlain,
+    bool useColor,
+    bool preserveRawTimestamps,
+    CancellationToken cancellationToken)
+{
+    using CancellationTokenSource cts =
+        CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+    cts.Token.Register(() =>
+        Console.Error.WriteLine("\r[*] Interrupt received — stopping..."));
+
+    Console.CancelKeyPress += (_, e) =>
+    {
+        e.Cancel = true;
+        try { cts.Cancel(); } catch (ObjectDisposedException) { }
+    };
+
+    AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+    {
+        try { cts.Cancel(); } catch (ObjectDisposedException) { }
+    };
+
+    Stream?      ndjsonOut = usePlain ? null : new BufferedStream(Console.OpenStandardOutput(), 65536);
+    StreamWriter? plainOut = usePlain
+        ? new StreamWriter(Console.OpenStandardOutput(), new System.Text.UTF8Encoding(false), 65536)
+        : null;
+
+    Console.Error.WriteLine($"[*] Streaming {etlFiles.Count} .etl file(s) to stdout...");
+
+    try
+    {
+        await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateEventsAsync(
+                           etlFiles,
+                           o =>
+                           {
+                               o.WppDecodingContext    = decodingContext;
+                               o.PreserveRawTimestamps = preserveRawTimestamps;
+                           },
+                           cts.Token))
+        {
+            if (cts.Token.IsCancellationRequested) break;
+
+            if (usePlain)
+            {
+                await WritePlainLineAsync(json, plainOut!, useColor, cts.Token);
+            }
+            else
+            {
+                await ndjsonOut!.WriteAsync(json, cts.Token);
+                ndjsonOut.WriteByte((byte)'\n');
+                await ndjsonOut.FlushAsync(cts.Token);
+            }
+        }
+    }
+    catch (OperationCanceledException)
+    {
+        // Expected on Ctrl+C.
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"[!] Fatal error: {ex.GetType().Name}: {ex.Message}");
+        return 1;
+    }
+    finally
+    {
+        if (usePlain)
+        {
+            await plainOut!.FlushAsync(CancellationToken.None);
+            await plainOut.DisposeAsync();
+        }
+        else
+        {
+            await ndjsonOut!.FlushAsync(CancellationToken.None);
+            await ndjsonOut.DisposeAsync();
+        }
+
+        Console.Error.WriteLine("[*] Done.");
+    }
+
+    return 0;
+}
+
+/// <summary>
+///     Decodes each .etl file in <paramref name="etlFiles" /> independently and writes the
+///     output to an equally-named file in <paramref name="outDir" />, replacing the
+///     <c>.etl</c> extension with <c>.ndjson</c> or <c>.tsv</c>.
+/// </summary>
+static async Task<int> RunParsePerFileAsync(
+    List<string> etlFiles,
+    string outDir,
+    DecodingContext? decodingContext,
+    bool usePlain,
+    bool preserveRawTimestamps,
+    CancellationToken cancellationToken)
+{
+    string ext = usePlain ? ".tsv" : ".ndjson";
+
+    try
+    {
+        Directory.CreateDirectory(outDir);
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine(
+            $"[!] Cannot create output directory '{outDir}': {ex.GetType().Name}: {ex.Message}");
+        return 2;
+    }
+
+    // Detect output file name collisions before processing anything.
+    Dictionary<string, string> outputMap = new(StringComparer.OrdinalIgnoreCase);
+    bool hasCollision = false;
+
+    foreach (string etl in etlFiles)
+    {
+        string outName = Path.GetFileNameWithoutExtension(etl) + ext;
+        string outPath = Path.Combine(outDir, outName);
+
+        if (outputMap.TryGetValue(outName, out string? previous))
+        {
+            Console.Error.WriteLine(
+                $"[!] Output file name collision: '{previous}' and '{etl}' " +
+                $"both map to '{outPath}'.");
+            hasCollision = true;
+        }
+        else
+        {
+            outputMap[outName] = etl;
+        }
+    }
+
+    if (hasCollision) return 2;
+
+    bool anyFailed = false;
+
+    foreach (string etl in etlFiles)
+    {
+        if (cancellationToken.IsCancellationRequested) break;
+
+        string outName = Path.GetFileNameWithoutExtension(etl) + ext;
+        string outPath = Path.Combine(outDir, outName);
+
+        Console.Error.WriteLine($"[*] {Path.GetFileName(etl)} -> {outPath}");
+
+        long eventCount = 0;
+        try
+        {
+            await using FileStream fileStream = new(outPath, FileMode.Create, FileAccess.Write,
+                FileShare.None, 65536, useAsync: true);
+
+            if (usePlain)
+            {
+                await using StreamWriter writer =
+                    new(fileStream, new System.Text.UTF8Encoding(false), 65536);
+
+                await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateEventsAsync(
+                                   [etl],
+                                   o =>
+                                   {
+                                       o.WppDecodingContext    = decodingContext;
+                                       o.PreserveRawTimestamps = preserveRawTimestamps;
+                                   },
+                                   cancellationToken))
+                {
+                    await WritePlainLineAsync(json, writer, false, cancellationToken);
+                    eventCount++;
+                }
+
+                await writer.FlushAsync(cancellationToken);
+            }
+            else
+            {
+                await using BufferedStream buffered = new(fileStream, 65536);
+
+                await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateEventsAsync(
+                                   [etl],
+                                   o =>
+                                   {
+                                       o.WppDecodingContext    = decodingContext;
+                                       o.PreserveRawTimestamps = preserveRawTimestamps;
+                                   },
+                                   cancellationToken))
+                {
+                    await buffered.WriteAsync(json, cancellationToken);
+                    buffered.WriteByte((byte)'\n');
+                    eventCount++;
+                }
+
+                await buffered.FlushAsync(cancellationToken);
+            }
+
+            Console.Error.WriteLine($"    {eventCount:N0} event(s) written.");
+        }
+        catch (OperationCanceledException)
+        {
+            Console.Error.WriteLine("    [cancelled]");
+            break;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(
+                $"[!] Failed to process '{Path.GetFileName(etl)}': " +
+                $"{ex.GetType().Name}: {ex.Message}");
+            anyFailed = true;
+        }
+    }
+
+    Console.Error.WriteLine("[*] Done.");
+    return anyFailed ? 1 : 0;
 }
 
 /// <summary>
