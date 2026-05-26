@@ -10,6 +10,23 @@ public sealed class DecodingContext
 
 Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md)
 
+## Properties
+
+### <a id="properties-providerguids"/>**ProviderGuids**
+
+The deduplicated union of all WPP trace control GUIDs (= ETW provider GUIDs) across every
+ underlying [DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md). Each GUID corresponds to one
+ `WPP_DEFINE_CONTROL_GUID` declaration found in the loaded PDB files.
+ The collection is empty when the context was built from TMF files only.
+
+```csharp
+public IReadOnlyCollection<Guid> ProviderGuids { get; }
+```
+
+#### Property Value
+
+[IReadOnlyCollection&lt;Guid&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ireadonlycollection-1)<br>
+
 ## Constructors
 
 ### <a id="constructors-.ctor"/>**DecodingContext(IList&lt;DecodingContextType&gt;)**

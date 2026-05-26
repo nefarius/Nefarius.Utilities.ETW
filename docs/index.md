@@ -40,6 +40,8 @@
 
 - [TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md)
 
+- [WppTraceControl](./nefarius.utilities.etw.deserializer.wpp.tmf.wpptracecontrol.md)
+
 ## Namespace Nefarius.Utilities.ETW.Events
 
 - [DbgIdRsdsEventInfo](./nefarius.utilities.etw.events.dbgidrsdseventinfo.md)

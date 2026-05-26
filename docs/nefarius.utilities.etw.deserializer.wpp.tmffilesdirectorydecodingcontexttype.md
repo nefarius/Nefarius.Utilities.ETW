@@ -13,6 +13,22 @@ Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) 
 
 ## Properties
 
+### <a id="properties-providerguids"/>**ProviderGuids**
+
+The distinct set of WPP trace control GUIDs (= ETW provider GUIDs) available from this
+ decoding source. Subclasses that carry the provider GUID — currently only
+ [PdbFileDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.pdbfiledecodingcontexttype.md) via its `TMC:` annotations — override this
+ property. TMF-only sources return an empty collection because `.tmf` files only
+ contain per-call-site message hash GUIDs, not the WPP control GUID.
+
+```csharp
+public IEnumerable<Guid> ProviderGuids { get; }
+```
+
+#### Property Value
+
+[IEnumerable&lt;Guid&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ienumerable-1)<br>
+
 ### <a id="properties-tracemessageformats"/>**TraceMessageFormats**
 
 Collection of extracted [TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md)s of this [DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md).
