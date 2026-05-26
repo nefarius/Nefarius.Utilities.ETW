@@ -387,3 +387,12 @@ All column tokens listed above are available as identifiers directly in the expr
 
 - [GitHub repository](https://github.com/nefarius/Nefarius.Utilities.ETW)
 - [Nefarius.Utilities.ETW library on NuGet](https://www.nuget.org/packages/Nefarius.Utilities.ETW/)
+
+## Credits
+
+| Package | Author / Maintainer | License | Role |
+|---|---|---|---|
+| [DynamicExpresso.Core](https://github.com/dynamicexpresso/DynamicExpresso) | Davide Icardi | MIT | Powers the `--filter` predicate engine |
+| [System.CommandLine](https://github.com/dotnet/command-line-api) | .NET Foundation | MIT | CLI argument parsing, help generation, and tab-completion plumbing |
+| [Smx.PDBSharp](https://github.com/smx-smx/PDBSharp) | smx-smx | MPL-2.0 | PDB file parsing used by `inspect-pdb` and WPP symbol resolution |
+| [MinVer](https://github.com/adamralph/minver) | Adam Ralph | Apache-2.0 | Build-time Git-tag-based version stamping (not shipped at runtime) |
