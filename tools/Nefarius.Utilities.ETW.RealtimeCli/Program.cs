@@ -149,8 +149,17 @@ Command inspectPdb = new(
 inspectPdb.SetAction((ParseResult result) =>
 {
     string[] paths = result.GetValue(inspectPathsArg)!;
-    bool useNdjson = result.GetValue(inspectFormatOpt)!
-        .Equals("ndjson", StringComparison.OrdinalIgnoreCase);
+    string formatValue = result.GetValue(inspectFormatOpt)!;
+
+    if (!formatValue.Equals("plain", StringComparison.OrdinalIgnoreCase) &&
+        !formatValue.Equals("ndjson", StringComparison.OrdinalIgnoreCase))
+    {
+        Console.Error.WriteLine(
+            $"[!] Unknown --format value '{formatValue}'. Expected 'plain' or 'ndjson'.");
+        return 1;
+    }
+
+    bool useNdjson = formatValue.Equals("ndjson", StringComparison.OrdinalIgnoreCase);
 
     // Collect PDB contexts only — TMF sources never carry a control GUID.
     List<PdbFileDecodingContextType> pdbContexts = [];
@@ -159,7 +168,7 @@ inspectPdb.SetAction((ParseResult result) =>
     {
         if (arg.Contains('*') || arg.Contains('?'))
         {
-            string root = Path.GetDirectoryName(arg) ?? ".";
+            string root = NormalizeGlobRoot(arg);
             string pattern = Path.GetFileName(arg);
             bool recurse = arg.Contains("**");
             SearchOption search = recurse ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
@@ -440,7 +449,9 @@ static (DecodingContext? Context, List<DecodingContextType> ContextTypes) Resolv
         {
             // Glob pattern: split into directory root + file pattern.
             // Recurse only when the caller explicitly uses ** in the pattern.
-            string root = Path.GetDirectoryName(arg) ?? ".";
+            // NormalizeGlobRoot strips any wildcard-containing directory segments
+            // (e.g. "C:\Symbols\**\*.pdb" → root "C:\Symbols") so Directory.Exists succeeds.
+            string root = NormalizeGlobRoot(arg);
             string pattern = Path.GetFileName(arg);
             bool recurse = arg.Contains("**");
             SearchOption search = recurse ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
@@ -458,12 +469,11 @@ static (DecodingContext? Context, List<DecodingContextType> ContextTypes) Resolv
         }
         else if (Directory.Exists(arg))
         {
-            // Directory: collect all PDB files recursively and treat the directory
-            // itself as a TMF search path (TmfFilesDirectoryDecodingContextType parses
-            // every *.tmf inside it).
+            // Directory: collect all PDB files recursively (AllDirectories so subdirectories
+            // are included — each PDB is loaded individually so recursion is safe).
             bool anyFound = false;
 
-            foreach (string pdb in Directory.EnumerateFiles(arg, "*.pdb", SearchOption.TopDirectoryOnly))
+            foreach (string pdb in Directory.EnumerateFiles(arg, "*.pdb", SearchOption.AllDirectories))
             {
                 if (AddSymbolFile(contexts, pdb))
                 {
@@ -471,19 +481,25 @@ static (DecodingContext? Context, List<DecodingContextType> ContextTypes) Resolv
                 }
             }
 
-            // Only add the directory as a TMF source when it actually contains TMF files,
-            // so we don't waste time on symbol-only directories.
-            if (Directory.EnumerateFiles(arg, "*.tmf", SearchOption.TopDirectoryOnly).Any())
+            // For TMF: TmfFilesDirectoryDecodingContextType scans a flat directory, so add
+            // each directory that *directly* contains .tmf files as a separate source.
+            // Using AllDirectories in the file search lets us discover TMF dirs in subdirs too.
+            IEnumerable<string> tmfDirs = Directory
+                .EnumerateFiles(arg, "*.tmf", SearchOption.AllDirectories)
+                .Select(f => Path.GetDirectoryName(f)!)
+                .Distinct();
+
+            foreach (string tmfDir in tmfDirs)
             {
                 try
                 {
-                    contexts.Add(new TmfFilesDirectoryDecodingContextType(arg));
-                    Console.Error.WriteLine($"    + {arg} (TMF directory)");
+                    contexts.Add(new TmfFilesDirectoryDecodingContextType(tmfDir));
+                    Console.Error.WriteLine($"    + {tmfDir} (TMF directory)");
                     anyFound = true;
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"[!] Failed to load TMF directory '{arg}': {ex.Message}");
+                    Console.Error.WriteLine($"[!] Failed to load TMF directory '{tmfDir}': {ex.Message}");
                 }
             }
 
@@ -544,6 +560,31 @@ static bool AddSymbolFile(List<DecodingContextType> contexts, string path)
         Console.Error.WriteLine($"[!] Failed to load '{path}': {ex.Message}");
         return false;
     }
+}
+
+/// <summary>
+///     Returns the last path-directory segment of <paramref name="globArg" /> that does not
+///     contain any wildcard characters (<c>*</c> or <c>?</c>).
+///     For example, <c>C:\Symbols\**\*.pdb</c> yields <c>C:\Symbols</c> rather than
+///     <c>C:\Symbols\**</c>, which allows <see cref="Directory.Exists" /> to succeed.
+/// </summary>
+static string NormalizeGlobRoot(string globArg)
+{
+    string? dir = Path.GetDirectoryName(globArg);
+    if (string.IsNullOrEmpty(dir)) return ".";
+
+    while (dir.Contains('*') || dir.Contains('?'))
+    {
+        string? parent = Path.GetDirectoryName(dir);
+        if (parent is null || parent.Length == 0 || parent == dir)
+        {
+            return ".";
+        }
+
+        dir = parent;
+    }
+
+    return dir;
 }
 
 /// <summary>
