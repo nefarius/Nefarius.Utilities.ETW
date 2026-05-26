@@ -35,6 +35,16 @@
 
     <Import Project="$(MSBuildThisFileDirectory)..\..\CommonProjectProperties.targets" />
 
+    <!-- Override the root README that CommonProjectProperties.targets injects for the library package. -->
+    <PropertyGroup>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Remove="$(SolutionDir)README.md" />
+        <None Include="README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
+
     <ItemGroup>
         <PackageReference Include="System.CommandLine" Version="2.0.5" />
         <PackageReference Include="MinVer" Version="7.0.0">
