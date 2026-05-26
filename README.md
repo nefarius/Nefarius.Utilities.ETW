@@ -151,6 +151,8 @@ etwutils realtime [<provider-guid> ...]
     [--symbols <path>] ...             # repeatable; PDB file, directory, or glob
     [--buffer-size-kb <n>]             # ETW buffer size, default 64
     [--flush-seconds  <n>]             # flush interval, default 1
+    [--format <ndjson|plain>]          # output format, default ndjson
+    [--color  <auto|always|never>]     # colorize Level column (plain only), default auto
 ```
 
 `provider-guid` is **optional**. When omitted, the tool reads the `WPP_DEFINE_CONTROL_GUID` declarations embedded in the PDB files passed to `--symbols` and uses those as the provider list. Explicit GUIDs always take precedence; PDB-derived GUIDs are not added on top of explicit ones.
@@ -197,6 +199,25 @@ etwutils realtime \
     --symbols "C:\Symbols\**\*.pdb"
 ```
 
+Stream events in human-friendly plain format (colourised Level when stdout is a TTY):
+
+```bash
+etwutils realtime --symbols C:\Symbols\MyDriver.pdb --format plain
+# 2026-05-26T14:51:23.1234567+02:00	BthPS3TraceGuid	TRACE_LEVEL_INFORMATION	Device arrived: USB\VID_054C&PID_09CC
+```
+
+Pipe plain output into `column` for aligned columns (disables colour automatically):
+
+```bash
+etwutils realtime --symbols C:\Symbols\MyDriver.pdb --format plain | column -t -s $'\t'
+```
+
+Force colour off even on a TTY:
+
+```bash
+etwutils realtime --symbols C:\Symbols\MyDriver.pdb --format plain --color never
+```
+
 List provider GUIDs embedded in a PDB (plain, human-readable — includes control name and bit flags):
 
 ```text
@@ -217,7 +238,9 @@ etwutils inspect-pdb C:\Symbols\MyDriver.pdb --format ndjson | jq .
 # { "guid": "{37DCD579-...}", "name": "BthPS3TraceGuid", "bitFlags": ["MYDRIVER_ALL_INFO", ...], "source": "BthPS3.pdb" }
 ```
 
-### NDJSON contract
+### Output formats
+
+#### NDJSON (default)
 
 Each line written to `stdout` is a self-contained JSON object. Status and error messages are written to `stderr` so the `stdout` pipe stays clean. Ctrl+C stops the session gracefully; the tool exits with code `0` on clean shutdown and `1` on fatal error.
 
@@ -233,6 +256,26 @@ Each line written to `stdout` is a self-contained JSON object. Status and error 
 
 # Example pipeline
 etwutils realtime --symbols C:\Symbols\MyDriver.pdb | jq .
+```
+
+#### Plain (tab-separated)
+
+`--format plain` writes one event per line to `stdout` as four tab-separated columns:
+
+| Column | Content |
+|--------|---------|
+| Timestamp | Local time in ISO-8601 with UTC offset, e.g. `2026-05-26T14:51:23.1234567+02:00` |
+| Provider | WPP provider friendly name (`GuidName`), or the first segment of the TDH event name for non-WPP events |
+| Level | WPP level string (`TRACE_LEVEL_INFORMATION`, etc.) or `-` for non-WPP events |
+| Message | WPP formatted message, or a compact JSON representation of the raw properties for non-WPP events |
+
+Embedded tabs and newlines in the message are escaped to `\t` and `\n` so each event always occupies exactly one output line.
+
+When stdout is a TTY (and `NO_COLOR` is not set), the Level column is automatically colourised: Critical/Fatal → bright red, Error → red, Warning → yellow, Information → cyan, Verbose → gray. Colour is suppressed automatically when piping. Use `--color always|never` to override.
+
+```text
+2026-05-26T14:51:23.1234567+02:00	BthPS3TraceGuid	TRACE_LEVEL_INFORMATION	Device arrived: USB\VID_054C&PID_09CC
+2026-05-26T14:51:23.5678901+02:00	BthPS3TraceGuid	TRACE_LEVEL_VERBOSE	  ConnectRequest: handle=0x0003
 ```
 
 ## Known limitations
