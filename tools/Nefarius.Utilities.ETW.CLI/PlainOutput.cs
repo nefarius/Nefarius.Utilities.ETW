@@ -199,9 +199,11 @@ internal static class PlainOutput
             // property exposed as a separate Parameter<T>, then build a Func<PlainEvent,bool>
             // wrapper that unpacks the record and calls the inner delegate.
 
-            // Build typed parameters for every exposed property.
+            // Primary column-token parameters (used by --columns and --filter alike).
+            // WPP-native aliases follow so users can write either GuidName or Provider, etc.
             Parameter[] propertyParams =
             [
+                // Column tokens
                 new Parameter("Timestamp",         typeof(string)),
                 new Parameter("Provider",          typeof(string)),
                 new Parameter("ProviderGuid",      typeof(string)),
@@ -219,6 +221,15 @@ internal static class PlainOutput
                 new Parameter("Component",         typeof(string)),
                 new Parameter("SubComponent",      typeof(string)),
                 new Parameter("Flags",             typeof(string)),
+
+                // WPP-native aliases — identical values, raw JSON property names
+                new Parameter("GuidName",          typeof(string)),  // == Provider
+                new Parameter("LevelName",         typeof(string)),  // == Level
+                new Parameter("FormattedString",   typeof(string)),  // == Message
+                new Parameter("FunctionName",      typeof(string)),  // == Function
+                new Parameter("ComponentName",     typeof(string)),  // == Component
+                new Parameter("SubComponentName",  typeof(string)),  // == SubComponent
+                new Parameter("FlagsName",         typeof(string)),  // == Flags
             ];
 
             // Parse the expression into a Lambda, constraining the return type to bool so that
@@ -233,6 +244,7 @@ internal static class PlainOutput
             }
 
             Func<PlainEvent, bool> predicate = (PlainEvent evt) => (bool)parsed.Invoke(
+                // Column tokens
                 evt.Timestamp,
                 evt.Provider,
                 evt.ProviderGuid,
@@ -249,7 +261,15 @@ internal static class PlainOutput
                 evt.Function,
                 evt.Component,
                 evt.SubComponent,
-                evt.Flags
+                evt.Flags,
+                // WPP-native aliases
+                evt.Provider,      // GuidName
+                evt.Level,         // LevelName
+                evt.Message,       // FormattedString
+                evt.Function,      // FunctionName
+                evt.Component,     // ComponentName
+                evt.SubComponent,  // SubComponentName
+                evt.Flags          // FlagsName
             )!;
 
             error = null;
