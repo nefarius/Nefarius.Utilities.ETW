@@ -585,6 +585,9 @@ static bool AddSymbolFile(List<DecodingContextType> contexts, string path)
 ///     <c>C:\Symbols\**\*.pdb</c> (standalone <c>**</c> recursion marker).
 ///     Rejected: <c>C:\Sym*\*.pdb</c> or <c>C:\Symbols\sub?\*.pdb</c>
 ///     (wildcards in a non-terminal, non-<c>**</c> directory segment).
+///     Also rejected: <c>C:\Symbols\**</c> or a trailing separator — patterns
+///     with no filename component produce an invalid <c>searchPattern</c> for
+///     <see cref="Directory.EnumerateFiles" />.
 /// </remarks>
 static string? ValidateGlobPattern(string globArg)
 {
@@ -602,6 +605,17 @@ static string? ValidateGlobPattern(string globArg)
                    $"Use a filename-only wildcard (e.g. *.pdb) or '**' for recursion " +
                    $"(e.g. Symbols\\**\\*.pdb).";
         }
+    }
+
+    // The last segment is the filename pattern passed to Directory.EnumerateFiles as
+    // searchPattern. "**" and empty are not valid searchPattern values and would throw
+    // ArgumentException at runtime; reject them here with a clear message.
+    string lastSeg = segments.Length > 0 ? segments[^1] : string.Empty;
+    if (lastSeg == "**" || lastSeg.Length == 0)
+    {
+        return $"[!] Glob pattern '{globArg}' has no filename component. " +
+               $"Use a filename wildcard (e.g. *.pdb) or '**' with a filename " +
+               $"(e.g. Symbols\\**\\*.pdb).";
     }
 
     return null;
