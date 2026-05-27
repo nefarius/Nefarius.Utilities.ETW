@@ -65,9 +65,22 @@ internal static class VerboseRegistry
 
         if (candidate.Kind == ServiceKind.Kernel)
         {
-            // CreateSubKey creates the Parameters subkey if absent (the parent service key must
-            // exist, which Detect() already confirmed by successfully reading the Type value).
-            target = hklm.CreateSubKey(candidate.TargetKeyPath, writable: true);
+            // Split TargetKeyPath into the parent service key and the "Parameters" child name
+            // so that CreateSubKey only ever creates the leaf ("Parameters") and never
+            // recreates a parent service key that was deleted after detection.
+            int sep = candidate.TargetKeyPath.LastIndexOf('\\');
+            string parentPath = candidate.TargetKeyPath[..sep];
+            string childName  = candidate.TargetKeyPath[(sep + 1)..];
+
+            using RegistryKey? parentKey = hklm.OpenSubKey(parentPath, writable: true);
+            if (parentKey is null)
+            {
+                throw new InvalidOperationException(
+                    $"Service key HKLM\\{parentPath} no longer exists. " +
+                    "The service may have been removed after detection.");
+            }
+
+            target = parentKey.CreateSubKey(childName, writable: true);
         }
         else
         {
@@ -80,8 +93,7 @@ internal static class VerboseRegistry
         if (target is null)
         {
             throw new InvalidOperationException(
-                $"Could not open registry key HKLM\\{candidate.TargetKeyPath}. " +
-                "The key must already exist for UMDF services.");
+                $"Could not open or create registry key HKLM\\{candidate.TargetKeyPath}.");
         }
 
         target.SetValue("VerboseOn", 1, RegistryValueKind.DWord);
