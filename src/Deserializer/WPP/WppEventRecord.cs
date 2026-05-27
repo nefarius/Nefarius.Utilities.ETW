@@ -205,59 +205,62 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                         continue;
                     }
 
-                    // these properties can be fetched with the way faster API
-                    byte* primitivePropertyBuffer = (byte*)Marshal.AllocHGlobal((int)propSize);
-
+                    // Primitive property types (uint/Guid/SYSTEMTIME/FILETIME) are always ≤ 16 bytes,
+                    // but we rent from the pool for consistency and to keep the allocation off the heap.
+                    byte[] primBufArr = ArrayPool<byte>.Shared.Rent((int)propSize);
                     try
                     {
-                        WIN32_ERROR getPrimPropRet = (WIN32_ERROR)PInvoke.TdhGetProperty(
-                            eventRecordReader.NativeEventRecord,
-                            0,
-                            null,
-                            1,
-                            &propertyDescriptor,
-                            propSize,
-                            primitivePropertyBuffer
-                        );
-
-                        if (getPrimPropRet != WIN32_ERROR.ERROR_SUCCESS)
+                        fixed (byte* primitivePropertyBuffer = primBufArr)
                         {
-                            throw new TdhGetPropertyException(getPrimPropRet);
-                        }
+                            WIN32_ERROR getPrimPropRet = (WIN32_ERROR)PInvoke.TdhGetProperty(
+                                eventRecordReader.NativeEventRecord,
+                                0,
+                                null,
+                                1,
+                                &propertyDescriptor,
+                                propSize,
+                                primitivePropertyBuffer
+                            );
 
-                        // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
-                        switch (propertyType)
-                        {
-                            case _TDH_IN_TYPE.TDH_INTYPE_UINT32:
-                                value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(uint));
-                                break;
-                            case _TDH_IN_TYPE.TDH_INTYPE_GUID:
-                                value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(Guid));
-                                if (propertyName.Equals(nameof(TraceGuid)))
-                                {
-                                    format = decodingContext.GetTraceMessageFormatFor((Guid?)value, GuidTypeNameFormatId);
-                                }
+                            if (getPrimPropRet != WIN32_ERROR.ERROR_SUCCESS)
+                            {
+                                throw new TdhGetPropertyException(getPrimPropRet);
+                            }
 
-                                break;
-                            case _TDH_IN_TYPE.TDH_INTYPE_SYSTEMTIME:
-                                value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(SYSTEMTIME));
-                                break;
-                            case _TDH_IN_TYPE.TDH_INTYPE_FILETIME:
-                                value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(FILETIME));
-                                break;
-                            default:
-                                throw new NotImplementedException($"Property type {propertyType} not implemented.");
-                        }
+                            // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
+                            switch (propertyType)
+                            {
+                                case _TDH_IN_TYPE.TDH_INTYPE_UINT32:
+                                    value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(uint));
+                                    break;
+                                case _TDH_IN_TYPE.TDH_INTYPE_GUID:
+                                    value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(Guid));
+                                    if (propertyName.Equals(nameof(TraceGuid)))
+                                    {
+                                        format = decodingContext.GetTraceMessageFormatFor((Guid?)value, GuidTypeNameFormatId);
+                                    }
 
-                        if (value is not null)
-                        {
-                            // set managed property by name
-                            self[propertyName] = value;
+                                    break;
+                                case _TDH_IN_TYPE.TDH_INTYPE_SYSTEMTIME:
+                                    value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(SYSTEMTIME));
+                                    break;
+                                case _TDH_IN_TYPE.TDH_INTYPE_FILETIME:
+                                    value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(FILETIME));
+                                    break;
+                                default:
+                                    throw new NotImplementedException($"Property type {propertyType} not implemented.");
+                            }
+
+                            if (value is not null)
+                            {
+                                // set managed property by name
+                                self[propertyName] = value;
+                            }
                         }
                     }
                     finally
                     {
-                        Marshal.FreeHGlobal((IntPtr)primitivePropertyBuffer);
+                        ArrayPool<byte>.Shared.Return(primBufArr);
                     }
                 }
             }
