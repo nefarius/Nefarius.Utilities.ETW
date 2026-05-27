@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
@@ -96,162 +97,177 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
             throw new TdhGetEventInformationException(infoRet);
         }
 
-        byte* infoBuffer = stackalloc byte[(int)bufferSize];
-        TRACE_EVENT_INFO* traceEventInfo = (TRACE_EVENT_INFO*)infoBuffer;
-        infoRet = (WIN32_ERROR)PInvoke.TdhGetEventInformation(
-            eventRecordReader.NativeEventRecord,
-            0,
-            null,
-            traceEventInfo,
-            &bufferSize
-        );
-
-        if (infoRet != WIN32_ERROR.ERROR_SUCCESS)
+        // Heap-allocate the TRACE_EVENT_INFO buffer via ArrayPool to avoid a stack overflow when
+        // bufferSize is large (stackalloc on an unbounded value crashed with 0xC0000005).
+        byte[] infoBufferArr = ArrayPool<byte>.Shared.Rent((int)bufferSize);
+        try
         {
-            throw new TdhGetEventInformationException(infoRet);
-        }
-
-        // we can look for this once we have the "TraceGuid" property value
-        TraceMessageFormat? format = null;
-
-        // we expect 20 WPP properties, but this dynamic approach is safer
-        for (int propertyIndex = 0; propertyIndex < traceEventInfo->PropertyCount; propertyIndex++)
-        {
-            EVENT_PROPERTY_INFO propertyInfo = traceEventInfo->EventPropertyInfoArray[propertyIndex];
-            _TDH_IN_TYPE propertyType = (_TDH_IN_TYPE)propertyInfo.Anonymous1.customSchemaType.InType;
-            string propertyName = new((char*)((byte*)traceEventInfo + propertyInfo.NameOffset));
-
-            PROPERTY_DATA_DESCRIPTOR propertyDescriptor = new()
+            fixed (byte* infoBuffer = infoBufferArr)
             {
-                // Pointer to a null-terminated Unicode string that contains the case-sensitive property name.
-                // You can use the NameOffset member of the EVENT_PROPERTY_INFO structure to get the property name.
-                PropertyName = (ulong)((byte*)traceEventInfo + propertyInfo.NameOffset),
-                // Zero-based index for accessing elements of a property array.
-                // If the property data is not an array or if you want to address the entire array,
-                // specify ULONG_MAX (0xFFFFFFFF).
-                ArrayIndex = uint.MaxValue
-            };
-
-            uint propSize = 0;
-            // fetch the size of properties that do not need decoding 
-            WIN32_ERROR sizeRet = (WIN32_ERROR)PInvoke.TdhGetPropertySize(
-                eventRecordReader.NativeEventRecord,
-                0,
-                null,
-                1,
-                &propertyDescriptor,
-                &propSize
-            );
-
-            if (sizeRet != WIN32_ERROR.ERROR_SUCCESS)
-            {
-                throw new TdhGetPropertySizeException(sizeRet);
-            }
-
-            object? value = null;
-
-            // we need to decode those using available TMF objects
-            if (propertyType == _TDH_IN_TYPE.TDH_INTYPE_UNICODESTRING)
-            {
-                if (format is not null)
-                {
-                    value = propertyName switch
-                    {
-                        nameof(GuidName) => format.Provider,
-                        nameof(GuidTypeName) => format.Opcode,
-                        nameof(FlagsName) => format.Flags,
-                        nameof(LevelName) => format.Level,
-                        nameof(FunctionName) => format.Function,
-                        nameof(FormattedString) => SubstituteFunctionParameters(format),
-                        // TODO: what even is this one?
-                        // Not listed here: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/trace-message-prefix
-                        // I guess it is %!STDPREFIX!
-                        // more info: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/how-do-i-add-a-prefix-and-suffix-to-a-trace-message-#configuration-block-syntax
-                        //.Replace("%0 ", string.Empty)
-                        // TODO: can there be more than these?
-                        // see: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-#software-tracing
-                        //.Replace("%!FUNC!", format.Function),
-                        nameof(ComponentName) => ReadUnicodeStringProperty(&propertyDescriptor, propSize),
-                        nameof(SubComponentName) => ReadUnicodeStringProperty(&propertyDescriptor, propSize),
-                        _ => throw new NotImplementedException($"Unknown property \"{propertyName}\" encountered.")
-                    };
-                }
-                // fallback value to inform the caller that we couldn't decode 
-                else if (propertyName.Equals(nameof(FormattedString)))
-                {
-                    value = new StringBuilder().Append("GUID=")
-                        .Append(TraceGuid.ToString().ToUpperInvariant())
-                        .Append(", ID=")
-                        .Append(GuidTypeNameFormatId)
-                        .Append(", Version=")
-                        .Append(Version)
-                        .Append(" - No format information found.")
-                        .ToString();
-                }
-
-                if (value is not null)
-                {
-                    // set managed property by name
-                    self[propertyName] = value;
-                }
-
-                continue;
-            }
-
-            // these properties can be fetched with the way faster API
-            byte* primitivePropertyBuffer = (byte*)Marshal.AllocHGlobal((int)propSize);
-
-            try
-            {
-                WIN32_ERROR getPrimPropRet = (WIN32_ERROR)PInvoke.TdhGetProperty(
+                TRACE_EVENT_INFO* traceEventInfo = (TRACE_EVENT_INFO*)infoBuffer;
+                infoRet = (WIN32_ERROR)PInvoke.TdhGetEventInformation(
                     eventRecordReader.NativeEventRecord,
                     0,
                     null,
-                    1,
-                    &propertyDescriptor,
-                    propSize,
-                    primitivePropertyBuffer
+                    traceEventInfo,
+                    &bufferSize
                 );
 
-                if (getPrimPropRet != WIN32_ERROR.ERROR_SUCCESS)
+                if (infoRet != WIN32_ERROR.ERROR_SUCCESS)
                 {
-                    throw new TdhGetPropertyException(getPrimPropRet);
+                    throw new TdhGetEventInformationException(infoRet);
                 }
 
-                // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
-                switch (propertyType)
+                // we can look for this once we have the "TraceGuid" property value
+                TraceMessageFormat? format = null;
+
+                // we expect 20 WPP properties, but this dynamic approach is safer
+                for (int propertyIndex = 0; propertyIndex < traceEventInfo->PropertyCount; propertyIndex++)
                 {
-                    case _TDH_IN_TYPE.TDH_INTYPE_UINT32:
-                        value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(uint));
-                        break;
-                    case _TDH_IN_TYPE.TDH_INTYPE_GUID:
-                        value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(Guid));
-                        if (propertyName.Equals(nameof(TraceGuid)))
+                    EVENT_PROPERTY_INFO propertyInfo = traceEventInfo->EventPropertyInfoArray[propertyIndex];
+                    _TDH_IN_TYPE propertyType = (_TDH_IN_TYPE)propertyInfo.Anonymous1.customSchemaType.InType;
+                    string propertyName = new((char*)((byte*)traceEventInfo + propertyInfo.NameOffset));
+
+                    PROPERTY_DATA_DESCRIPTOR propertyDescriptor = new()
+                    {
+                        // Pointer to a null-terminated Unicode string that contains the case-sensitive property name.
+                        // You can use the NameOffset member of the EVENT_PROPERTY_INFO structure to get the property name.
+                        PropertyName = (ulong)((byte*)traceEventInfo + propertyInfo.NameOffset),
+                        // Zero-based index for accessing elements of a property array.
+                        // If the property data is not an array or if you want to address the entire array,
+                        // specify ULONG_MAX (0xFFFFFFFF).
+                        ArrayIndex = uint.MaxValue
+                    };
+
+                    uint propSize = 0;
+                    // fetch the size of properties that do not need decoding
+                    WIN32_ERROR sizeRet = (WIN32_ERROR)PInvoke.TdhGetPropertySize(
+                        eventRecordReader.NativeEventRecord,
+                        0,
+                        null,
+                        1,
+                        &propertyDescriptor,
+                        &propSize
+                    );
+
+                    if (sizeRet != WIN32_ERROR.ERROR_SUCCESS)
+                    {
+                        throw new TdhGetPropertySizeException(sizeRet);
+                    }
+
+                    object? value = null;
+
+                    // we need to decode those using available TMF objects
+                    if (propertyType == _TDH_IN_TYPE.TDH_INTYPE_UNICODESTRING)
+                    {
+                        if (format is not null)
                         {
-                            format = decodingContext.GetTraceMessageFormatFor((Guid?)value, GuidTypeNameFormatId);
+                            value = propertyName switch
+                            {
+                                nameof(GuidName) => format.Provider,
+                                nameof(GuidTypeName) => format.Opcode,
+                                nameof(FlagsName) => format.Flags,
+                                nameof(LevelName) => format.Level,
+                                nameof(FunctionName) => format.Function,
+                                nameof(FormattedString) => SubstituteFunctionParameters(format),
+                                // TODO: what even is this one?
+                                // Not listed here: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/trace-message-prefix
+                                // I guess it is %!STDPREFIX!
+                                // more info: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/how-do-i-add-a-prefix-and-suffix-to-a-trace-message-#configuration-block-syntax
+                                //.Replace("%0 ", string.Empty)
+                                // TODO: can there be more than these?
+                                // see: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-#software-tracing
+                                //.Replace("%!FUNC!", format.Function),
+                                nameof(ComponentName) => ReadUnicodeStringProperty(&propertyDescriptor, propSize),
+                                nameof(SubComponentName) => ReadUnicodeStringProperty(&propertyDescriptor, propSize),
+                                _ => throw new NotImplementedException($"Unknown property \"{propertyName}\" encountered.")
+                            };
+                        }
+                        // fallback value to inform the caller that we couldn't decode
+                        else if (propertyName.Equals(nameof(FormattedString)))
+                        {
+                            value = new StringBuilder().Append("GUID=")
+                                .Append(TraceGuid.ToString().ToUpperInvariant())
+                                .Append(", ID=")
+                                .Append(GuidTypeNameFormatId)
+                                .Append(", Version=")
+                                .Append(Version)
+                                .Append(" - No format information found.")
+                                .ToString();
                         }
 
-                        break;
-                    case _TDH_IN_TYPE.TDH_INTYPE_SYSTEMTIME:
-                        value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(SYSTEMTIME));
-                        break;
-                    case _TDH_IN_TYPE.TDH_INTYPE_FILETIME:
-                        value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(FILETIME));
-                        break;
-                    default:
-                        throw new NotImplementedException($"Property type {propertyType} not implemented.");
-                }
+                        if (value is not null)
+                        {
+                            // set managed property by name
+                            self[propertyName] = value;
+                        }
 
-                if (value is not null)
-                {
-                    // set managed property by name
-                    self[propertyName] = value;
+                        continue;
+                    }
+
+                    // Primitive property types (uint/Guid/SYSTEMTIME/FILETIME) are always ≤ 16 bytes,
+                    // but we rent from the pool for consistency and to keep the allocation off the heap.
+                    byte[] primBufArr = ArrayPool<byte>.Shared.Rent((int)propSize);
+                    try
+                    {
+                        fixed (byte* primitivePropertyBuffer = primBufArr)
+                        {
+                            WIN32_ERROR getPrimPropRet = (WIN32_ERROR)PInvoke.TdhGetProperty(
+                                eventRecordReader.NativeEventRecord,
+                                0,
+                                null,
+                                1,
+                                &propertyDescriptor,
+                                propSize,
+                                primitivePropertyBuffer
+                            );
+
+                            if (getPrimPropRet != WIN32_ERROR.ERROR_SUCCESS)
+                            {
+                                throw new TdhGetPropertyException(getPrimPropRet);
+                            }
+
+                            // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
+                            switch (propertyType)
+                            {
+                                case _TDH_IN_TYPE.TDH_INTYPE_UINT32:
+                                    value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(uint));
+                                    break;
+                                case _TDH_IN_TYPE.TDH_INTYPE_GUID:
+                                    value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(Guid));
+                                    if (propertyName.Equals(nameof(TraceGuid)))
+                                    {
+                                        format = decodingContext.GetTraceMessageFormatFor((Guid?)value, GuidTypeNameFormatId);
+                                    }
+
+                                    break;
+                                case _TDH_IN_TYPE.TDH_INTYPE_SYSTEMTIME:
+                                    value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(SYSTEMTIME));
+                                    break;
+                                case _TDH_IN_TYPE.TDH_INTYPE_FILETIME:
+                                    value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(FILETIME));
+                                    break;
+                                default:
+                                    throw new NotImplementedException($"Property type {propertyType} not implemented.");
+                            }
+
+                            if (value is not null)
+                            {
+                                // set managed property by name
+                                self[propertyName] = value;
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        ArrayPool<byte>.Shared.Return(primBufArr);
+                    }
                 }
             }
-            finally
-            {
-                Marshal.FreeHGlobal((IntPtr)primitivePropertyBuffer);
-            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(infoBufferArr);
         }
     }
 
