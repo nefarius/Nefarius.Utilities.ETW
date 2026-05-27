@@ -48,20 +48,40 @@ internal static class VerboseRegistry
 
     /// <summary>
     ///     Writes <c>VerboseOn = 1</c> (REG_DWORD) at the location described by
-    ///     <paramref name="candidate" />.  For kernel services the <c>Parameters</c> subkey is
-    ///     created on demand when it does not already exist.
+    ///     <paramref name="candidate" />.
+    ///     <list type="bullet">
+    ///       <item>Kernel: the <c>Parameters</c> subkey is created on demand when absent; the parent
+    ///         service key must already exist.</item>
+    ///       <item>UMDF: the WUDF service key must already exist; it is never auto-created so that a
+    ///         stale or mismatched service name cannot synthesise phantom registry entries.</item>
+    ///     </list>
     ///     Throws <see cref="UnauthorizedAccessException" /> when the process lacks write access
     ///     (i.e. is not elevated); the caller is responsible for translating this into an error message.
     /// </summary>
     internal static void Enable(Candidate candidate)
     {
-        using RegistryKey hklm    = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
-        using RegistryKey? target = hklm.CreateSubKey(candidate.TargetKeyPath, writable: true);
+        using RegistryKey hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+        RegistryKey? target;
+
+        if (candidate.Kind == ServiceKind.Kernel)
+        {
+            // CreateSubKey creates the Parameters subkey if absent (the parent service key must
+            // exist, which Detect() already confirmed by successfully reading the Type value).
+            target = hklm.CreateSubKey(candidate.TargetKeyPath, writable: true);
+        }
+        else
+        {
+            // For UMDF the target is the WUDF service key itself; never auto-create it.
+            target = hklm.OpenSubKey(candidate.TargetKeyPath, writable: true);
+        }
+
+        using RegistryKey? _ = target; // ensure Dispose regardless of path
 
         if (target is null)
         {
             throw new InvalidOperationException(
-                $"Could not open or create registry key HKLM\\{candidate.TargetKeyPath}.");
+                $"Could not open registry key HKLM\\{candidate.TargetKeyPath}. " +
+                "The key must already exist for UMDF services.");
         }
 
         target.SetValue("VerboseOn", 1, RegistryValueKind.DWord);

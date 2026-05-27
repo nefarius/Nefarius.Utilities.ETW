@@ -655,12 +655,16 @@ Argument<string> verboseServiceArg = new("service-name")
 
 Option<bool> verboseEnableOpt = new("--enable")
 {
-    Description = "Set VerboseOn = 1 in the driver service's Parameters key."
+    Description =
+        "Set VerboseOn = 1 (REG_DWORD) in the driver service's registry key " +
+        "(Parameters subkey for kernel-mode; service key directly for UMDF)."
 };
 
 Option<bool> verboseDisableOpt = new("--disable")
 {
-    Description = "Delete the VerboseOn value from the driver service's Parameters key."
+    Description =
+        "Delete the VerboseOn value from the driver service's registry key " +
+        "(Parameters subkey for kernel-mode; service key directly for UMDF)."
 };
 
 Option<bool> verboseStatusOpt = new("--status")
@@ -683,7 +687,7 @@ Option<bool> verboseDryRunOpt = new("--dry-run")
 Command verbose = new(
     "verbose",
     "Enable or disable WPP verbose tracing for a kernel-mode or UMDF driver service by " +
-    "writing the VerboseOn REG_DWORD under the service's Parameters key. " +
+    "writing the VerboseOn REG_DWORD to the driver's registry key. " +
     "Requires an elevated (admin) process for --enable and --disable.")
 {
     verboseServiceArg,
@@ -702,6 +706,22 @@ verbose.SetAction((ParseResult result) =>
     bool   doStatus    = result.GetValue(verboseStatusOpt);
     string? typeRaw    = result.GetValue(verboseTypeOpt);
     bool   dryRun      = result.GetValue(verboseDryRunOpt);
+
+    // --- Validate service name ---
+    if (string.IsNullOrWhiteSpace(serviceName))
+    {
+        Console.Error.WriteLine("[!] service-name must not be empty or whitespace.");
+        return 2;
+    }
+
+    // Reject path separators and common invalid registry key characters to prevent
+    // a caller from composing registry paths outside the expected service subtree.
+    if (serviceName.IndexOfAny(['\\', '/', '\0']) >= 0)
+    {
+        Console.Error.WriteLine(
+            "[!] service-name must not contain path separators ('\\', '/') or null characters.");
+        return 2;
+    }
 
     // --- Validate mutually exclusive action flags ---
     int actionCount = (doEnable ? 1 : 0) + (doDisable ? 1 : 0) + (doStatus ? 1 : 0);
