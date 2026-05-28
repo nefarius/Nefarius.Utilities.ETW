@@ -60,7 +60,7 @@ When `--symbols-search`, `--symbol-server`, or `--symbol-cache` is supplied (or 
 2. **Search paths** — first case-insensitive filename match in `--symbols-search` directories.
 3. **Symbol server** — `GET <url>/<pdbname>/<GUID><AGE>/<pdbname>`; downloaded atomically into the cache.
 
-Unresolved PDBs log a `[!]` warning and are non-fatal; affected WPP events fall back to a `GUID=...` placeholder.
+Unresolved PDBs log a `[!]` warning and are non-fatal; affected WPP events fall back to a `GUID=...` placeholder. In addition, each distinct provider GUID that triggers the placeholder also emits a one-time `[!]` warning to `stderr` at decode time, so symbol mismatches are surfaced immediately even when piping output through `--filter`.
 
 ##### Default cache directory
 

@@ -83,10 +83,14 @@ internal sealed class WppTraceEventParser : ICustomParser
             nameof(WppEventRecord.ProviderGuid), false, false, 0, null);
     }
 
-    public WppTraceEventParser(DecodingContext decodingContext)
+    private readonly Action<Guid, ushort, uint>? _onFormatMissing;
+
+    public WppTraceEventParser(DecodingContext decodingContext,
+        Action<Guid, ushort, uint>? onFormatMissing = null)
     {
         ArgumentNullException.ThrowIfNull(decodingContext);
         DecodingContext = decodingContext;
+        _onFormatMissing = onFormatMissing;
     }
 
     public DecodingContext DecodingContext { get; init; }
@@ -112,7 +116,7 @@ internal sealed class WppTraceEventParser : ICustomParser
 
         WppEventRecord decodedRecord = new(reader);
         // this does the heavy lifting of retrieving properties with the decoding context 
-        decodedRecord.Decode(DecodingContext);
+        decodedRecord.Decode(DecodingContext, _onFormatMissing);
 
         writer.WriteEventBegin(eventMetadata, runtimeMetadata);
 

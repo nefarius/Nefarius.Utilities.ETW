@@ -969,6 +969,8 @@ static async Task<int> RunAsync(
         TryEnableWindowsVt();
     }
 
+    Action<Guid, ushort, uint> missingFormatWarner = CreateMissingFormatWarner();
+
     try
     {
         using EtwRealtimeSession session = EtwRealtimeSession.Create(sessionName, opts =>
@@ -997,7 +999,11 @@ static async Task<int> RunAsync(
 
         await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateRealtimeEventsAsync(
                            sessionName,
-                           o => o.WppDecodingContext = decodingContext,
+                           o =>
+                           {
+                               o.WppDecodingContext  = decodingContext;
+                               o.OnWppFormatMissing  = missingFormatWarner;
+                           },
                            cts.Token))
         {
             // Stop emitting immediately once cancellation is requested so no
@@ -1697,6 +1703,8 @@ static async Task<int> RunParseStdoutAsync(
         ? new StreamWriter(Console.OpenStandardOutput(), new System.Text.UTF8Encoding(false), 65536)
         : null;
 
+    Action<Guid, ushort, uint> missingFormatWarner = CreateMissingFormatWarner();
+
     Console.Error.WriteLine($"[*] Streaming {etlFiles.Count} .etl file(s) to stdout...");
 
     try
@@ -1713,6 +1721,7 @@ static async Task<int> RunParseStdoutAsync(
                            {
                                o.WppDecodingContext    = decodingContext;
                                o.PreserveRawTimestamps = preserveRawTimestamps;
+                               o.OnWppFormatMissing    = missingFormatWarner;
                            },
                            cts.Token))
         {
@@ -1813,6 +1822,9 @@ static async Task<int> RunParsePerFileAsync(
 
     bool anyFailed = false;
 
+    // One warner per command run so each provider GUID is reported at most once across all ETL files.
+    Action<Guid, ushort, uint> missingFormatWarner = CreateMissingFormatWarner();
+
     foreach (string etl in etlFiles)
     {
         if (cancellationToken.IsCancellationRequested) break;
@@ -1844,6 +1856,7 @@ static async Task<int> RunParsePerFileAsync(
                                    {
                                        o.WppDecodingContext    = decodingContext;
                                        o.PreserveRawTimestamps = preserveRawTimestamps;
+                                       o.OnWppFormatMissing    = missingFormatWarner;
                                    },
                                    cancellationToken))
                 {
@@ -1864,6 +1877,7 @@ static async Task<int> RunParsePerFileAsync(
                                    {
                                        o.WppDecodingContext    = decodingContext;
                                        o.PreserveRawTimestamps = preserveRawTimestamps;
+                                       o.OnWppFormatMissing    = missingFormatWarner;
                                    },
                                    cancellationToken))
                 {
@@ -1909,6 +1923,30 @@ static bool ResolveColor(string colorOpt)
     if (!string.IsNullOrEmpty(noColor)) return false;
     if (Console.IsOutputRedirected) return false;
     return true;
+}
+
+/// <summary>
+///     Returns a callback suitable for <see cref="EtwJsonConverterOptions.OnWppFormatMissing" /> that
+///     prints a single <c>[!]</c> warning to <c>stderr</c> the first time each provider GUID is seen
+///     without format information.  The deduplication is per-instance so callers should create one
+///     warner per command invocation and share it across all option-lambdas in that run.
+/// </summary>
+static Action<Guid, ushort, uint> CreateMissingFormatWarner()
+{
+    HashSet<Guid> warned = [];
+    return (guid, _, _) =>
+    {
+        lock (warned)
+        {
+            if (!warned.Add(guid)) return;
+            Console.Error.WriteLine(
+                $"[!] No WPP format information found for provider {{{guid}}}. " +
+                "This usually means the loaded PDB does not match the binary that produced the trace " +
+                "(wrong PDB age/GUID). Affected events will appear as " +
+                "'GUID=... - No format information found.' and may not match --filter expressions " +
+                "targeting Message, FunctionName, Function, or Level.");
+        }
+    };
 }
 
 /// <summary>

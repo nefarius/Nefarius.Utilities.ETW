@@ -85,7 +85,8 @@ public static class EtwUtil
         Deserializer<EtwJsonWriter> deserializer = new(
             new EtwJsonWriter(jsonWriter),
             opts.CustomProviderManifest,
-            opts.WppDecodingContext
+            opts.WppDecodingContext,
+            opts.OnWppFormatMissing
         );
 
         int count = list.Count;
@@ -212,7 +213,8 @@ public static class EtwUtil
         Deserializer<EtwJsonWriter> deserializer = new(
             new EtwJsonWriter(jsonWriter),
             opts.CustomProviderManifest,
-            opts.WppDecodingContext
+            opts.WppDecodingContext,
+            opts.OnWppFormatMissing
         );
 
         EVENT_TRACE_LOGFILEW session;
@@ -634,7 +636,8 @@ public static class EtwUtil
         Deserializer<EtwJsonChannelWriter> deserializer = new(
             channelWriter,
             opts.CustomProviderManifest,
-            opts.WppDecodingContext
+            opts.WppDecodingContext,
+            opts.OnWppFormatMissing
         );
 
         string workerName = realtimeSessionName is not null
