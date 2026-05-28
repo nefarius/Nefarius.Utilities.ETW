@@ -15,6 +15,15 @@ public sealed class EtwJsonConverterOptions
     public Action<string>? ReportError { get; set; }
 
     /// <summary>
+    ///     Invoked whenever a WPP event is decoded but no matching <see cref="Deserializer.WPP.TMF.TraceMessageFormat" />
+    ///     was found in the supplied <see cref="WppDecodingContext" /> (i.e. the event's <c>FormattedString</c> was
+    ///     substituted with the <c>"GUID=... - No format information found."</c> placeholder).
+    ///     Receives the provider trace GUID, the WPP event id, and the version.
+    ///     Fires once per affected event; consumers are expected to deduplicate as needed.
+    /// </summary>
+    public Action<Guid, ushort, uint>? OnWppFormatMissing { get; set; }
+
+    /// <summary>
     ///     Custom manifest provider lookup.
     /// </summary>
     public Func<Guid, Stream?>? CustomProviderManifest { get; set; }

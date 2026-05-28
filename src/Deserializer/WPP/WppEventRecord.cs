@@ -76,10 +76,16 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
     ///     Decodes well-known WPP properties from a given <see cref="EVENT_RECORD" />.
     /// </summary>
     /// <param name="decodingContext">The <see cref="DecodingContext" /> to use.</param>
+    /// <param name="onFormatMissing">
+    ///     Optional callback invoked when no <see cref="TMF.TraceMessageFormat" /> is found for this
+    ///     event. Receives the trace GUID, the event id, and the version. Fires before the
+    ///     placeholder <c>FormattedString</c> is written.
+    /// </param>
     /// <exception cref="TdhGetEventInformationException">Failed to get event information.</exception>
     /// <exception cref="TdhGetPropertySizeException">Failed to query property size.</exception>
     /// <exception cref="TdhGetPropertyException">Failed to get property content.</exception>
-    public void Decode(DecodingContext decodingContext)
+    public void Decode(DecodingContext decodingContext,
+        Action<Guid, ushort, uint>? onFormatMissing = null)
     {
         ObjectAccessor? self = ObjectAccessor.Create(this, true);
 
@@ -194,6 +200,8 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                                 .Append(Version)
                                 .Append(" - No format information found.")
                                 .ToString();
+
+                            onFormatMissing?.Invoke(TraceGuid, GuidTypeNameFormatId, Version);
                         }
 
                         if (value is not null)
