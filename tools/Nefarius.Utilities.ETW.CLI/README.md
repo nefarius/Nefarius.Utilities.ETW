@@ -103,7 +103,7 @@ etwutils realtime [<provider-guid> ...]
 
 Enable or disable WPP verbose tracing for a kernel-mode or UMDF driver service by writing the `VerboseOn` `REG_DWORD` under the driver's registry parameters key.
 
-> **Admin required.** `--enable` and `--disable` write to `HKEY_LOCAL_MACHINE` and require an elevated process.
+> **Admin required.** The `enable` and `disable` actions write to `HKEY_LOCAL_MACHINE` and require an elevated process.
 
 ```text
 etwutils verbose <service-name> <enable|disable|status> [--type kernel|umdf] [--dry-run]
