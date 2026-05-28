@@ -24,6 +24,22 @@ public Func<Guid, Stream> CustomProviderManifest { get; set; }
 
 [Func&lt;Guid, Stream&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.func-2)<br>
 
+### <a id="properties-onwppformatmissing"/>**OnWppFormatMissing**
+
+Invoked whenever a WPP event is decoded but no matching [TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md)
+ was found in the supplied [EtwJsonConverterOptions.WppDecodingContext](./nefarius.utilities.etw.etwjsonconverteroptions.md#wppdecodingcontext) (i.e. the event's `FormattedString` was
+ substituted with the `"GUID=... - No format information found."` placeholder).
+ Receives the provider trace GUID, the WPP event id, and the version.
+ Fires once per affected event; consumers are expected to deduplicate as needed.
+
+```csharp
+public Action<Guid, UInt16, UInt32> OnWppFormatMissing { get; set; }
+```
+
+#### Property Value
+
+[Action&lt;Guid, UInt16, UInt32&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-3)<br>
+
 ### <a id="properties-preserverawtimestamps"/>**PreserveRawTimestamps**
 
 If set, `PROCESS_TRACE_MODE_RAW_TIMESTAMP` will be applied when processing the trace record.
