@@ -77,7 +77,8 @@ When neither `--symbol-server` nor `--symbol-cache` is passed, the tool reads th
 | `cache*<dir>` | sets cache only |
 | anything else | prints a notice and is ignored |
 
-> **Tip:** [WinDbgSymbolsCachingProxy](https://github.com/nefarius/WinDbgSymbolsCachingProxy) is a ready-made caching proxy that speaks the same SymSrv protocol. Point `--symbol-server` (or `_NT_SYMBOL_PATH`) at `https://symbols.nefarius.at/download/symbols` to use the public instance, or self-host your own.
+> [!TIP]  
+> [WinDbgSymbolsCachingProxy](https://github.com/nefarius/WinDbgSymbolsCachingProxy) is a ready-made caching proxy that speaks the same SymSrv protocol. Point `--symbol-server` (or `_NT_SYMBOL_PATH`) at `https://symbols.nefarius.at/download/symbols` to use the public instance, or self-host your own.
 
 ### `realtime`
 
@@ -101,12 +102,14 @@ etwutils realtime [<provider-guid> ...]
 
 `provider-guid` is **optional**. When omitted, the tool reads the `WPP_DEFINE_CONTROL_GUID` declarations embedded in the PDB files passed to `--symbols` and uses those as the provider list. Explicit GUIDs always take precedence; PDB-derived GUIDs are not added on top of explicit ones.
 
-> **Note:** Auto-derivation requires **PDB files**. TMF files do not contain the WPP control GUID (they only hold per-call-site message format data). If `--symbols` points to a directory or glob that contains only TMF files, you must also supply `provider-guid` explicitly.
+> [!NOTE]  
+> Auto-derivation requires **PDB files**. TMF files do not contain the WPP control GUID (they only hold per-call-site message format data). If `--symbols` points to a directory or glob that contains only TMF files, you must also supply `provider-guid` explicitly.
 
 ### `verbose`
 
 Enable or disable WPP verbose tracing for a kernel-mode or UMDF driver service by writing the `VerboseOn` `REG_DWORD` under the driver's registry parameters key.
 
+> [!IMPORTANT]  
 > **Admin required.** The `enable` and `disable` actions write to `HKEY_LOCAL_MACHINE` and require an elevated process.
 
 ```text
@@ -157,7 +160,8 @@ Because a kernel-mode and a UMDF driver can share the same service name on one s
     etwutils verbose BthPS3 enable --dry-run
     ```
 
-> **Note:** After toggling `VerboseOn`, the change only takes effect once the driver restarts or the device is re-enumerated. A future `etwutils` release will add `--restart-devices` to automate this step.
+> [!NOTE]  
+> After toggling `VerboseOn`, the change only takes effect once the driver restarts or the device is re-enumerated. A future `etwutils` release will add `--restart-devices` to automate this step.
 
 ### `inspect-pdb`
 
