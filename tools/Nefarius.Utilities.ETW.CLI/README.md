@@ -11,6 +11,7 @@ A .NET global tool (`etwutils`) that wraps the ETW API of [Nefarius.Utilities.ET
 > [!IMPORTANT]  
 > While this tool is designed to support universal ETW trace sources, the primary personal goal and highest development priority has been making it work reliably with [WPP Software Tracing](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/wpp-software-tracing) in particular. Other trace source types may work but receive less focused attention and testing.
 
+> [!WARNING]  
 > **Admin required.** ETW session creation requires an elevated process.
 
 ## Installation
