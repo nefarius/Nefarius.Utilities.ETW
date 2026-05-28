@@ -106,17 +106,14 @@ Enable or disable WPP verbose tracing for a kernel-mode or UMDF driver service b
 > **Admin required.** `--enable` and `--disable` write to `HKEY_LOCAL_MACHINE` and require an elevated process.
 
 ```text
-etwutils verbose <service-name>
-    (--enable | --disable | --status)
-    [--type kernel|umdf]
-    [--dry-run]
+etwutils verbose <service-name> <enable|disable|status> [--type kernel|umdf] [--dry-run]
 ```
 
-| Option | Description |
+| Argument / Option | Description |
 |---|---|
-| `--enable` | Write `VerboseOn = 1` (REG_DWORD) to the service's Parameters key |
-| `--disable` | Delete the `VerboseOn` value (silent no-op when already absent) |
-| `--status` | Print the current state for both kernel and UMDF candidates; no registry writes |
+| `enable` | Write `VerboseOn = 1` (REG_DWORD) to the service's registry key |
+| `disable` | Delete the `VerboseOn` value (silent no-op when already absent) |
+| `status` | Print the current state for both kernel and UMDF candidates; no registry writes |
 | `--type kernel\|umdf` | Target a specific driver kind explicitly (see detection rules below) |
 | `--dry-run` | Print what would be done without touching the registry; exits 0 |
 
@@ -138,23 +135,23 @@ Because a kernel-mode and a UMDF driver can share the same service name on one s
 
 #### Examples
 
-```text
-# Enable verbose tracing for the BthPS3 kernel driver
-etwutils verbose BthPS3 --enable
+    ```text
+    # Enable verbose tracing for the BthPS3 kernel driver
+    etwutils verbose BthPS3 enable
 
-# Check the current state of both kernel and UMDF candidates
-etwutils verbose BthPS3 --status
+    # Check the current state of both kernel and UMDF candidates
+    etwutils verbose BthPS3 status
 
-# Disable verbose tracing
-etwutils verbose BthPS3 --disable
+    # Disable verbose tracing
+    etwutils verbose BthPS3 disable
 
-# When both a kernel and a UMDF driver share the same name, target explicitly
-etwutils verbose Foo --enable --type umdf
-etwutils verbose Foo --enable --type kernel
+    # When both a kernel and a UMDF driver share the same name, target explicitly
+    etwutils verbose Foo enable --type umdf
+    etwutils verbose Foo enable --type kernel
 
-# Preview what --enable would do without writing anything
-etwutils verbose BthPS3 --enable --dry-run
-```
+    # Preview what enable would do without writing anything
+    etwutils verbose BthPS3 enable --dry-run
+    ```
 
 > **Note:** After toggling `VerboseOn`, the change only takes effect once the driver restarts or the device is re-enumerated. A future `etwutils` release will add `--restart-devices` to automate this step.
 

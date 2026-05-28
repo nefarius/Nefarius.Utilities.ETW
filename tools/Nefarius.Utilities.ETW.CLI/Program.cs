@@ -653,23 +653,13 @@ Argument<string> verboseServiceArg = new("service-name")
     Description = "Name of the driver service to target (e.g. BthPS3)."
 };
 
-Option<bool> verboseEnableOpt = new("--enable")
+Argument<string> verboseActionArg = new("action")
 {
     Description =
-        "Set VerboseOn = 1 (REG_DWORD) in the driver service's registry key " +
-        "(Parameters subkey for kernel-mode; service key directly for UMDF)."
-};
-
-Option<bool> verboseDisableOpt = new("--disable")
-{
-    Description =
-        "Delete the VerboseOn value from the driver service's registry key " +
-        "(Parameters subkey for kernel-mode; service key directly for UMDF)."
-};
-
-Option<bool> verboseStatusOpt = new("--status")
-{
-    Description = "Show the current VerboseOn state for the service without making changes."
+        "Action to perform: " +
+        "'enable' writes VerboseOn = 1 (Parameters subkey for kernel-mode; service key directly for UMDF); " +
+        "'disable' deletes the VerboseOn value (no-op when already absent); " +
+        "'status' prints the current VerboseOn state without making changes."
 };
 
 Option<string?> verboseTypeOpt = new("--type")
@@ -688,24 +678,20 @@ Command verbose = new(
     "verbose",
     "Enable or disable WPP verbose tracing for a kernel-mode or UMDF driver service by " +
     "writing the VerboseOn REG_DWORD to the driver's registry key. " +
-    "Requires an elevated (admin) process for --enable and --disable.")
+    "Requires an elevated (admin) process for 'enable' and 'disable'.")
 {
     verboseServiceArg,
-    verboseEnableOpt,
-    verboseDisableOpt,
-    verboseStatusOpt,
+    verboseActionArg,
     verboseTypeOpt,
     verboseDryRunOpt
 };
 
 verbose.SetAction((ParseResult result) =>
 {
-    string serviceName = result.GetValue(verboseServiceArg)!;
-    bool   doEnable    = result.GetValue(verboseEnableOpt);
-    bool   doDisable   = result.GetValue(verboseDisableOpt);
-    bool   doStatus    = result.GetValue(verboseStatusOpt);
-    string? typeRaw    = result.GetValue(verboseTypeOpt);
-    bool   dryRun      = result.GetValue(verboseDryRunOpt);
+    string  serviceName = result.GetValue(verboseServiceArg)!;
+    string  actionRaw   = result.GetValue(verboseActionArg)!;
+    string? typeRaw     = result.GetValue(verboseTypeOpt);
+    bool    dryRun      = result.GetValue(verboseDryRunOpt);
 
     // --- Validate service name ---
     if (string.IsNullOrWhiteSpace(serviceName))
@@ -723,17 +709,15 @@ verbose.SetAction((ParseResult result) =>
         return 2;
     }
 
-    // --- Validate mutually exclusive action flags ---
-    int actionCount = (doEnable ? 1 : 0) + (doDisable ? 1 : 0) + (doStatus ? 1 : 0);
-    if (actionCount == 0)
-    {
-        Console.Error.WriteLine("[!] One of --enable, --disable, or --status is required.");
-        return 2;
-    }
+    // --- Validate action ---
+    bool doEnable = actionRaw.Equals("enable", StringComparison.OrdinalIgnoreCase);
+    bool doDisable = actionRaw.Equals("disable", StringComparison.OrdinalIgnoreCase);
+    bool doStatus  = actionRaw.Equals("status", StringComparison.OrdinalIgnoreCase);
 
-    if (actionCount > 1)
+    if (!doEnable && !doDisable && !doStatus)
     {
-        Console.Error.WriteLine("[!] Only one of --enable, --disable, or --status may be specified at a time.");
+        Console.Error.WriteLine(
+            $"[!] Unknown action '{actionRaw}'. Expected 'enable', 'disable', or 'status'.");
         return 2;
     }
 
