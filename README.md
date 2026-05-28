@@ -13,6 +13,9 @@ JSON parser/converter library.
 > *This is a fork of the fantastic [`ETW2JSON`](https://github.com/microsoft/ETW2JSON) project by Microsoft and
 contributors.*
 
+> [!IMPORTANT]  
+> While this library is designed to support universal ETW trace sources, the primary personal goal and highest development priority has been making it work reliably with [WPP Software Tracing](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/wpp-software-tracing) in particular. Other trace source types may work but receive less focused attention and testing.
+
 ## Changes of this fork
 
 - Converted console tool into a reusable class library
