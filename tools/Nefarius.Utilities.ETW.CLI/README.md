@@ -99,6 +99,65 @@ etwutils realtime [<provider-guid> ...]
 
 > **Note:** Auto-derivation requires **PDB files**. TMF files do not contain the WPP control GUID (they only hold per-call-site message format data). If `--symbols` points to a directory or glob that contains only TMF files, you must also supply `provider-guid` explicitly.
 
+### `verbose`
+
+Enable or disable WPP verbose tracing for a kernel-mode or UMDF driver service by writing the `VerboseOn` `REG_DWORD` under the driver's registry parameters key.
+
+> **Admin required.** `--enable` and `--disable` write to `HKEY_LOCAL_MACHINE` and require an elevated process.
+
+```text
+etwutils verbose <service-name>
+    (--enable | --disable | --status)
+    [--type kernel|umdf]
+    [--dry-run]
+```
+
+| Option | Description |
+|---|---|
+| `--enable` | Write `VerboseOn = 1` (REG_DWORD) to the service's Parameters key |
+| `--disable` | Delete the `VerboseOn` value (silent no-op when already absent) |
+| `--status` | Print the current state for both kernel and UMDF candidates; no registry writes |
+| `--type kernel\|umdf` | Target a specific driver kind explicitly (see detection rules below) |
+| `--dry-run` | Print what would be done without touching the registry; exits 0 |
+
+#### Registry target paths
+
+| Driver kind | `VerboseOn` location |
+|---|---|
+| Kernel-mode | `HKLM\SYSTEM\CurrentControlSet\Services\<name>\Parameters\VerboseOn` |
+| UMDF | `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\WUDF\Services\<name>\VerboseOn` |
+
+#### Service detection rules
+
+The command probes both registry locations independently for the given service name:
+
+- **Kernel candidate** — `HKLM\SYSTEM\CurrentControlSet\Services\<name>\Type` must exist and equal `SERVICE_KERNEL_DRIVER` (1) or `SERVICE_FILE_SYSTEM_DRIVER` (2). Any other `Type` value is not treated as a kernel candidate.
+- **UMDF candidate** — the key `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\WUDF\Services\<name>` must exist.
+
+Because a kernel-mode and a UMDF driver can share the same service name on one system, `--type` selects the intended target explicitly. When `--type` is omitted the command prefers the kernel candidate; if only a UMDF candidate is found it falls back and emits a `[*]` warning on stderr. If neither candidate exists the command exits with code 2.
+
+#### Examples
+
+```text
+# Enable verbose tracing for the BthPS3 kernel driver
+etwutils verbose BthPS3 --enable
+
+# Check the current state of both kernel and UMDF candidates
+etwutils verbose BthPS3 --status
+
+# Disable verbose tracing
+etwutils verbose BthPS3 --disable
+
+# When both a kernel and a UMDF driver share the same name, target explicitly
+etwutils verbose Foo --enable --type umdf
+etwutils verbose Foo --enable --type kernel
+
+# Preview what --enable would do without writing anything
+etwutils verbose BthPS3 --enable --dry-run
+```
+
+> **Note:** After toggling `VerboseOn`, the change only takes effect once the driver restarts or the device is re-enumerated. A future `etwutils` release will add `--restart-devices` to automate this step.
+
 ### `inspect-pdb`
 
 Parse PDB files and report every embedded WPP provider GUID without starting an ETW session.
