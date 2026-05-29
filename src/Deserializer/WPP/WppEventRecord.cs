@@ -130,6 +130,13 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                 // we expect 20 WPP properties, but this dynamic approach is safer
                 for (int propertyIndex = 0; propertyIndex < traceEventInfo->PropertyCount; propertyIndex++)
                 {
+                    // Reset UserData to the original payload start before every TDH call.
+                    // SubstituteFunctionParameters (called for FormattedString) advances UserData
+                    // through ItemReader.Readers, but UserDataLength is never adjusted. Without this
+                    // reset, TdhGetPropertySize on subsequent properties reads past the buffer end,
+                    // causing an intermittent 0xC0000005 access violation.
+                    eventRecordReader.Reset();
+
                     EVENT_PROPERTY_INFO propertyInfo = traceEventInfo->EventPropertyInfoArray[propertyIndex];
                     _TDH_IN_TYPE propertyType = (_TDH_IN_TYPE)propertyInfo.Anonymous1.customSchemaType.InType;
                     string propertyName = new((char*)((byte*)traceEventInfo + propertyInfo.NameOffset));
