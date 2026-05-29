@@ -8,8 +8,9 @@ Describes a Program DataBase metaobject extracted from the provided trace.
 public struct PdbMetaData
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [ValueType](https://docs.microsoft.com/en-us/dotnet/api/system.valuetype) → [PdbMetaData](./nefarius.utilities.etw.deserializer.wpp.pdbmetadata.md)<br>
-Implements [IEquatable&lt;PdbMetaData&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.iequatable-1)
+Inheritance [Object](https://learn.microsoft.com/dotnet/api/system.object) → [ValueType](https://learn.microsoft.com/dotnet/api/system.valuetype) → [PdbMetaData](./nefarius.utilities.etw.deserializer.wpp.pdbmetadata.md)<br>
+Implements [IEquatable](https://learn.microsoft.com/dotnet/api/system.iequatable-1)<[PdbMetaData](./nefarius.utilities.etw.deserializer.wpp.pdbmetadata.md)><br>
+Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullablecontextattribute), [NullableAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullableattribute), [IsReadOnlyAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.isreadonlyattribute), [RequiredMemberAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.requiredmemberattribute)
 
 ## Properties
 
@@ -23,7 +24,7 @@ public int Age { get; set; }
 
 #### Property Value
 
-[Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)<br>
+[Int32](https://learn.microsoft.com/dotnet/api/system.int32)<br>
 
 ### <a id="properties-downloadpath"/>**DownloadPath**
 
@@ -35,7 +36,7 @@ public string DownloadPath { get; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ### <a id="properties-guid"/>**Guid**
 
@@ -47,7 +48,7 @@ public Guid Guid { get; set; }
 
 #### Property Value
 
-[Guid](https://docs.microsoft.com/en-us/dotnet/api/system.guid)<br>
+[Guid](https://learn.microsoft.com/dotnet/api/system.guid)<br>
 
 ### <a id="properties-indexprefix"/>**IndexPrefix**
 
@@ -59,7 +60,7 @@ public string IndexPrefix { get; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 **Remarks:**
 
@@ -76,7 +77,7 @@ public string PdbName { get; set; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ## Methods
 
@@ -92,7 +93,7 @@ bool Equals(PdbMetaData other)
 
 #### Returns
 
-[Boolean](https://docs.microsoft.com/en-us/dotnet/api/system.boolean)
+[Boolean](https://learn.microsoft.com/dotnet/api/system.boolean)
 
 ### <a id="methods-equals"/>**Equals(Object)**
 
@@ -102,11 +103,11 @@ bool Equals(object obj)
 
 #### Parameters
 
-`obj` [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object)<br>
+`obj` [Object](https://learn.microsoft.com/dotnet/api/system.object)<br>
 
 #### Returns
 
-[Boolean](https://docs.microsoft.com/en-us/dotnet/api/system.boolean)
+[Boolean](https://learn.microsoft.com/dotnet/api/system.boolean)
 
 ### <a id="methods-gethashcode"/>**GetHashCode()**
 
@@ -116,4 +117,4 @@ int GetHashCode()
 
 #### Returns
 
-[Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)
+[Int32](https://learn.microsoft.com/dotnet/api/system.int32)

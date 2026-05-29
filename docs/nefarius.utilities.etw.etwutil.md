@@ -8,7 +8,8 @@ ETW utility class.
 public static class EtwUtil
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [EtwUtil](./nefarius.utilities.etw.etwutil.md)
+Inheritance [Object](https://learn.microsoft.com/dotnet/api/system.object) → [EtwUtil](./nefarius.utilities.etw.etwutil.md)<br>
+Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullablecontextattribute), [NullableAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullableattribute)
 
 ## Methods
 
@@ -24,30 +25,30 @@ public static bool ConvertRealtimeToJson(Utf8JsonWriter jsonWriter, string sessi
 
 #### Parameters
 
-`jsonWriter` Utf8JsonWriter<br>
+`jsonWriter` [Utf8JsonWriter](https://learn.microsoft.com/dotnet/api/system.text.json.utf8jsonwriter)<br>
 The target JSON writer to write to.
 
-`sessionName` [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+`sessionName` [String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 The name of an already-running real-time ETW session (e.g., created via
  [EtwRealtimeSession.Create(String, Action&lt;EtwRealtimeSessionOptions&gt;)](./nefarius.utilities.etw.etwrealtimesession.md#createstring-actionetwrealtimesessionoptions) or `logman start`).
 
-`options` [Action&lt;EtwJsonConverterOptions&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-1)<br>
+`options` [Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[EtwJsonConverterOptions](./nefarius.utilities.etw.etwjsonconverteroptions.md)><br>
 Options to further tweak the parsing operation.
 
-`cancellationToken` [CancellationToken](https://docs.microsoft.com/en-us/dotnet/api/system.threading.cancellationtoken)<br>
+`cancellationToken` [CancellationToken](https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken)<br>
 Token that, when cancelled, stops trace processing and returns from this method.
 
 #### Returns
 
-when the session ended normally or was cancelled;
-  if the session could not be opened.
+`true` when the session ended normally or was cancelled;
+ `false` if the session could not be opened.
 
 #### Exceptions
 
-[ArgumentNullException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentnullexception)<br>
-`jsonWriter` or `sessionName` is .
+[ArgumentNullException](https://learn.microsoft.com/dotnet/api/system.argumentnullexception)<br>
+`jsonWriter` or `sessionName` is `null`.
 
-[ArgumentException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentexception)<br>
+[ArgumentException](https://learn.microsoft.com/dotnet/api/system.argumentexception)<br>
 `sessionName` is empty or whitespace.
 
 **Remarks:**
@@ -67,13 +68,13 @@ public static bool ConvertToJson(Utf8JsonWriter jsonWriter, IEnumerable<String> 
 
 #### Parameters
 
-`jsonWriter` Utf8JsonWriter<br>
+`jsonWriter` [Utf8JsonWriter](https://learn.microsoft.com/dotnet/api/system.text.json.utf8jsonwriter)<br>
 The target JSON writer to write to.
 
-`inputFiles` [IEnumerable&lt;String&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ienumerable-1)<br>
+`inputFiles` [IEnumerable](https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1)<[String](https://learn.microsoft.com/dotnet/api/system.string)><br>
 One or more input files.
 
-`options` [Action&lt;EtwJsonConverterOptions&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-1)<br>
+`options` [Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[EtwJsonConverterOptions](./nefarius.utilities.etw.etwjsonconverteroptions.md)><br>
 Options to further tweak the parsing operation.
 
 #### Returns
@@ -83,7 +84,7 @@ True on success, false otherwise.
 ### <a id="methods-enumerateeventsasync"/>**EnumerateEventsAsync(IEnumerable&lt;String&gt;, Action&lt;EtwJsonConverterOptions&gt;, CancellationToken)**
 
 Converts one or more .ETL files to a stream of UTF-8 JSON objects, yielding each decoded event
- as a [ReadOnlyMemory<byte>](https://docs.microsoft.com/en-us/dotnet/api/system.readonlymemory-1) as it is produced.
+ as a [ReadOnlyMemory<byte>](https://learn.microsoft.com/dotnet/api/system.readonlymemory-1) as it is produced.
 
 ```csharp
 public static IAsyncEnumerable<ReadOnlyMemory<Byte>> EnumerateEventsAsync(IEnumerable<String> inputFiles, Action<EtwJsonConverterOptions> options, CancellationToken cancellationToken)
@@ -91,28 +92,28 @@ public static IAsyncEnumerable<ReadOnlyMemory<Byte>> EnumerateEventsAsync(IEnume
 
 #### Parameters
 
-`inputFiles` [IEnumerable&lt;String&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ienumerable-1)<br>
+`inputFiles` [IEnumerable](https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1)<[String](https://learn.microsoft.com/dotnet/api/system.string)><br>
 One or more input files.
 
-`options` [Action&lt;EtwJsonConverterOptions&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-1)<br>
+`options` [Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[EtwJsonConverterOptions](./nefarius.utilities.etw.etwjsonconverteroptions.md)><br>
 Options to further tweak the parsing operation.
 
-`cancellationToken` [CancellationToken](https://docs.microsoft.com/en-us/dotnet/api/system.threading.cancellationtoken)<br>
+`cancellationToken` [CancellationToken](https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken)<br>
 Token that, when cancelled, stops trace processing and completes the enumeration.
 
 #### Returns
 
-An [IAsyncEnumerable&lt;T&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.iasyncenumerable-1) of raw UTF-8 JSON buffers, one per event. Each buffer contains a
+An [IAsyncEnumerable](https://learn.microsoft.com/dotnet/api/system.collections.generic.iasyncenumerable-1)<T> of raw UTF-8 JSON buffers, one per event. Each buffer contains a
  self-contained JSON object — `{"Event":{"Timestamp":…,"Properties":[{…}]}}` — with no outer
  array wrapper. The caller may concatenate or wrap the items as needed.
 
 #### Exceptions
 
-[ArgumentNullException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentnullexception)<br>
-`inputFiles` is .
+[ArgumentNullException](https://learn.microsoft.com/dotnet/api/system.argumentnullexception)<br>
+`inputFiles` is `null`.
 
-[ArgumentException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentexception)<br>
-One or more entries in `inputFiles` are , empty, or consist only of
+[ArgumentException](https://learn.microsoft.com/dotnet/api/system.argumentexception)<br>
+One or more entries in `inputFiles` are `null`, empty, or consist only of
  whitespace.
 
 [EtwOpenTraceException](./nefarius.utilities.etw.exceptions.etwopentraceexception.md)<br>
@@ -120,10 +121,10 @@ One of the input files could not be opened by the ETW API.
 
 **Remarks:**
 
-Each [ReadOnlyMemory<byte>](https://docs.microsoft.com/en-us/dotnet/api/system.readonlymemory-1) is backed by a buffer rented from
- [ArrayPool&lt;T&gt;.Shared](https://docs.microsoft.com/en-us/dotnet/api/system.buffers.arraypool-1.shared). The buffer is valid only until the next iteration step; the library
+Each [ReadOnlyMemory<byte>](https://learn.microsoft.com/dotnet/api/system.readonlymemory-1) is backed by a buffer rented from
+ [ArrayPool&lt;T&gt;.Shared](https://learn.microsoft.com/dotnet/api/system.buffers.arraypool-1.shared). The buffer is valid only until the next iteration step; the library
  returns it to the pool when `MoveNextAsync` is called (i.e. at the start of the next
-  loop body). Do not retain references to the memory across iterations.
+ `await foreach` loop body). Do not retain references to the memory across iterations.
 
 Trace processing runs on a dedicated background thread so the thread-pool is not blocked by the
  long-running native `ProcessTrace` call. A bounded channel with a fixed capacity couples the
@@ -140,11 +141,11 @@ public static IReadOnlyCollection<PdbMetaData> EnumeratePdbReferences(IEnumerabl
 
 #### Parameters
 
-`inputFiles` [IEnumerable&lt;String&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ienumerable-1)<br>
-One or more input `.etl` files to scan. Must not be  and must not
- contain any  or whitespace-only entries.
+`inputFiles` [IEnumerable](https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1)<[String](https://learn.microsoft.com/dotnet/api/system.string)><br>
+One or more input `.etl` files to scan. Must not be `null` and must not
+ contain any `null` or whitespace-only entries.
 
-`options` [Action&lt;EtwMetadataScanOptions&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-1)<br>
+`options` [Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[EtwMetadataScanOptions](./nefarius.utilities.etw.etwmetadatascanoptions.md)><br>
 Optional callback to configure scan behaviour. Use it to subscribe to
  [EtwMetadataScanOptions.OnDbgIdRsds](./nefarius.utilities.etw.etwmetadatascanoptions.md#ondbgidrsds) (`KernelTraceControl/ImageID/DbgID_RSDS`),
  [EtwMetadataScanOptions.OnKernelDbgIdRsds](./nefarius.utilities.etw.etwmetadatascanoptions.md#onkerneldbgidrsds) (`MSNT_SystemTrace/EventTrace/DbgIdRSDS`),
@@ -161,17 +162,17 @@ A deduplicated, read-only collection of every [PdbMetaData](./nefarius.utilities
 
 #### Exceptions
 
-[ArgumentNullException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentnullexception)<br>
-`inputFiles` is .
+[ArgumentNullException](https://learn.microsoft.com/dotnet/api/system.argumentnullexception)<br>
+`inputFiles` is `null`.
 
-[ArgumentException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentexception)<br>
-One or more entries in `inputFiles` are , empty, or consist only of
+[ArgumentException](https://learn.microsoft.com/dotnet/api/system.argumentexception)<br>
+One or more entries in `inputFiles` are `null`, empty, or consist only of
  whitespace.
 
 ### <a id="methods-enumeraterealtimeeventsasync"/>**EnumerateRealtimeEventsAsync(String, Action&lt;EtwJsonConverterOptions&gt;, CancellationToken)**
 
 Streams decoded events from a live real-time ETW session as UTF-8 JSON objects,
- yielding each event as a [ReadOnlyMemory<byte>](https://docs.microsoft.com/en-us/dotnet/api/system.readonlymemory-1)
+ yielding each event as a [ReadOnlyMemory<byte>](https://learn.microsoft.com/dotnet/api/system.readonlymemory-1)
  as it is produced.
 
 ```csharp
@@ -180,28 +181,28 @@ public static IAsyncEnumerable<ReadOnlyMemory<Byte>> EnumerateRealtimeEventsAsyn
 
 #### Parameters
 
-`sessionName` [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+`sessionName` [String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 The name of an already-running real-time ETW session (e.g., created via
  [EtwRealtimeSession.Create(String, Action&lt;EtwRealtimeSessionOptions&gt;)](./nefarius.utilities.etw.etwrealtimesession.md#createstring-actionetwrealtimesessionoptions) or `logman start`).
 
-`options` [Action&lt;EtwJsonConverterOptions&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-1)<br>
+`options` [Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[EtwJsonConverterOptions](./nefarius.utilities.etw.etwjsonconverteroptions.md)><br>
 Options to further tweak the parsing operation.
 
-`cancellationToken` [CancellationToken](https://docs.microsoft.com/en-us/dotnet/api/system.threading.cancellationtoken)<br>
+`cancellationToken` [CancellationToken](https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken)<br>
 Token that, when cancelled, stops trace processing and completes the enumeration.
 
 #### Returns
 
-An [IAsyncEnumerable&lt;T&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.iasyncenumerable-1) of raw UTF-8 JSON buffers, one per event. Each buffer
+An [IAsyncEnumerable](https://learn.microsoft.com/dotnet/api/system.collections.generic.iasyncenumerable-1)<T> of raw UTF-8 JSON buffers, one per event. Each buffer
  is a self-contained JSON object — `{"Event":{"Timestamp":…,"Properties":[{…}]}}` —
  with no outer array wrapper. The caller may concatenate or wrap items as needed.
 
 #### Exceptions
 
-[ArgumentNullException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentnullexception)<br>
-`sessionName` is .
+[ArgumentNullException](https://learn.microsoft.com/dotnet/api/system.argumentnullexception)<br>
+`sessionName` is `null`.
 
-[ArgumentException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentexception)<br>
+[ArgumentException](https://learn.microsoft.com/dotnet/api/system.argumentexception)<br>
 `sessionName` is empty or whitespace.
 
 [EtwOpenTraceException](./nefarius.utilities.etw.exceptions.etwopentraceexception.md)<br>
@@ -209,8 +210,8 @@ The session could not be opened by the ETW API.
 
 **Remarks:**
 
-Each [ReadOnlyMemory<byte>](https://docs.microsoft.com/en-us/dotnet/api/system.readonlymemory-1) is backed by a buffer rented from
- [ArrayPool&lt;T&gt;.Shared](https://docs.microsoft.com/en-us/dotnet/api/system.buffers.arraypool-1.shared). The buffer is valid only until the next iteration step; the library
+Each [ReadOnlyMemory<byte>](https://learn.microsoft.com/dotnet/api/system.readonlymemory-1) is backed by a buffer rented from
+ [ArrayPool&lt;T&gt;.Shared](https://learn.microsoft.com/dotnet/api/system.buffers.arraypool-1.shared). The buffer is valid only until the next iteration step; the library
  returns it to the pool when `MoveNextAsync` is called. Do not retain references to the memory
  across iterations.
 
@@ -235,13 +236,13 @@ public static void StopOrphanSession(string sessionName)
 
 #### Parameters
 
-`sessionName` [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+`sessionName` [String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 Name of the orphaned session to stop.
 
 #### Exceptions
 
-[ArgumentNullException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentnullexception)<br>
-`sessionName` is .
+[ArgumentNullException](https://learn.microsoft.com/dotnet/api/system.argumentnullexception)<br>
+`sessionName` is `null`.
 
-[ArgumentException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentexception)<br>
+[ArgumentException](https://learn.microsoft.com/dotnet/api/system.argumentexception)<br>
 `sessionName` is empty or whitespace.

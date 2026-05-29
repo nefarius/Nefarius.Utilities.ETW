@@ -8,8 +8,9 @@ Thrown when `StartTraceW` fails to create a realtime ETW session.
 public sealed class EtwStartTraceException : System.ComponentModel.Win32Exception, System.Runtime.Serialization.ISerializable
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [Exception](https://docs.microsoft.com/en-us/dotnet/api/system.exception) → [SystemException](https://docs.microsoft.com/en-us/dotnet/api/system.systemexception) → [ExternalException](https://docs.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.externalexception) → [Win32Exception](https://docs.microsoft.com/en-us/dotnet/api/system.componentmodel.win32exception) → [EtwStartTraceException](./nefarius.utilities.etw.exceptions.etwstarttraceexception.md)<br>
-Implements [ISerializable](https://docs.microsoft.com/en-us/dotnet/api/system.runtime.serialization.iserializable)
+Inheritance [Object](https://learn.microsoft.com/dotnet/api/system.object) → [Exception](https://learn.microsoft.com/dotnet/api/system.exception) → [SystemException](https://learn.microsoft.com/dotnet/api/system.systemexception) → [ExternalException](https://learn.microsoft.com/dotnet/api/system.runtime.interopservices.externalexception) → [Win32Exception](https://learn.microsoft.com/dotnet/api/system.componentmodel.win32exception) → [EtwStartTraceException](./nefarius.utilities.etw.exceptions.etwstarttraceexception.md)<br>
+Implements [ISerializable](https://learn.microsoft.com/dotnet/api/system.runtime.serialization.iserializable)<br>
+Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullablecontextattribute), [NullableAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullableattribute)
 
 ## Properties
 
@@ -21,7 +22,7 @@ public IDictionary Data { get; }
 
 #### Property Value
 
-[IDictionary](https://docs.microsoft.com/en-us/dotnet/api/system.collections.idictionary)<br>
+[IDictionary](https://learn.microsoft.com/dotnet/api/system.collections.idictionary)<br>
 
 ### <a id="properties-errorcode"/>**ErrorCode**
 
@@ -31,7 +32,7 @@ public int ErrorCode { get; }
 
 #### Property Value
 
-[Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)<br>
+[Int32](https://learn.microsoft.com/dotnet/api/system.int32)<br>
 
 ### <a id="properties-helplink"/>**HelpLink**
 
@@ -41,7 +42,7 @@ public string HelpLink { get; set; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ### <a id="properties-hresult"/>**HResult**
 
@@ -51,7 +52,7 @@ public int HResult { get; set; }
 
 #### Property Value
 
-[Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)<br>
+[Int32](https://learn.microsoft.com/dotnet/api/system.int32)<br>
 
 ### <a id="properties-innerexception"/>**InnerException**
 
@@ -61,7 +62,7 @@ public Exception InnerException { get; }
 
 #### Property Value
 
-[Exception](https://docs.microsoft.com/en-us/dotnet/api/system.exception)<br>
+[Exception](https://learn.microsoft.com/dotnet/api/system.exception)<br>
 
 ### <a id="properties-message"/>**Message**
 
@@ -71,7 +72,7 @@ public string Message { get; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ### <a id="properties-nativeerrorcode"/>**NativeErrorCode**
 
@@ -81,7 +82,7 @@ public int NativeErrorCode { get; }
 
 #### Property Value
 
-[Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)<br>
+[Int32](https://learn.microsoft.com/dotnet/api/system.int32)<br>
 
 ### <a id="properties-source"/>**Source**
 
@@ -91,7 +92,7 @@ public string Source { get; set; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ### <a id="properties-stacktrace"/>**StackTrace**
 
@@ -101,7 +102,7 @@ public string StackTrace { get; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ### <a id="properties-targetsite"/>**TargetSite**
 
@@ -111,4 +112,4 @@ public MethodBase TargetSite { get; }
 
 #### Property Value
 
-[MethodBase](https://docs.microsoft.com/en-us/dotnet/api/system.reflection.methodbase)<br>
+[MethodBase](https://learn.microsoft.com/dotnet/api/system.reflection.methodbase)<br>

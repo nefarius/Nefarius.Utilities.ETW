@@ -8,7 +8,8 @@ Trace Message Format parsing utilities.
 public static class TmfParser
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [TmfParser](./nefarius.utilities.etw.deserializer.wpp.tmf.tmfparser.md)
+Inheritance [Object](https://learn.microsoft.com/dotnet/api/system.object) → [TmfParser](./nefarius.utilities.etw.deserializer.wpp.tmf.tmfparser.md)<br>
+Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullablecontextattribute), [NullableAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullableattribute)
 
 ## Methods
 
@@ -22,10 +23,10 @@ internal static IEnumerable<TraceMessageFormat> ExtractTraceMessageFormats(IEnum
 
 #### Parameters
 
-`pairs` [IEnumerable&lt;SymProc32AnnotationPair&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ienumerable-1)<br>
+`pairs` [IEnumerable](https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1)<[SymProc32AnnotationPair](./nefarius.utilities.etw.deserializer.wpp.tmf.symproc32annotationpair.md)><br>
 The source [SymProc32AnnotationPair](./nefarius.utilities.etw.deserializer.wpp.tmf.symproc32annotationpair.md)s to convert.
 
-`originalSymbolFileName` [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+`originalSymbolFileName` [String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 Optional source file name the data was extracted from.
 
 #### Returns
@@ -42,7 +43,7 @@ public static IEnumerable<TraceMessageFormat> ParseDirectory(string path)
 
 #### Parameters
 
-`path` [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+`path` [String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 The directory to search in.
 
 #### Returns
@@ -59,7 +60,7 @@ public static IEnumerable<TraceMessageFormat> ParseFile(string path)
 
 #### Parameters
 
-`path` [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+`path` [String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 The path to a `.tmf` file.
 
 #### Returns

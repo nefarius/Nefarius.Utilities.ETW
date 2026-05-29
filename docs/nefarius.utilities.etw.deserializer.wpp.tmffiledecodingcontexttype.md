@@ -8,7 +8,8 @@ A [TDH_CONTEXT_TYPE.TDH_CONTEXT_WPP_TMFFILE](./windows.win32.system.diagnostics.
 public sealed class TmfFileDecodingContextType : DecodingContextType
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md) → [TmfFileDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.tmffiledecodingcontexttype.md)
+Inheritance [Object](https://learn.microsoft.com/dotnet/api/system.object) → [DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md) → [TmfFileDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.tmffiledecodingcontexttype.md)<br>
+Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullablecontextattribute), [NullableAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullableattribute)
 
 ## Properties
 
@@ -26,7 +27,7 @@ public IEnumerable<Guid> ProviderGuids { get; }
 
 #### Property Value
 
-[IEnumerable&lt;Guid&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ienumerable-1)<br>
+[IEnumerable](https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1)<[Guid](https://learn.microsoft.com/dotnet/api/system.guid)><br>
 
 ### <a id="properties-tracemessageformats"/>**TraceMessageFormats**
 
@@ -38,7 +39,7 @@ public IEnumerable<TraceMessageFormat> TraceMessageFormats { get; protected set;
 
 #### Property Value
 
-[IEnumerable&lt;TraceMessageFormat&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ienumerable-1)<br>
+[IEnumerable](https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1)<[TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md)><br>
 
 ## Constructors
 
@@ -60,7 +61,7 @@ public TmfFileDecodingContextType(string path)
 
 #### Parameters
 
-`path` [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+`path` [String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 Path to a single `.tmf` file.
 
 ## Methods
@@ -76,7 +77,7 @@ public static IList<DecodingContextType> CreateFrom(IList<String> pathList)
 
 #### Parameters
 
-`pathList` [IList&lt;String&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ilist-1)<br>
+`pathList` [IList](https://learn.microsoft.com/dotnet/api/system.collections.generic.ilist-1)<[String](https://learn.microsoft.com/dotnet/api/system.string)><br>
 One or more paths to `.tmf` files.
 
 #### Returns

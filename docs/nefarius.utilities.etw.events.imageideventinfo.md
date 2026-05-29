@@ -6,11 +6,11 @@ Strongly-typed representation of a `KernelTraceControl/ImageID` event (opcode 0,
  provider `b3e675d7-2554-4f18-830b-2762732560de`).
 
 ```csharp
-public struct ImageIdEventInfo
+public record struct ImageIdEventInfo
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [ValueType](https://docs.microsoft.com/en-us/dotnet/api/system.valuetype) → [ImageIdEventInfo](./nefarius.utilities.etw.events.imageideventinfo.md)<br>
-Implements [IEquatable&lt;ImageIdEventInfo&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.iequatable-1)
+Inheritance [Object](https://learn.microsoft.com/dotnet/api/system.object) → [ValueType](https://learn.microsoft.com/dotnet/api/system.valuetype) → [ImageIdEventInfo](./nefarius.utilities.etw.events.imageideventinfo.md)<br>
+Attributes [IsReadOnlyAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.isreadonlyattribute)
 
 ## Properties
 
@@ -24,7 +24,7 @@ public ulong ImageBase { get; set; }
 
 #### Property Value
 
-[UInt64](https://docs.microsoft.com/en-us/dotnet/api/system.uint64)<br>
+[UInt64](https://learn.microsoft.com/dotnet/api/system.uint64)<br>
 
 ### <a id="properties-imagesize"/>**ImageSize**
 
@@ -36,7 +36,7 @@ public uint ImageSize { get; set; }
 
 #### Property Value
 
-[UInt32](https://docs.microsoft.com/en-us/dotnet/api/system.uint32)<br>
+[UInt32](https://learn.microsoft.com/dotnet/api/system.uint32)<br>
 
 ### <a id="properties-originalfilename"/>**OriginalFileName**
 
@@ -48,7 +48,7 @@ public string OriginalFileName { get; set; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ### <a id="properties-processid"/>**ProcessId**
 
@@ -60,7 +60,7 @@ public uint ProcessId { get; set; }
 
 #### Property Value
 
-[UInt32](https://docs.microsoft.com/en-us/dotnet/api/system.uint32)<br>
+[UInt32](https://learn.microsoft.com/dotnet/api/system.uint32)<br>
 
 ### <a id="properties-threadid"/>**ThreadId**
 
@@ -72,7 +72,7 @@ public uint ThreadId { get; set; }
 
 #### Property Value
 
-[UInt32](https://docs.microsoft.com/en-us/dotnet/api/system.uint32)<br>
+[UInt32](https://learn.microsoft.com/dotnet/api/system.uint32)<br>
 
 ### <a id="properties-timedatestamp"/>**TimeDateStamp**
 
@@ -84,7 +84,7 @@ public uint TimeDateStamp { get; set; }
 
 #### Property Value
 
-[UInt32](https://docs.microsoft.com/en-us/dotnet/api/system.uint32)<br>
+[UInt32](https://learn.microsoft.com/dotnet/api/system.uint32)<br>
 
 ### <a id="properties-timestamp"/>**Timestamp**
 
@@ -96,23 +96,9 @@ public long Timestamp { get; set; }
 
 #### Property Value
 
-[Int64](https://docs.microsoft.com/en-us/dotnet/api/system.int64)<br>
+[Int64](https://learn.microsoft.com/dotnet/api/system.int64)<br>
 
 ## Methods
-
-### <a id="methods-equals"/>**Equals(Object)**
-
-```csharp
-bool Equals(object obj)
-```
-
-#### Parameters
-
-`obj` [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object)<br>
-
-#### Returns
-
-[Boolean](https://docs.microsoft.com/en-us/dotnet/api/system.boolean)
 
 ### <a id="methods-equals"/>**Equals(ImageIdEventInfo)**
 
@@ -126,24 +112,4 @@ bool Equals(ImageIdEventInfo other)
 
 #### Returns
 
-[Boolean](https://docs.microsoft.com/en-us/dotnet/api/system.boolean)
-
-### <a id="methods-gethashcode"/>**GetHashCode()**
-
-```csharp
-int GetHashCode()
-```
-
-#### Returns
-
-[Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)
-
-### <a id="methods-tostring"/>**ToString()**
-
-```csharp
-string ToString()
-```
-
-#### Returns
-
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)
+[Boolean](https://learn.microsoft.com/dotnet/api/system.boolean)

@@ -8,7 +8,8 @@ WPP decoding context used to extract TMF information from resources like `.PDB` 
 public sealed class DecodingContext
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md)
+Inheritance [Object](https://learn.microsoft.com/dotnet/api/system.object) → [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md)<br>
+Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullablecontextattribute), [NullableAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullableattribute)
 
 ## Properties
 
@@ -25,7 +26,7 @@ public IReadOnlyCollection<Guid> ProviderGuids { get; }
 
 #### Property Value
 
-[IReadOnlyCollection&lt;Guid&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ireadonlycollection-1)<br>
+[IReadOnlyCollection](https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlycollection-1)<[Guid](https://learn.microsoft.com/dotnet/api/system.guid)><br>
 
 ## Constructors
 
@@ -39,7 +40,7 @@ public DecodingContext(IList<DecodingContextType> decodingTypes)
 
 #### Parameters
 
-`decodingTypes` [IList&lt;DecodingContextType&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ilist-1)<br>
+`decodingTypes` [IList](https://learn.microsoft.com/dotnet/api/system.collections.generic.ilist-1)<[DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md)><br>
 One or more [DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md)s to look up decoding information in.
 
 ## Methods
@@ -55,7 +56,7 @@ public DecodingContext ExtendWith(IList<DecodingContextType> additionalDecodingT
 
 #### Parameters
 
-`additionalDecodingTypes` [IList&lt;DecodingContextType&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ilist-1)<br>
+`additionalDecodingTypes` [IList](https://learn.microsoft.com/dotnet/api/system.collections.generic.ilist-1)<[DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md)><br>
 One or more [DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md)s to be added to this instances'
  types.
 
@@ -71,9 +72,9 @@ internal TraceMessageFormat GetTraceMessageFormatFor(Nullable<Guid> messageGuid,
 
 #### Parameters
 
-`messageGuid` [Nullable&lt;Guid&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.nullable-1)<br>
+`messageGuid` [Nullable](https://learn.microsoft.com/dotnet/api/system.nullable-1)<[Guid](https://learn.microsoft.com/dotnet/api/system.guid)><br>
 
-`id` [Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)<br>
+`id` [Int32](https://learn.microsoft.com/dotnet/api/system.int32)<br>
 
 #### Returns
 

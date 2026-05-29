@@ -8,7 +8,8 @@ Adjustments for [EtwUtil.EnumeratePdbReferences(IEnumerable&lt;String&gt;, Actio
 public sealed class EtwMetadataScanOptions
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [EtwMetadataScanOptions](./nefarius.utilities.etw.etwmetadatascanoptions.md)
+Inheritance [Object](https://learn.microsoft.com/dotnet/api/system.object) → [EtwMetadataScanOptions](./nefarius.utilities.etw.etwmetadatascanoptions.md)<br>
+Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullablecontextattribute), [NullableAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullableattribute)
 
 ## Properties
 
@@ -23,7 +24,7 @@ public Action<DbgIdRsdsEventInfo> OnDbgIdRsds { get; set; }
 
 #### Property Value
 
-[Action&lt;DbgIdRsdsEventInfo&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-1)<br>
+[Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[DbgIdRsdsEventInfo](./nefarius.utilities.etw.events.dbgidrsdseventinfo.md)><br>
 
 **Remarks:**
 
@@ -43,7 +44,7 @@ public Action<ImageIdEventInfo> OnImageId { get; set; }
 
 #### Property Value
 
-[Action&lt;ImageIdEventInfo&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-1)<br>
+[Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[ImageIdEventInfo](./nefarius.utilities.etw.events.imageideventinfo.md)><br>
 
 **Remarks:**
 
@@ -60,7 +61,7 @@ public Action<ImageIdFileVersionEventInfo> OnImageIdFileVersion { get; set; }
 
 #### Property Value
 
-[Action&lt;ImageIdFileVersionEventInfo&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-1)<br>
+[Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[ImageIdFileVersionEventInfo](./nefarius.utilities.etw.events.imageidfileversioneventinfo.md)><br>
 
 **Remarks:**
 
@@ -77,7 +78,7 @@ public Action<KernelDbgIdRsdsEventInfo> OnKernelDbgIdRsds { get; set; }
 
 #### Property Value
 
-[Action&lt;KernelDbgIdRsdsEventInfo&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-1)<br>
+[Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[KernelDbgIdRsdsEventInfo](./nefarius.utilities.etw.events.kerneldbgidrsdseventinfo.md)><br>
 
 ### <a id="properties-reporterror"/>**ReportError**
 
@@ -89,4 +90,4 @@ public Action<String> ReportError { get; set; }
 
 #### Property Value
 
-[Action&lt;String&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-1)<br>
+[Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[String](https://learn.microsoft.com/dotnet/api/system.string)><br>

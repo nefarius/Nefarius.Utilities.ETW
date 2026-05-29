@@ -6,7 +6,8 @@ Namespace: Nefarius.Utilities.ETW.Deserializer.WPP.TMF
 public struct FunctionParameter
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [ValueType](https://docs.microsoft.com/en-us/dotnet/api/system.valuetype) → [FunctionParameter](./nefarius.utilities.etw.deserializer.wpp.tmf.functionparameter.md)
+Inheritance [Object](https://learn.microsoft.com/dotnet/api/system.object) → [ValueType](https://learn.microsoft.com/dotnet/api/system.valuetype) → [FunctionParameter](./nefarius.utilities.etw.deserializer.wpp.tmf.functionparameter.md)<br>
+Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullablecontextattribute), [NullableAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullableattribute), [IsReadOnlyAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.isreadonlyattribute), [RequiredMemberAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.requiredmemberattribute)
 
 ## Properties
 
@@ -20,7 +21,7 @@ public string Expression { get; set; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ### <a id="properties-index"/>**Index**
 
@@ -32,7 +33,7 @@ public int Index { get; set; }
 
 #### Property Value
 
-[Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)<br>
+[Int32](https://learn.microsoft.com/dotnet/api/system.int32)<br>
 
 ### <a id="properties-listitems"/>**ListItems**
 
@@ -44,7 +45,7 @@ public IReadOnlyDictionary<Int32, String> ListItems { get; set; }
 
 #### Property Value
 
-[IReadOnlyDictionary&lt;Int32, String&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ireadonlydictionary-2)<br>
+[IReadOnlyDictionary](https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlydictionary-2)<[Int32](https://learn.microsoft.com/dotnet/api/system.int32), [String](https://learn.microsoft.com/dotnet/api/system.string)><br>
 
 **Remarks:**
 

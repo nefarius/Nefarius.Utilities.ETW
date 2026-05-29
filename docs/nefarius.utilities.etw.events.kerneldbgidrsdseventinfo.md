@@ -3,14 +3,14 @@
 Namespace: Nefarius.Utilities.ETW.Events
 
 Strongly-typed representation of a `MSNT_SystemTrace/EventTrace/DbgIdRSDS` event emitted by the
- legacy kernel Event Trace provider ().
+ legacy kernel Event Trace provider (EventTraceGuid).
 
 ```csharp
-public struct KernelDbgIdRsdsEventInfo
+public record struct KernelDbgIdRsdsEventInfo
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [ValueType](https://docs.microsoft.com/en-us/dotnet/api/system.valuetype) → [KernelDbgIdRsdsEventInfo](./nefarius.utilities.etw.events.kerneldbgidrsdseventinfo.md)<br>
-Implements [IEquatable&lt;KernelDbgIdRsdsEventInfo&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.iequatable-1)
+Inheritance [Object](https://learn.microsoft.com/dotnet/api/system.object) → [ValueType](https://learn.microsoft.com/dotnet/api/system.valuetype) → [KernelDbgIdRsdsEventInfo](./nefarius.utilities.etw.events.kerneldbgidrsdseventinfo.md)<br>
+Attributes [IsReadOnlyAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.isreadonlyattribute)
 
 **Remarks:**
 
@@ -30,7 +30,7 @@ public uint Age { get; set; }
 
 #### Property Value
 
-[UInt32](https://docs.microsoft.com/en-us/dotnet/api/system.uint32)<br>
+[UInt32](https://learn.microsoft.com/dotnet/api/system.uint32)<br>
 
 ### <a id="properties-guid"/>**Guid**
 
@@ -42,7 +42,7 @@ public Guid Guid { get; set; }
 
 #### Property Value
 
-[Guid](https://docs.microsoft.com/en-us/dotnet/api/system.guid)<br>
+[Guid](https://learn.microsoft.com/dotnet/api/system.guid)<br>
 
 ### <a id="properties-pdbname"/>**PdbName**
 
@@ -54,7 +54,7 @@ public string PdbName { get; set; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ### <a id="properties-processid"/>**ProcessId**
 
@@ -66,7 +66,7 @@ public uint ProcessId { get; set; }
 
 #### Property Value
 
-[UInt32](https://docs.microsoft.com/en-us/dotnet/api/system.uint32)<br>
+[UInt32](https://learn.microsoft.com/dotnet/api/system.uint32)<br>
 
 ### <a id="properties-threadid"/>**ThreadId**
 
@@ -78,7 +78,7 @@ public uint ThreadId { get; set; }
 
 #### Property Value
 
-[UInt32](https://docs.microsoft.com/en-us/dotnet/api/system.uint32)<br>
+[UInt32](https://learn.microsoft.com/dotnet/api/system.uint32)<br>
 
 ### <a id="properties-timestamp"/>**Timestamp**
 
@@ -90,23 +90,9 @@ public long Timestamp { get; set; }
 
 #### Property Value
 
-[Int64](https://docs.microsoft.com/en-us/dotnet/api/system.int64)<br>
+[Int64](https://learn.microsoft.com/dotnet/api/system.int64)<br>
 
 ## Methods
-
-### <a id="methods-equals"/>**Equals(Object)**
-
-```csharp
-bool Equals(object obj)
-```
-
-#### Parameters
-
-`obj` [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object)<br>
-
-#### Returns
-
-[Boolean](https://docs.microsoft.com/en-us/dotnet/api/system.boolean)
 
 ### <a id="methods-equals"/>**Equals(KernelDbgIdRsdsEventInfo)**
 
@@ -120,17 +106,7 @@ bool Equals(KernelDbgIdRsdsEventInfo other)
 
 #### Returns
 
-[Boolean](https://docs.microsoft.com/en-us/dotnet/api/system.boolean)
-
-### <a id="methods-gethashcode"/>**GetHashCode()**
-
-```csharp
-int GetHashCode()
-```
-
-#### Returns
-
-[Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)
+[Boolean](https://learn.microsoft.com/dotnet/api/system.boolean)
 
 ### <a id="methods-topdbmetadata"/>**ToPdbMetaData()**
 
@@ -146,15 +122,5 @@ PdbMetaData ToPdbMetaData()
 
 #### Exceptions
 
-[ArgumentOutOfRangeException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentoutofrangeexception)<br>
-Thrown when [KernelDbgIdRsdsEventInfo.Age](./nefarius.utilities.etw.events.kerneldbgidrsdseventinfo.md#age) exceeds [Int32.MaxValue](https://docs.microsoft.com/en-us/dotnet/api/system.int32.maxvalue) and cannot be safely narrowed.
-
-### <a id="methods-tostring"/>**ToString()**
-
-```csharp
-string ToString()
-```
-
-#### Returns
-
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)
+[ArgumentOutOfRangeException](https://learn.microsoft.com/dotnet/api/system.argumentoutofrangeexception)<br>
+Thrown when [KernelDbgIdRsdsEventInfo.Age](./nefarius.utilities.etw.events.kerneldbgidrsdseventinfo.md#age) exceeds [Int32.MaxValue](https://learn.microsoft.com/dotnet/api/system.int32.maxvalue) and cannot be safely narrowed.

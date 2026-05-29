@@ -5,11 +5,12 @@ Namespace: Nefarius.Utilities.ETW.Deserializer.WPP.TMF
 Decoding information for WPP events.
 
 ```csharp
-public sealed class TraceMessageFormat : System.IEquatable`1[[Nefarius.Utilities.ETW.Deserializer.WPP.TMF.TraceMessageFormat, Nefarius.Utilities.ETW, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]], System.IComparable`1[[Nefarius.Utilities.ETW.Deserializer.WPP.TMF.TraceMessageFormat, Nefarius.Utilities.ETW, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]], System.IComparable
+public sealed class TraceMessageFormat : System.IEquatable<Nefarius.Utilities.ETW.Deserializer.WPP.TMF.TraceMessageFormat>, System.IComparable<Nefarius.Utilities.ETW.Deserializer.WPP.TMF.TraceMessageFormat>, System.IComparable
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md)<br>
-Implements [IEquatable&lt;TraceMessageFormat&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.iequatable-1), [IComparable&lt;TraceMessageFormat&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.icomparable-1), [IComparable](https://docs.microsoft.com/en-us/dotnet/api/system.icomparable)
+Inheritance [Object](https://learn.microsoft.com/dotnet/api/system.object) → [TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md)<br>
+Implements [IEquatable](https://learn.microsoft.com/dotnet/api/system.iequatable-1)<[TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md)>, [IComparable](https://learn.microsoft.com/dotnet/api/system.icomparable-1)<[TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md)>, [IComparable](https://learn.microsoft.com/dotnet/api/system.icomparable)<br>
+Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullablecontextattribute), [NullableAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullableattribute), [RequiredMemberAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.requiredmemberattribute)
 
 ## Properties
 
@@ -21,7 +22,7 @@ public string FileName { get; set; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ### <a id="properties-flags"/>**Flags**
 
@@ -31,7 +32,7 @@ public string Flags { get; set; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ### <a id="properties-function"/>**Function**
 
@@ -41,7 +42,7 @@ public string Function { get; set; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ### <a id="properties-functionparameters"/>**FunctionParameters**
 
@@ -51,7 +52,7 @@ public IReadOnlyList<FunctionParameter> FunctionParameters { get; set; }
 
 #### Property Value
 
-[IReadOnlyList&lt;FunctionParameter&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ireadonlylist-1)<br>
+[IReadOnlyList](https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1)<[FunctionParameter](./nefarius.utilities.etw.deserializer.wpp.tmf.functionparameter.md)><br>
 
 ### <a id="properties-id"/>**Id**
 
@@ -61,7 +62,7 @@ public int Id { get; set; }
 
 #### Property Value
 
-[Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)<br>
+[Int32](https://learn.microsoft.com/dotnet/api/system.int32)<br>
 
 ### <a id="properties-level"/>**Level**
 
@@ -71,7 +72,7 @@ public string Level { get; set; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ### <a id="properties-messageformat"/>**MessageFormat**
 
@@ -81,7 +82,7 @@ public string MessageFormat { get; set; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ### <a id="properties-messageguid"/>**MessageGuid**
 
@@ -91,7 +92,7 @@ public Guid MessageGuid { get; set; }
 
 #### Property Value
 
-[Guid](https://docs.microsoft.com/en-us/dotnet/api/system.guid)<br>
+[Guid](https://learn.microsoft.com/dotnet/api/system.guid)<br>
 
 ### <a id="properties-opcode"/>**Opcode**
 
@@ -101,7 +102,7 @@ public string Opcode { get; set; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ### <a id="properties-originalsymbolfilename"/>**OriginalSymbolFileName**
 
@@ -111,7 +112,7 @@ public string OriginalSymbolFileName { get; set; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ### <a id="properties-provider"/>**Provider**
 
@@ -121,7 +122,7 @@ public string Provider { get; set; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ## Constructors
 
@@ -147,11 +148,11 @@ public int CompareTo(object obj)
 
 #### Parameters
 
-`obj` [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object)<br>
+`obj` [Object](https://learn.microsoft.com/dotnet/api/system.object)<br>
 
 #### Returns
 
-[Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)
+[Int32](https://learn.microsoft.com/dotnet/api/system.int32)
 
 ### <a id="methods-compareto"/>**CompareTo(TraceMessageFormat)**
 
@@ -165,7 +166,7 @@ public int CompareTo(TraceMessageFormat other)
 
 #### Returns
 
-[Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)
+[Int32](https://learn.microsoft.com/dotnet/api/system.int32)
 
 ### <a id="methods-equals"/>**Equals(TraceMessageFormat)**
 
@@ -179,7 +180,7 @@ public bool Equals(TraceMessageFormat other)
 
 #### Returns
 
-[Boolean](https://docs.microsoft.com/en-us/dotnet/api/system.boolean)
+[Boolean](https://learn.microsoft.com/dotnet/api/system.boolean)
 
 ### <a id="methods-equals"/>**Equals(Object)**
 
@@ -189,11 +190,11 @@ public bool Equals(object obj)
 
 #### Parameters
 
-`obj` [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object)<br>
+`obj` [Object](https://learn.microsoft.com/dotnet/api/system.object)<br>
 
 #### Returns
 
-[Boolean](https://docs.microsoft.com/en-us/dotnet/api/system.boolean)
+[Boolean](https://learn.microsoft.com/dotnet/api/system.boolean)
 
 ### <a id="methods-gethashcode"/>**GetHashCode()**
 
@@ -203,4 +204,4 @@ public int GetHashCode()
 
 #### Returns
 
-[Int32](https://docs.microsoft.com/en-us/dotnet/api/system.int32)
+[Int32](https://learn.microsoft.com/dotnet/api/system.int32)

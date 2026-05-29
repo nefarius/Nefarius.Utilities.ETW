@@ -8,11 +8,18 @@ A [DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontex
 public sealed class PdbFileDecodingContextType : DecodingContextType
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md) → [PdbFileDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.pdbfiledecodingcontexttype.md)
+Inheritance [Object](https://learn.microsoft.com/dotnet/api/system.object) → [DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md) → [PdbFileDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.pdbfiledecodingcontexttype.md)<br>
+Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullablecontextattribute), [NullableAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullableattribute)
 
 ## Properties
 
 ### <a id="properties-providerguids"/>**ProviderGuids**
+
+The distinct set of WPP trace control GUIDs (= ETW provider GUIDs) available from this
+ decoding source. Subclasses that carry the provider GUID — currently only
+ [PdbFileDecodingContextType](./nefarius.utilities.etw.deserializer.wpp.pdbfiledecodingcontexttype.md) via its `TMC:` annotations — override this
+ property. TMF-only sources return an empty collection because `.tmf` files only
+ contain per-call-site message hash GUIDs, not the WPP control GUID.
 
 ```csharp
 public IEnumerable<Guid> ProviderGuids { get; }
@@ -20,13 +27,7 @@ public IEnumerable<Guid> ProviderGuids { get; }
 
 #### Property Value
 
-[IEnumerable&lt;Guid&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ienumerable-1)<br>
-
-**Remarks:**
-
-For PDB sources the provider GUIDs are the WPP trace control GUIDs extracted from
- `TMC:``S_ANNOTATION` records in the symbol stream — one per
- `WPP_DEFINE_CONTROL_GUID` declaration.
+[IEnumerable](https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1)<[Guid](https://learn.microsoft.com/dotnet/api/system.guid)><br>
 
 ### <a id="properties-tracemessageformats"/>**TraceMessageFormats**
 
@@ -38,7 +39,7 @@ public IEnumerable<TraceMessageFormat> TraceMessageFormats { get; protected set;
 
 #### Property Value
 
-[IEnumerable&lt;TraceMessageFormat&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ienumerable-1)<br>
+[IEnumerable](https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1)<[TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md)><br>
 
 ### <a id="properties-wpptracecontrols"/>**WppTraceControls**
 
@@ -53,7 +54,7 @@ public IReadOnlyCollection<WppTraceControl> WppTraceControls { get; private set;
 
 #### Property Value
 
-[IReadOnlyCollection&lt;WppTraceControl&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ireadonlycollection-1)<br>
+[IReadOnlyCollection](https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlycollection-1)<[WppTraceControl](./nefarius.utilities.etw.deserializer.wpp.tmf.wpptracecontrol.md)><br>
 
 ## Constructors
 
@@ -75,7 +76,7 @@ public PdbFileDecodingContextType(string path)
 
 #### Parameters
 
-`path` [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+`path` [String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 Relative or absolute path to a `.pdb` file.
 
 ### <a id="constructors-.ctor"/>**PdbFileDecodingContextType(Stream)**
@@ -88,7 +89,7 @@ public PdbFileDecodingContextType(Stream stream)
 
 #### Parameters
 
-`stream` [Stream](https://docs.microsoft.com/en-us/dotnet/api/system.io.stream)<br>
+`stream` [Stream](https://learn.microsoft.com/dotnet/api/system.io.stream)<br>
 A stream containing a `.pdb` file.
 
 ## Methods
@@ -104,7 +105,7 @@ public static IList<DecodingContextType> CreateFrom(IList<String> pathList)
 
 #### Parameters
 
-`pathList` [IList&lt;String&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ilist-1)<br>
+`pathList` [IList](https://learn.microsoft.com/dotnet/api/system.collections.generic.ilist-1)<[String](https://learn.microsoft.com/dotnet/api/system.string)><br>
 One or more paths to `.pdb` files.
 
 #### Returns
@@ -122,12 +123,12 @@ public static IReadOnlyCollection<Guid> EnumerateProviderGuids(string path)
 
 #### Parameters
 
-`path` [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+`path` [String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 Relative or absolute path to a `.pdb` file.
 
 #### Returns
 
-A distinct, read-only collection of [Guid](https://docs.microsoft.com/en-us/dotnet/api/system.guid)s — one per
+A distinct, read-only collection of [Guid](https://learn.microsoft.com/dotnet/api/system.guid)s — one per
  `WPP_DEFINE_CONTROL_GUID` block found in the PDB. The collection is empty if the
  PDB contains no WPP `TMC:` annotations.
 
@@ -143,7 +144,7 @@ public static IReadOnlyCollection<WppTraceControl> EnumerateTraceControls(string
 
 #### Parameters
 
-`path` [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+`path` [String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 Relative or absolute path to a `.pdb` file.
 
 #### Returns

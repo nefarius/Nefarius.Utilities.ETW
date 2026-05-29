@@ -8,7 +8,8 @@ Adjustments for [EtwUtil](./nefarius.utilities.etw.etwutil.md).
 public sealed class EtwJsonConverterOptions
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [EtwJsonConverterOptions](./nefarius.utilities.etw.etwjsonconverteroptions.md)
+Inheritance [Object](https://learn.microsoft.com/dotnet/api/system.object) → [EtwJsonConverterOptions](./nefarius.utilities.etw.etwjsonconverteroptions.md)<br>
+Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullablecontextattribute), [NullableAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullableattribute)
 
 ## Properties
 
@@ -22,7 +23,7 @@ public Func<Guid, Stream> CustomProviderManifest { get; set; }
 
 #### Property Value
 
-[Func&lt;Guid, Stream&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.func-2)<br>
+[Func](https://learn.microsoft.com/dotnet/api/system.func-2)<[Guid](https://learn.microsoft.com/dotnet/api/system.guid), [Stream](https://learn.microsoft.com/dotnet/api/system.io.stream)><br>
 
 ### <a id="properties-onwppformatmissing"/>**OnWppFormatMissing**
 
@@ -38,7 +39,7 @@ public Action<Guid, UInt16, UInt32> OnWppFormatMissing { get; set; }
 
 #### Property Value
 
-[Action&lt;Guid, UInt16, UInt32&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-3)<br>
+[Action](https://learn.microsoft.com/dotnet/api/system.action-3)<[Guid](https://learn.microsoft.com/dotnet/api/system.guid), [UInt16](https://learn.microsoft.com/dotnet/api/system.uint16), [UInt32](https://learn.microsoft.com/dotnet/api/system.uint32)><br>
 
 ### <a id="properties-preserverawtimestamps"/>**PreserveRawTimestamps**
 
@@ -50,7 +51,7 @@ public bool PreserveRawTimestamps { get; set; }
 
 #### Property Value
 
-[Boolean](https://docs.microsoft.com/en-us/dotnet/api/system.boolean)<br>
+[Boolean](https://learn.microsoft.com/dotnet/api/system.boolean)<br>
 
 **Remarks:**
 
@@ -67,7 +68,7 @@ public Action<String> ReportError { get; set; }
 
 #### Property Value
 
-[Action&lt;String&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-1)<br>
+[Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[String](https://learn.microsoft.com/dotnet/api/system.string)><br>
 
 ### <a id="properties-wppdecodingcontext"/>**WppDecodingContext**
 

@@ -9,8 +9,9 @@ Represents an active real-time ETW session that collects events from user-mode p
 public sealed class EtwRealtimeSession : System.IDisposable
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [EtwRealtimeSession](./nefarius.utilities.etw.etwrealtimesession.md)<br>
-Implements [IDisposable](https://docs.microsoft.com/en-us/dotnet/api/system.idisposable)
+Inheritance [Object](https://learn.microsoft.com/dotnet/api/system.object) → [EtwRealtimeSession](./nefarius.utilities.etw.etwrealtimesession.md)<br>
+Implements [IDisposable](https://learn.microsoft.com/dotnet/api/system.idisposable)<br>
+Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullablecontextattribute), [NullableAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullableattribute)
 
 **Remarks:**
 
@@ -35,7 +36,7 @@ public string SessionName { get; }
 
 #### Property Value
 
-[String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 
 ## Methods
 
@@ -49,13 +50,13 @@ public static EtwRealtimeSession Create(string sessionName, Action<EtwRealtimeSe
 
 #### Parameters
 
-`sessionName` [String](https://docs.microsoft.com/en-us/dotnet/api/system.string)<br>
+`sessionName` [String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 A unique name for the session (case-insensitive). If a session with this name
  already exists, an [EtwStartTraceException](./nefarius.utilities.etw.exceptions.etwstarttraceexception.md) is thrown with
- ; call
+ ERROR_ALREADY_EXISTS; call
  [EtwUtil.StopOrphanSession(String)](./nefarius.utilities.etw.etwutil.md#stoporphansessionstring) first to remove the orphan.
 
-`configure` [Action&lt;EtwRealtimeSessionOptions&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-1)<br>
+`configure` [Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[EtwRealtimeSessionOptions](./nefarius.utilities.etw.etwrealtimesessionoptions.md)><br>
 Optional delegate to adjust [EtwRealtimeSessionOptions](./nefarius.utilities.etw.etwrealtimesessionoptions.md).
 
 #### Returns
@@ -64,16 +65,16 @@ A running [EtwRealtimeSession](./nefarius.utilities.etw.etwrealtimesession.md) i
 
 #### Exceptions
 
-[ArgumentNullException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentnullexception)<br>
-`sessionName` is .
+[ArgumentNullException](https://learn.microsoft.com/dotnet/api/system.argumentnullexception)<br>
+`sessionName` is `null`.
 
-[ArgumentException](https://docs.microsoft.com/en-us/dotnet/api/system.argumentexception)<br>
+[ArgumentException](https://learn.microsoft.com/dotnet/api/system.argumentexception)<br>
 `sessionName` is empty or whitespace.
 
 [EtwStartTraceException](./nefarius.utilities.etw.exceptions.etwstarttraceexception.md)<br>
-`StartTrace` failed — inspect [Win32Exception.NativeErrorCode](https://docs.microsoft.com/en-us/dotnet/api/system.componentmodel.win32exception.nativeerrorcode).
- Common causes:  (run as administrator),
-  (orphan session still running).
+`StartTrace` failed — inspect [Win32Exception.NativeErrorCode](https://learn.microsoft.com/dotnet/api/system.componentmodel.win32exception.nativeerrorcode).
+ Common causes: ERROR_ACCESS_DENIED (run as administrator),
+ ERROR_ALREADY_EXISTS (orphan session still running).
 
 ### <a id="methods-disableprovider"/>**DisableProvider(Guid)**
 
@@ -85,12 +86,12 @@ public void DisableProvider(Guid providerGuid)
 
 #### Parameters
 
-`providerGuid` [Guid](https://docs.microsoft.com/en-us/dotnet/api/system.guid)<br>
+`providerGuid` [Guid](https://learn.microsoft.com/dotnet/api/system.guid)<br>
 The provider's registration GUID.
 
 #### Exceptions
 
-[ObjectDisposedException](https://docs.microsoft.com/en-us/dotnet/api/system.objectdisposedexception)<br>
+[ObjectDisposedException](https://learn.microsoft.com/dotnet/api/system.objectdisposedexception)<br>
 The session has been disposed.
 
 [EtwEnableTraceException](./nefarius.utilities.etw.exceptions.etwenabletraceexception.md)<br>
@@ -119,23 +120,23 @@ public void EnableProvider(Guid providerGuid, TraceEventLevel level, ulong match
 
 #### Parameters
 
-`providerGuid` [Guid](https://docs.microsoft.com/en-us/dotnet/api/system.guid)<br>
+`providerGuid` [Guid](https://learn.microsoft.com/dotnet/api/system.guid)<br>
 The provider's registration GUID.
 
 `level` [TraceEventLevel](./nefarius.utilities.etw.traceeventlevel.md)<br>
 Maximum event severity level to receive. Defaults to [TraceEventLevel.Verbose](./nefarius.utilities.etw.traceeventlevel.md#verbose).
 
-`matchAnyKeyword` [UInt64](https://docs.microsoft.com/en-us/dotnet/api/system.uint64)<br>
+`matchAnyKeyword` [UInt64](https://learn.microsoft.com/dotnet/api/system.uint64)<br>
 Bitmask: an event is included if any of the provider's keywords match.
- Pass [UInt64.MaxValue](https://docs.microsoft.com/en-us/dotnet/api/system.uint64.maxvalue) (default) to receive all events.
+ Pass [UInt64.MaxValue](https://learn.microsoft.com/dotnet/api/system.uint64.maxvalue) (default) to receive all events.
 
-`matchAllKeyword` [UInt64](https://docs.microsoft.com/en-us/dotnet/api/system.uint64)<br>
+`matchAllKeyword` [UInt64](https://learn.microsoft.com/dotnet/api/system.uint64)<br>
 Bitmask: an event is included only if all of these keywords are set.
  Pass `0` (default) to disable the all-keyword filter.
 
 #### Exceptions
 
-[ObjectDisposedException](https://docs.microsoft.com/en-us/dotnet/api/system.objectdisposedexception)<br>
+[ObjectDisposedException](https://learn.microsoft.com/dotnet/api/system.objectdisposedexception)<br>
 The session has been disposed.
 
 [EtwEnableTraceException](./nefarius.utilities.etw.exceptions.etwenabletraceexception.md)<br>
@@ -152,8 +153,8 @@ public void Flush()
 
 #### Exceptions
 
-[ObjectDisposedException](https://docs.microsoft.com/en-us/dotnet/api/system.objectdisposedexception)<br>
+[ObjectDisposedException](https://learn.microsoft.com/dotnet/api/system.objectdisposedexception)<br>
 The session has been disposed.
 
-[Win32Exception](https://docs.microsoft.com/en-us/dotnet/api/system.componentmodel.win32exception)<br>
+[Win32Exception](https://learn.microsoft.com/dotnet/api/system.componentmodel.win32exception)<br>
 `ControlTrace(FLUSH)` returned a non-zero error code.

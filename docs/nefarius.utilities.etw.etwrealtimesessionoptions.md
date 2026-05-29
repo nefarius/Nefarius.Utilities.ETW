@@ -8,7 +8,7 @@ Buffer and timing options for [EtwRealtimeSession](./nefarius.utilities.etw.etwr
 public sealed class EtwRealtimeSessionOptions
 ```
 
-Inheritance [Object](https://docs.microsoft.com/en-us/dotnet/api/system.object) → [EtwRealtimeSessionOptions](./nefarius.utilities.etw.etwrealtimesessionoptions.md)
+Inheritance [Object](https://learn.microsoft.com/dotnet/api/system.object) → [EtwRealtimeSessionOptions](./nefarius.utilities.etw.etwrealtimesessionoptions.md)
 
 ## Properties
 
@@ -22,7 +22,7 @@ public uint BufferSizeKb { get; set; }
 
 #### Property Value
 
-[UInt32](https://docs.microsoft.com/en-us/dotnet/api/system.uint32)<br>
+[UInt32](https://learn.microsoft.com/dotnet/api/system.uint32)<br>
 
 ### <a id="properties-clockresolution"/>**ClockResolution**
 
@@ -49,7 +49,7 @@ public uint FlushTimerSeconds { get; set; }
 
 #### Property Value
 
-[UInt32](https://docs.microsoft.com/en-us/dotnet/api/system.uint32)<br>
+[UInt32](https://learn.microsoft.com/dotnet/api/system.uint32)<br>
 
 ### <a id="properties-maximumbuffers"/>**MaximumBuffers**
 
@@ -63,12 +63,12 @@ public uint MaximumBuffers { get; set; }
 
 #### Property Value
 
-[UInt32](https://docs.microsoft.com/en-us/dotnet/api/system.uint32)<br>
+[UInt32](https://learn.microsoft.com/dotnet/api/system.uint32)<br>
 
 ### <a id="properties-minimumbuffers"/>**MinimumBuffers**
 
 Minimum number of ETW buffers to allocate.
- Defaults to [Environment.ProcessorCount](https://docs.microsoft.com/en-us/dotnet/api/system.environment.processorcount).
+ Defaults to [Environment.ProcessorCount](https://learn.microsoft.com/dotnet/api/system.environment.processorcount).
 
 ```csharp
 public uint MinimumBuffers { get; set; }
@@ -76,7 +76,7 @@ public uint MinimumBuffers { get; set; }
 
 #### Property Value
 
-[UInt32](https://docs.microsoft.com/en-us/dotnet/api/system.uint32)<br>
+[UInt32](https://learn.microsoft.com/dotnet/api/system.uint32)<br>
 
 ### <a id="properties-reporterror"/>**ReportError**
 
@@ -88,4 +88,4 @@ public Action<String> ReportError { get; set; }
 
 #### Property Value
 
-[Action&lt;String&gt;](https://docs.microsoft.com/en-us/dotnet/api/system.action-1)<br>
+[Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[String](https://learn.microsoft.com/dotnet/api/system.string)><br>
