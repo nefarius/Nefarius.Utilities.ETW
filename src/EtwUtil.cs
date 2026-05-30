@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -457,6 +458,92 @@ public static class EtwUtil
                 NativeMemory.Free(props);
             }
         }
+    }
+
+    /// <summary>
+    ///     Returns the names of all currently running ETW trace sessions.
+    /// </summary>
+    /// <returns>
+    ///     A read-only list of session names in the order reported by <c>QueryAllTracesW</c>.
+    ///     An empty list means the system has no active trace sessions.
+    /// </returns>
+    /// <remarks>
+    ///     The Windows default maximum is 64 concurrent sessions.  When the registry key
+    ///     <c>EtwMaxLoggers</c> raises the limit above 64, this method retries first with
+    ///     capacity 128 and then with capacity 256 before giving up.
+    /// </remarks>
+    /// <exception cref="Win32Exception">
+    ///     <c>QueryAllTracesW</c> returned a non-zero, non-<c>ERROR_MORE_DATA</c> error code, or
+    ///     the system reports more than 256 concurrent sessions and the buffer cannot be grown further.
+    /// </exception>
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    public static IReadOnlyList<string> EnumerateSessionNames()
+    {
+        // ETW session names are limited to 1 024 characters including the null terminator.
+        const int MaxNameChars = 1024;
+
+        // Try 64 first (system default); retry with 128 then 256 if QueryAllTracesW reports more sessions.
+        for (int capacity = 64; capacity <= 256; capacity *= 2)
+        {
+            unsafe
+            {
+                int propsSize = Marshal.SizeOf<EVENT_TRACE_PROPERTIES>();
+                int nameBytes = (MaxNameChars + 1) * sizeof(char);
+                int slotSize  = propsSize + nameBytes;
+
+                // Allocate the property blocks and the pointer array in native heap.
+                byte* block = (byte*)NativeMemory.AllocZeroed((nuint)(capacity * slotSize));
+                EVENT_TRACE_PROPERTIES** ptrArray =
+                    (EVENT_TRACE_PROPERTIES**)NativeMemory.AllocZeroed((nuint)(capacity * sizeof(void*)));
+                try
+                {
+                    for (int i = 0; i < capacity; i++)
+                    {
+                        EVENT_TRACE_PROPERTIES* slot = (EVENT_TRACE_PROPERTIES*)(block + i * slotSize);
+                        slot->Wnode.BufferSize = (uint)slotSize;
+                        slot->LoggerNameOffset = (uint)propsSize;
+                        ptrArray[i]            = slot;
+                    }
+
+                    uint error = Etw.QueryAllTraces(ptrArray, (uint)capacity, out uint loggerCount);
+
+                    // Any error other than ERROR_MORE_DATA (234) is a real API failure.
+                    if (error != 0 && error != 234u)
+                    {
+                        throw new Win32Exception((int)error,
+                            $"QueryAllTracesW failed with Win32 error 0x{error:X8}.");
+                    }
+
+                    uint toRead = Math.Min(loggerCount, (uint)capacity);
+                    List<string> names = new((int)toRead);
+                    for (uint i = 0; i < toRead; i++)
+                    {
+                        EVENT_TRACE_PROPERTIES* slot = ptrArray[i];
+                        char* namePtr = (char*)((byte*)slot + slot->LoggerNameOffset);
+                        names.Add(new string(namePtr));
+                    }
+
+                    if (error == 234u && loggerCount > (uint)capacity)
+                    {
+                        // Outer loop will retry with doubled capacity.
+                        continue;
+                    }
+
+                    return names;
+                }
+                finally
+                {
+                    NativeMemory.Free(ptrArray);
+                    NativeMemory.Free(block);
+                }
+            }
+        }
+
+        // Reached only when QueryAllTracesW still returns ERROR_MORE_DATA after 256 slots —
+        // an extraordinary situation (>256 concurrent ETW sessions).
+        throw new Win32Exception(234,
+            "QueryAllTracesW: the system reports more than 256 concurrent ETW sessions; " +
+            "cannot enumerate all of them.");
     }
 
     // -----------------------------------------------------------------------

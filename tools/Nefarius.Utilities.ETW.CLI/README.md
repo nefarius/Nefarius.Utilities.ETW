@@ -176,6 +176,49 @@ Because a kernel-mode and a UMDF driver can share the same service name on one s
 > [!NOTE]  
 > After toggling `VerboseOn`, the change only takes effect once the driver restarts or the device is re-enumerated. A future `etwutils` release will add `--restart-devices` to automate this step.
 
+### `sessions`
+
+List and clean up ETW trace sessions created by `etwutils`. Useful after a run is killed before it can stop its session — orphaned `NefariusEtwCli-<pid>` sessions hold their provider enabled, and once the system or provider limit is reached every new run fails with an error.
+
+> [!IMPORTANT]  
+> **Admin required.** The `clean` action calls `ControlTrace(STOP)` and requires an elevated process.
+
+```text
+etwutils sessions <list|clean> [--all] [--prefix <name>] [--dry-run]
+```
+
+| Argument / Option | Description |
+|---|---|
+| `list` | Print all running ETW sessions; annotate sessions matching `--prefix` as `alive` or `dead` based on whether the owning process still exists |
+| `clean` | Stop sessions matching `--prefix` whose owning process is no longer running |
+| `--all` | For `clean`: also stop sessions whose process is still running. **Warning:** may interrupt another live `etwutils realtime` instance |
+| `--prefix <name>` | Session name prefix to target (default: `NefariusEtwCli-`) |
+| `--dry-run` | Print what would be stopped without stopping anything; exits 0 |
+
+#### Why sessions pile up
+
+`etwutils realtime` creates an ETW session named `NefariusEtwCli-<pid>`. When the process is killed (e.g. closing the terminal) the session is left behind because `ControlTrace(STOP)` never runs. Modern ETW providers can be enabled in up to 8 sessions simultaneously; legacy WPP/MOF providers allow only 1. Once the limit is reached, `EnableTraceEx2` returns `ERROR_NO_SYSTEM_RESOURCES` (0x5AA) and the next run fails immediately.
+
+#### Examples
+
+```text
+# List all running ETW sessions (annotates etwutils sessions as alive/dead)
+etwutils sessions list
+
+# Remove all dead NefariusEtwCli-<pid> sessions (safe for concurrent runs)
+etwutils sessions clean
+
+# Preview what would be removed without touching anything
+etwutils sessions clean --dry-run
+
+# Force-stop all NefariusEtwCli- sessions regardless of process state
+etwutils sessions clean --all
+
+# Target a custom session name prefix
+etwutils sessions list --prefix MyApp-
+etwutils sessions clean --prefix MyApp-
+```
+
 ### `inspect-pdb`
 
 Parse PDB files and report every embedded WPP provider GUID without starting an ETW session.

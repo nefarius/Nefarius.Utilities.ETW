@@ -178,4 +178,15 @@ internal static class Etw
     [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     [SuppressUnmanagedCodeSecurity]
     internal static extern int CloseTrace([In] ULONGLONG TraceHandle);
+
+    /// <summary>
+    ///     Retrieves the properties and statistics for all running ETW trace sessions.
+    ///     Returns a Win32 error code; does not set the thread-local error (SetLastError=false).
+    /// </summary>
+    [DllImport("advapi32.dll", EntryPoint = "QueryAllTracesW", CharSet = CharSet.Unicode, SetLastError = false)]
+    [SuppressUnmanagedCodeSecurity]
+    internal static extern unsafe uint QueryAllTraces(
+        EVENT_TRACE_PROPERTIES** PropertyArray,
+        uint PropertyArrayCount,
+        out uint LoggerCount);
 }
