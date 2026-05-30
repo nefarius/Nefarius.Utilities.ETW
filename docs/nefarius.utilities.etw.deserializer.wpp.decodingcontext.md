@@ -79,3 +79,22 @@ internal TraceMessageFormat GetTraceMessageFormatFor(Nullable<Guid> messageGuid,
 #### Returns
 
 [TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md)
+
+### <a id="methods-getwppprovidernameoverride"/>**GetWppProviderNameOverride(TraceMessageFormat)**
+
+Returns the friendly TMC control name (e.g. `DsHidMiniTraceGuid`) for the given message format,
+ or `null` if no unambiguous override is available (TMF-only context, or a PDB with
+ zero / multiple control GUIDs). Used by [WppEventRecord](./nefarius.utilities.etw.deserializer.wpp.wppeventrecord.md) when provider-name rewriting
+ is enabled.
+
+```csharp
+internal string GetWppProviderNameOverride(TraceMessageFormat format)
+```
+
+#### Parameters
+
+`format` [TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md)<br>
+
+#### Returns
+
+[String](https://learn.microsoft.com/dotnet/api/system.string)

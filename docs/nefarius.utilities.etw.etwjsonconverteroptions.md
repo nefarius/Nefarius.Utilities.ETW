@@ -70,6 +70,31 @@ public Action<String> ReportError { get; set; }
 
 [Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[String](https://learn.microsoft.com/dotnet/api/system.string)><br>
 
+### <a id="properties-rewritewppprovidername"/>**RewriteWppProviderName**
+
+When `true`, the `GuidName` / `Provider` field in decoded WPP events is
+ overridden with the friendly name declared in the `TMC:``WPP_DEFINE_CONTROL_GUID` annotation
+ (e.g. `DsHidMiniTraceGuid`) instead of the raw TMF module token (e.g. `sys`).
+
+```csharp
+public bool RewriteWppProviderName { get; set; }
+```
+
+#### Property Value
+
+[Boolean](https://learn.microsoft.com/dotnet/api/system.boolean)<br>
+
+**Remarks:**
+
+The override is resolved on a per-PDB basis: if a PDB declares exactly one control GUID whose
+ name is non-empty, every message format that originated from that PDB is mapped to that name.
+ PDBs with zero or more than one control GUID are skipped (ambiguous mapping) and the original
+ `format.Provider` value is kept unchanged — so the fallback is always silent and safe.
+
+Has no effect when [EtwJsonConverterOptions.WppDecodingContext](./nefarius.utilities.etw.etwjsonconverteroptions.md#wppdecodingcontext) is not set or was built from TMF files only.
+
+Default is `false` (existing output is unchanged).
+
 ### <a id="properties-wppdecodingcontext"/>**WppDecodingContext**
 
 [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md) to read WPP events.
