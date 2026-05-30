@@ -1,0 +1,32 @@
+{
+  TotalEventCount: 663,
+  WppEventCount: 658,
+  DecodedWppCount: 658,
+  UniqueEventNames: [
+    MSNT_SystemTrace/EventTrace/BuildInfo,
+    MSNT_SystemTrace/EventTrace/DbgIdRSDS,
+    MSNT_SystemTrace/EventTrace/Header,
+    MSNT_SystemTrace/EventTrace/PartitionInfoExtensionV2,
+    WPP
+  ],
+  SampleDecodedEvents: [
+    {
+      Provider: BthPS3PSMTraceGuid,
+      Function: BthPS3PSMEvtIoInternalDeviceControl,
+      Level: TRACE_LEVEL_VERBOSE,
+      FormattedString: [BthPS3PSMEvtIoInternalDeviceControl]>> Bulk IN transfer (PipeHandle: 0xFFFF95820BE02120)
+    },
+    {
+      Provider: BthPS3PSMTraceGuid,
+      Function: BthPS3PSMEvtIoInternalDeviceControl,
+      Level: TRACE_LEVEL_VERBOSE,
+      FormattedString: [BthPS3PSMEvtIoInternalDeviceControl]>> Bulk IN transfer (PipeHandle: 0xFFFF95820BE02120)
+    },
+    {
+      Provider: BthPS3PSMTraceGuid,
+      Function: BthPS3PSMEvtIoInternalDeviceControl,
+      Level: TRACE_LEVEL_VERBOSE,
+      FormattedString: [BthPS3PSMEvtIoInternalDeviceControl]>> Bulk IN transfer (PipeHandle: 0xFFFF95820BE02120)
+    }
+  ]
+}

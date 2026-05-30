@@ -42,6 +42,24 @@ public class SnapshotTests
             .UseFileName("DsHidMini_summary");
     }
 
+    [Test]
+    public Task BthPs3EtlTrace_WithProviderRewrite_SnapshotMatches()
+    {
+        object summary = BuildSummary(Shared.BthPs3EtlTraceDecodeToStringWithRewrite(), sampleCount: 3);
+        return Verifier.Verify(summary)
+            .UseDirectory("Snapshots")
+            .UseFileName("BthPS3_0_rewrite_summary");
+    }
+
+    [Test]
+    public Task DsHidMiniEtlTrace_WithProviderRewrite_SnapshotMatches()
+    {
+        object summary = BuildSummary(Shared.DsHidMiniEtlTraceDecodeToStringWithRewrite(), sampleCount: 3);
+        return Verifier.Verify(summary)
+            .UseDirectory("Snapshots")
+            .UseFileName("DsHidMini_rewrite_summary");
+    }
+
     // -----------------------------------------------------------------------
 
     /// <summary>

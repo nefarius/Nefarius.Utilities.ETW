@@ -114,6 +114,59 @@ public static class Shared
         return Encoding.UTF8.GetString(ms.ToArray());
     }
 
+    /// <summary>
+    ///     Decodes <c>BthPS3_0.etl</c> with both PDB files and the provider-name rewrite enabled.
+    /// </summary>
+    public static string BthPs3EtlTraceDecodeToStringWithRewrite()
+    {
+        const string etwFilePath = @".\traces\BthPS3_0.etl";
+
+        JsonWriterOptions options = new() { Indented = true };
+
+        using MemoryStream ms = new();
+        using Utf8JsonWriter jsonWriter = new(ms, options);
+        DecodingContext decodingContext = new(PdbFileDecodingContextType.CreateFrom(
+            @".\symbols\BthPS3.pdb",
+            @".\symbols\BthPS3PSM.pdb"
+        ));
+
+        if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
+            {
+                converterOptions.WppDecodingContext = decodingContext;
+                converterOptions.RewriteWppProviderName = true;
+            }))
+        {
+            throw new InvalidOperationException("BthPS3 ETL decode with rewrite failed.");
+        }
+
+        return Encoding.UTF8.GetString(ms.ToArray());
+    }
+
+    /// <summary>
+    ///     Decodes <c>DsHidMini.etl</c> with <c>DsHidMini.pdb</c> and the provider-name rewrite enabled.
+    /// </summary>
+    public static string DsHidMiniEtlTraceDecodeToStringWithRewrite()
+    {
+        const string etwFilePath = @".\traces\DsHidMini.etl";
+
+        JsonWriterOptions options = new() { Indented = true };
+
+        using MemoryStream ms = new();
+        using Utf8JsonWriter jsonWriter = new(ms, options);
+        DecodingContext decodingContext = new(new PdbFileDecodingContextType(@".\symbols\DsHidMini.pdb"));
+
+        if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
+            {
+                converterOptions.WppDecodingContext = decodingContext;
+                converterOptions.RewriteWppProviderName = true;
+            }))
+        {
+            throw new InvalidOperationException("DsHidMini ETL decode with rewrite failed.");
+        }
+
+        return Encoding.UTF8.GetString(ms.ToArray());
+    }
+
     // Kept for backward compatibility with benchmarks.
     public static bool BthPs3EtlTraceDecoding()
     {

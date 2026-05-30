@@ -41,6 +41,25 @@ public sealed class EtwJsonConverterOptions
     public DecodingContext? WppDecodingContext { get; set; }
 
     /// <summary>
+    ///     When <see langword="true" />, the <c>GuidName</c> / <c>Provider</c> field in decoded WPP events is
+    ///     overridden with the friendly name declared in the <c>TMC:</c> <c>WPP_DEFINE_CONTROL_GUID</c> annotation
+    ///     (e.g. <c>DsHidMiniTraceGuid</c>) instead of the raw TMF module token (e.g. <c>sys</c>).
+    /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///         The override is resolved on a per-PDB basis: if a PDB declares exactly one control GUID whose
+    ///         name is non-empty, every message format that originated from that PDB is mapped to that name.
+    ///         PDBs with zero or more than one control GUID are skipped (ambiguous mapping) and the original
+    ///         <c>format.Provider</c> value is kept unchanged — so the fallback is always silent and safe.
+    ///     </para>
+    ///     <para>
+    ///         Has no effect when <see cref="WppDecodingContext" /> is not set or was built from TMF files only.
+    ///     </para>
+    ///     <para>Default is <see langword="false" /> (existing output is unchanged).</para>
+    /// </remarks>
+    public bool RewriteWppProviderName { get; set; }
+
+    /// <summary>
     ///     If set, <c>PROCESS_TRACE_MODE_RAW_TIMESTAMP</c> will be applied when processing the trace record.
     /// </summary>
     /// <remarks>

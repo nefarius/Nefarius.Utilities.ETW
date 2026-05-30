@@ -86,7 +86,8 @@ public static class EtwUtil
             new EtwJsonWriter(jsonWriter),
             opts.CustomProviderManifest,
             opts.WppDecodingContext,
-            opts.OnWppFormatMissing
+            opts.OnWppFormatMissing,
+            opts.RewriteWppProviderName
         );
 
         int count = list.Count;
@@ -214,7 +215,8 @@ public static class EtwUtil
             new EtwJsonWriter(jsonWriter),
             opts.CustomProviderManifest,
             opts.WppDecodingContext,
-            opts.OnWppFormatMissing
+            opts.OnWppFormatMissing,
+            opts.RewriteWppProviderName
         );
 
         EVENT_TRACE_LOGFILEW session;
@@ -637,7 +639,8 @@ public static class EtwUtil
             channelWriter,
             opts.CustomProviderManifest,
             opts.WppDecodingContext,
-            opts.OnWppFormatMissing
+            opts.OnWppFormatMissing,
+            opts.RewriteWppProviderName
         );
 
         string workerName = realtimeSessionName is not null

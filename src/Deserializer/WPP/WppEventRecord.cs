@@ -81,11 +81,17 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
     ///     event. Receives the trace GUID, the event id, and the version. Fires before the
     ///     placeholder <c>FormattedString</c> is written.
     /// </param>
+    /// <param name="rewriteProviderName">
+    ///     When <see langword="true" />, the <c>GuidName</c> field is overridden with the friendly
+    ///     TMC control name from <see cref="DecodingContext.GetWppProviderNameOverride" /> if
+    ///     available. Falls back to <c>format.Provider</c> when no override is found.
+    /// </param>
     /// <exception cref="TdhGetEventInformationException">Failed to get event information.</exception>
     /// <exception cref="TdhGetPropertySizeException">Failed to query property size.</exception>
     /// <exception cref="TdhGetPropertyException">Failed to get property content.</exception>
     public void Decode(DecodingContext decodingContext,
-        Action<Guid, ushort, uint>? onFormatMissing = null)
+        Action<Guid, ushort, uint>? onFormatMissing = null,
+        bool rewriteProviderName = false)
     {
         ObjectAccessor? self = ObjectAccessor.Create(this, true);
 
@@ -177,7 +183,9 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                         {
                             value = propertyName switch
                             {
-                                nameof(GuidName) => format.Provider,
+                                nameof(GuidName) => (rewriteProviderName
+                                    ? decodingContext.GetWppProviderNameOverride(format)
+                                    : null) ?? format.Provider,
                                 nameof(GuidTypeName) => format.Opcode,
                                 nameof(FlagsName) => format.Flags,
                                 nameof(LevelName) => format.Level,

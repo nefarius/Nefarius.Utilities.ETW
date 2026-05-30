@@ -18,6 +18,12 @@ public sealed class DecodingContext
     private readonly IReadOnlyCollection<Guid> _providerGuids;
 
     /// <summary>
+    ///     Maps (MessageGuid, Id) -> friendly control name for PDB sources that declare exactly one
+    ///     unambiguous <c>WPP_DEFINE_CONTROL_GUID</c>. Built lazily on first use.
+    /// </summary>
+    private readonly IReadOnlyDictionary<TraceMessageFormatLookupKey, string> _providerNameOverrides;
+
+    /// <summary>
     ///     New decoding context instance.
     /// </summary>
     /// <param name="decodingTypes">One or more <see cref="DecodingContextType" />s to look up decoding information in.</param>
@@ -39,6 +45,40 @@ public sealed class DecodingContext
             .SelectMany(t => t.ProviderGuids)
             .Distinct()
             .ToArray();
+
+        // Build the provider-name override map. Only PDB sources with exactly one non-empty control name
+        // contribute entries; zero or multiple controls are ambiguous and are skipped silently.
+        Dictionary<TraceMessageFormatLookupKey, string> overrides = [];
+
+        foreach (DecodingContextType t in _decodingTypes)
+        {
+            if (t is not PdbFileDecodingContextType pdb)
+            {
+                continue;
+            }
+
+            IReadOnlyCollection<WppTraceControl> controls = pdb.WppTraceControls;
+
+            if (controls.Count != 1)
+            {
+                continue;
+            }
+
+            string controlName = controls.Single().Name;
+
+            if (string.IsNullOrEmpty(controlName))
+            {
+                continue;
+            }
+
+            foreach (TraceMessageFormat fmt in pdb.TraceMessageFormats)
+            {
+                TraceMessageFormatLookupKey key = new(fmt.MessageGuid, fmt.Id);
+                overrides.TryAdd(key, controlName);
+            }
+        }
+
+        _providerNameOverrides = overrides.AsReadOnly();
     }
 
     /// <summary>
@@ -59,6 +99,18 @@ public sealed class DecodingContext
         TraceMessageFormatLookupKey key = new(messageGuid.Value, id);
 
         return _lookup.GetValueOrDefault(key);
+    }
+
+    /// <summary>
+    ///     Returns the friendly TMC control name (e.g. <c>DsHidMiniTraceGuid</c>) for the given message format,
+    ///     or <see langword="null" /> if no unambiguous override is available (TMF-only context, or a PDB with
+    ///     zero / multiple control GUIDs).  Used by <see cref="WppEventRecord" /> when provider-name rewriting
+    ///     is enabled.
+    /// </summary>
+    internal string? GetWppProviderNameOverride(TraceMessageFormat format)
+    {
+        TraceMessageFormatLookupKey key = new(format.MessageGuid, format.Id);
+        return _providerNameOverrides.GetValueOrDefault(key);
     }
 
     /// <summary>
