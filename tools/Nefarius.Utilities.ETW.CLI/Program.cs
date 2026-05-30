@@ -656,20 +656,18 @@ parse.SetAction(async (ParseResult result, CancellationToken cancellationToken) 
     List<DecodingContextType> allTypes = [..explicitTypes, ..autoTypes];
     DecodingContext? decodingContext = allTypes.Count > 0 ? new DecodingContext(allTypes) : null;
 
-    // Build the provider-name rewrite map from PDB TMC: annotations.
-    IReadOnlyDictionary<Guid, string>? providerNameMap =
-        BuildProviderNameMap(allTypes, keepOriginalProvider);
+    bool rewriteProviderName = ShouldRewriteProviderName(allTypes, keepOriginalProvider);
 
     if (outDir is not null)
     {
         return await RunParsePerFileAsync(
             etlFiles, outDir, decodingContext, usePlain, preserveRaw,
-            columns, emitHeader, filter, providerNameMap, cancellationToken);
+            columns, emitHeader, filter, rewriteProviderName, cancellationToken);
     }
 
     return await RunParseStdoutAsync(
         etlFiles, decodingContext, usePlain, useColor, preserveRaw,
-        columns, emitHeader, filter, providerNameMap, cancellationToken);
+        columns, emitHeader, filter, rewriteProviderName, cancellationToken);
 });
 
 // ---------------------------------------------------------------------------
@@ -891,33 +889,33 @@ return await root.Parse(args).InvokeAsync();
 // ---------------------------------------------------------------------------
 
 /// <summary>
-///     Builds the provider-name rewrite map from the loaded decoding contexts and the
-///     <c>--keep-original-provider</c> flag.
-///     Returns <see langword="null" /> when the flag is set or when no TMC records are available
-///     (in both cases the callers skip the rewrite entirely, preserving existing behaviour).
-///     When the flag is NOT set but the map ends up empty (e.g. only TMF sources were loaded),
-///     a single informational note is written to stderr and <see langword="null" /> is returned.
+///     Returns <see langword="true" /> when the WPP provider-name rewrite should be enabled.
+///     Returns <see langword="false" /> immediately when <paramref name="keepOriginalProvider" /> is set.
+///     Returns <see langword="false" /> (with a one-time informational stderr notice) when no
+///     TMC control-GUID names are found in the loaded symbols — e.g. only TMF sources were loaded.
 /// </summary>
-static IReadOnlyDictionary<Guid, string>? BuildProviderNameMap(
+static bool ShouldRewriteProviderName(
     IEnumerable<DecodingContextType> types,
     bool keepOriginalProvider)
 {
     if (keepOriginalProvider)
     {
-        return null;
+        return false;
     }
 
-    Dictionary<Guid, string> map = WppProviderRewriter.BuildNameMap(types);
+    bool hasTmcNames = types
+        .OfType<PdbFileDecodingContextType>()
+        .Any(p => p.WppTraceControls.Any(c => !string.IsNullOrWhiteSpace(c.Name)));
 
-    if (map.Count == 0)
+    if (!hasTmcNames)
     {
         Console.Error.WriteLine(
             "[*] WPP provider name rewrite: no TMC control-GUID names found in the loaded symbols; " +
             "using original Provider values. Pass --keep-original-provider to suppress this notice.");
-        return null;
+        return false;
     }
 
-    return map;
+    return true;
 }
 
 static ulong ParseKeywordMask(string raw)
@@ -951,9 +949,7 @@ static async Task<int> RunAsync(
     // Resolve --symbols paths into a DecodingContext and the raw context list.
     (DecodingContext? decodingContext, List<DecodingContextType> contextTypes) = ResolveSymbols(symbolPaths);
 
-    // Build provider-name rewrite map from PDB TMC: annotations.
-    IReadOnlyDictionary<Guid, string>? providerNameMap =
-        BuildProviderNameMap(contextTypes, keepOriginalProvider);
+    bool rewriteProviderName = ShouldRewriteProviderName(contextTypes, keepOriginalProvider);
 
     // Determine the final provider list: explicit args take precedence; fall back to WPP control
     // GUIDs extracted from TMC: annotations in the PDB files.
@@ -1063,8 +1059,9 @@ static async Task<int> RunAsync(
                            sessionName,
                            o =>
                            {
-                               o.WppDecodingContext  = decodingContext;
-                               o.OnWppFormatMissing  = missingFormatWarner;
+                               o.WppDecodingContext      = decodingContext;
+                               o.OnWppFormatMissing      = missingFormatWarner;
+                               o.RewriteWppProviderName  = rewriteProviderName;
                            },
                            cts.Token))
         {
@@ -1074,17 +1071,14 @@ static async Task<int> RunAsync(
 
             if (usePlain)
             {
-                await WritePlainLineAsync(json, plainOut!, useColor, columns, filter, providerNameMap, cts.Token);
+                await WritePlainLineAsync(json, plainOut!, useColor, columns, filter, cts.Token);
             }
             else
             {
                 // Each buffer is a self-contained JSON object; append a newline for NDJSON,
                 // then flush immediately so events appear in realtime rather than waiting
                 // for the buffer to fill.
-                ReadOnlyMemory<byte> outJson = providerNameMap is not null
-                    ? WppProviderRewriter.Rewrite(json, providerNameMap)
-                    : json;
-                await ndjsonOut!.WriteAsync(outJson, cts.Token);
+                await ndjsonOut!.WriteAsync(json, cts.Token);
                 ndjsonOut.WriteByte((byte)'\n');
                 await ndjsonOut.FlushAsync(cts.Token);
             }
@@ -1744,7 +1738,7 @@ static async Task<int> RunParseStdoutAsync(
     IReadOnlyList<PlainOutput.ColumnSpec> columns,
     bool emitHeader,
     Func<PlainOutput.PlainEvent, bool>? filter,
-    IReadOnlyDictionary<Guid, string>? providerNameMap,
+    bool rewriteProviderName,
     CancellationToken cancellationToken)
 {
     using CancellationTokenSource cts =
@@ -1785,9 +1779,10 @@ static async Task<int> RunParseStdoutAsync(
                            etlFiles,
                            o =>
                            {
-                               o.WppDecodingContext    = decodingContext;
-                               o.PreserveRawTimestamps = preserveRawTimestamps;
-                               o.OnWppFormatMissing    = missingFormatWarner;
+                               o.WppDecodingContext     = decodingContext;
+                               o.PreserveRawTimestamps  = preserveRawTimestamps;
+                               o.OnWppFormatMissing     = missingFormatWarner;
+                               o.RewriteWppProviderName = rewriteProviderName;
                            },
                            cts.Token))
         {
@@ -1795,14 +1790,11 @@ static async Task<int> RunParseStdoutAsync(
 
             if (usePlain)
             {
-                await WritePlainLineAsync(json, plainOut!, useColor, columns, filter, providerNameMap, cts.Token);
+                await WritePlainLineAsync(json, plainOut!, useColor, columns, filter, cts.Token);
             }
             else
             {
-                ReadOnlyMemory<byte> outJson = providerNameMap is not null
-                    ? WppProviderRewriter.Rewrite(json, providerNameMap)
-                    : json;
-                await ndjsonOut!.WriteAsync(outJson, cts.Token);
+                await ndjsonOut!.WriteAsync(json, cts.Token);
                 ndjsonOut.WriteByte((byte)'\n');
                 await ndjsonOut.FlushAsync(cts.Token);
             }
@@ -1850,7 +1842,7 @@ static async Task<int> RunParsePerFileAsync(
     IReadOnlyList<PlainOutput.ColumnSpec> columns,
     bool emitHeader,
     Func<PlainOutput.PlainEvent, bool>? filter,
-    IReadOnlyDictionary<Guid, string>? providerNameMap,
+    bool rewriteProviderName,
     CancellationToken cancellationToken)
 {
     string ext = usePlain ? ".tsv" : ".ndjson";
@@ -1924,14 +1916,15 @@ static async Task<int> RunParsePerFileAsync(
                                    [etl],
                                    o =>
                                    {
-                                       o.WppDecodingContext    = decodingContext;
-                                       o.PreserveRawTimestamps = preserveRawTimestamps;
-                                       o.OnWppFormatMissing    = missingFormatWarner;
+                                       o.WppDecodingContext     = decodingContext;
+                                       o.PreserveRawTimestamps  = preserveRawTimestamps;
+                                       o.OnWppFormatMissing     = missingFormatWarner;
+                                       o.RewriteWppProviderName = rewriteProviderName;
                                    },
                                    cancellationToken))
                 {
                     bool written = await WritePlainLineAsync(
-                        json, writer, false, columns, filter, providerNameMap, cancellationToken, flush: false);
+                        json, writer, false, columns, filter, cancellationToken, flush: false);
                     if (written) eventCount++;
                 }
 
@@ -1945,16 +1938,14 @@ static async Task<int> RunParsePerFileAsync(
                                    [etl],
                                    o =>
                                    {
-                                       o.WppDecodingContext    = decodingContext;
-                                       o.PreserveRawTimestamps = preserveRawTimestamps;
-                                       o.OnWppFormatMissing    = missingFormatWarner;
+                                       o.WppDecodingContext     = decodingContext;
+                                       o.PreserveRawTimestamps  = preserveRawTimestamps;
+                                       o.OnWppFormatMissing     = missingFormatWarner;
+                                       o.RewriteWppProviderName = rewriteProviderName;
                                    },
                                    cancellationToken))
                 {
-                    ReadOnlyMemory<byte> outJson = providerNameMap is not null
-                        ? WppProviderRewriter.Rewrite(json, providerNameMap)
-                        : json;
-                    await buffered.WriteAsync(outJson, cancellationToken);
+                    await buffered.WriteAsync(json, cancellationToken);
                     buffered.WriteByte((byte)'\n');
                     eventCount++;
                 }
@@ -2055,14 +2046,13 @@ static async Task<bool> WritePlainLineAsync(
     bool useColor,
     IReadOnlyList<PlainOutput.ColumnSpec> columns,
     Func<PlainOutput.PlainEvent, bool>? filter,
-    IReadOnlyDictionary<Guid, string>? providerNameMap,
     CancellationToken cancellationToken,
     bool flush = true)
 {
     // Decode failures and filter evaluation exceptions are propagated as fatal errors so the
     // caller's outer try-catch logs them and returns exit code 1. A filter returning false
     // is a normal, non-fatal drop and still returns false here.
-    PlainOutput.PlainEvent evt = PlainOutput.Decode(json, providerNameMap)
+    PlainOutput.PlainEvent evt = PlainOutput.Decode(json)
         ?? throw new InvalidOperationException("Could not parse event JSON.");
 
     if (filter is not null && !filter(evt))
