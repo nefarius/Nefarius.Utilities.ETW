@@ -225,6 +225,31 @@ WPP decoding in real-time mode requires a pre-built
  `options` — the file-based [EtwUtil.EnumeratePdbReferences(IEnumerable&lt;String&gt;, Action&lt;EtwMetadataScanOptions&gt;)](./nefarius.utilities.etw.etwutil.md#enumeratepdbreferencesienumerablestring-actionetwmetadatascanoptions) pre-scan cannot be
  applied to live sessions.
 
+### <a id="methods-enumeratesessionnames"/>**EnumerateSessionNames()**
+
+Returns the names of all currently running ETW trace sessions.
+
+```csharp
+public static IReadOnlyList<String> EnumerateSessionNames()
+```
+
+#### Returns
+
+A read-only list of session names in the order reported by `QueryAllTracesW`.
+ An empty list means the system has no active trace sessions.
+
+#### Exceptions
+
+[Win32Exception](https://learn.microsoft.com/dotnet/api/system.componentmodel.win32exception)<br>
+`QueryAllTracesW` returned a non-zero, non-`ERROR_MORE_DATA` error code, or
+ the system reports more than 256 concurrent sessions and the buffer cannot be grown further.
+
+**Remarks:**
+
+The Windows default maximum is 64 concurrent sessions. When the registry key
+ `EtwMaxLoggers` raises the limit above 64, this method retries first with
+ capacity 128 and then with capacity 256 before giving up.
+
 ### <a id="methods-stoporphansession"/>**StopOrphanSession(String)**
 
 Stops a real-time ETW session by name, ignoring the error if no session with that name exists.
