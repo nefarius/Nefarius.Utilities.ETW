@@ -68,7 +68,7 @@ Unresolved PDBs log a `[!]` warning and are non-fatal; affected WPP events fall 
 By default, when PDB files containing `WPP_DEFINE_CONTROL_GUID` declarations are loaded, the `Provider`/`GuidName` field in every WPP event is rewritten from the raw folder-derived token (e.g. `obj\amd64`) to the friendly name declared in the source (`BthPS3TraceGuid`). The rewrite is best-effort:
 
 - Events whose control GUID is not found in any loaded PDB are left unchanged.
-- TMF-only sources do not carry control-GUID names, so the rewrite is a silent no-op in that case.
+- TMF-only sources do not carry control-GUID names, so no rewrite occurs, but a one-time informational notice is emitted to stderr to make the situation visible.
 
 Pass `--keep-original-provider` to suppress the rewrite and use the original decoder value as-is.
 
