@@ -354,19 +354,28 @@ public class DecodingContextTests
 
     [Test]
     [Category("Parse")]
-    public void GetWppProviderNameOverride_ReturnsBthPS3PsmTraceGuid_ForKnownBthPS3PsmFormat()
+    public void GetWppProviderNameOverride_ReturnsBothControlNames_ForCombinedContext()
     {
+        // BthPS3PSM.pdb: MessageGuid ca66b9c0-..., Id 13 (Device_c104) — verified from cvdump.
+        Guid psmMessageGuid = Guid.Parse("ca66b9c0-97d7-3776-3daf-3296492866aa");
+        const int psmId = 13;
+
         // Build a combined context — BthPS3.pdb and BthPS3PSM.pdb each declare exactly
-        // one control, so the override map should contain entries for both.
+        // one control, so the override map must contain entries for both independently.
         DecodingContext context = new(PdbFileDecodingContextType.CreateFrom(
             @".\symbols\BthPS3.pdb",
             @".\symbols\BthPS3PSM.pdb"
         ));
 
-        // KnownGuid/KnownId belongs to BthPS3.pdb, so the override must be BthPS3TraceGuid.
-        TraceMessageFormat? format = context.GetTraceMessageFormatFor(KnownGuid, KnownId);
-        Assert.That(format, Is.Not.Null, "Precondition: BthPS3 format must resolve.");
-        Assert.That(context.GetWppProviderNameOverride(format!), Is.EqualTo("BthPS3TraceGuid"));
+        // KnownGuid/KnownId belongs to BthPS3.pdb.
+        TraceMessageFormat? bthPs3Format = context.GetTraceMessageFormatFor(KnownGuid, KnownId);
+        Assert.That(bthPs3Format, Is.Not.Null, "Precondition: BthPS3 format must resolve.");
+        Assert.That(context.GetWppProviderNameOverride(bthPs3Format!), Is.EqualTo("BthPS3TraceGuid"));
+
+        // psmMessageGuid/psmId belongs to BthPS3PSM.pdb.
+        TraceMessageFormat? psmFormat = context.GetTraceMessageFormatFor(psmMessageGuid, psmId);
+        Assert.That(psmFormat, Is.Not.Null, "Precondition: BthPS3PSM format must resolve.");
+        Assert.That(context.GetWppProviderNameOverride(psmFormat!), Is.EqualTo("BthPS3PSMTraceGuid"));
     }
 
     [Test]

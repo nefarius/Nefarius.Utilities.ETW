@@ -19,7 +19,7 @@ public sealed class DecodingContext
 
     /// <summary>
     ///     Maps (MessageGuid, Id) -> friendly control name for PDB sources that declare exactly one
-    ///     unambiguous <c>WPP_DEFINE_CONTROL_GUID</c>. Built lazily on first use.
+    ///     unambiguous <c>WPP_DEFINE_CONTROL_GUID</c>. Populated eagerly in the constructor.
     /// </summary>
     private readonly IReadOnlyDictionary<TraceMessageFormatLookupKey, string> _providerNameOverrides;
 
@@ -66,7 +66,7 @@ public sealed class DecodingContext
 
             string controlName = controls.Single().Name;
 
-            if (string.IsNullOrEmpty(controlName))
+            if (string.IsNullOrWhiteSpace(controlName))
             {
                 continue;
             }
