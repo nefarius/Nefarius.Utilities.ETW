@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -464,13 +465,17 @@ public static class EtwUtil
     /// </summary>
     /// <returns>
     ///     A read-only list of session names in the order reported by <c>QueryAllTracesW</c>.
-    ///     Returns an empty list on failure.
+    ///     An empty list means the system has no active trace sessions.
     /// </returns>
     /// <remarks>
     ///     The Windows default maximum is 64 concurrent sessions.  When the registry key
     ///     <c>EtwMaxLoggers</c> raises the limit above 64, this method retries once with
     ///     capacity 256 before giving up.
     /// </remarks>
+    /// <exception cref="Win32Exception">
+    ///     <c>QueryAllTracesW</c> returned a non-zero, non-<c>ERROR_MORE_DATA</c> error code, or
+    ///     the system reports more than 256 concurrent sessions and the buffer cannot be grown further.
+    /// </exception>
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public static IReadOnlyList<string> EnumerateSessionNames()
     {
@@ -502,11 +507,11 @@ public static class EtwUtil
 
                     uint error = Etw.QueryAllTraces(ptrArray, (uint)capacity, out uint loggerCount);
 
-                    // ERROR_MORE_DATA (234) means more sessions exist than we allocated for;
-                    // we still process what was filled in and will retry the outer loop.
+                    // Any error other than ERROR_MORE_DATA (234) is a real API failure.
                     if (error != 0 && error != 234u)
                     {
-                        return [];
+                        throw new Win32Exception((int)error,
+                            $"QueryAllTracesW failed with Win32 error 0x{error:X8}.");
                     }
 
                     uint toRead = Math.Min(loggerCount, (uint)capacity);
@@ -534,7 +539,11 @@ public static class EtwUtil
             }
         }
 
-        return [];
+        // Reached only when QueryAllTracesW still returns ERROR_MORE_DATA after 256 slots —
+        // an extraordinary situation (>256 concurrent ETW sessions).
+        throw new Win32Exception(234,
+            "QueryAllTracesW: the system reports more than 256 concurrent ETW sessions; " +
+            "cannot enumerate all of them.");
     }
 
     // -----------------------------------------------------------------------
