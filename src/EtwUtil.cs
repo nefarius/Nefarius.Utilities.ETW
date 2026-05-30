@@ -459,6 +459,84 @@ public static class EtwUtil
         }
     }
 
+    /// <summary>
+    ///     Returns the names of all currently running ETW trace sessions.
+    /// </summary>
+    /// <returns>
+    ///     A read-only list of session names in the order reported by <c>QueryAllTracesW</c>.
+    ///     Returns an empty list on failure.
+    /// </returns>
+    /// <remarks>
+    ///     The Windows default maximum is 64 concurrent sessions.  When the registry key
+    ///     <c>EtwMaxLoggers</c> raises the limit above 64, this method retries once with
+    ///     capacity 256 before giving up.
+    /// </remarks>
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    public static IReadOnlyList<string> EnumerateSessionNames()
+    {
+        // ETW session names are limited to 1 024 characters including the null terminator.
+        const int MaxNameChars = 1024;
+
+        // Try 64 first (system default); retry with 256 if QueryAllTracesW reports more sessions.
+        for (int capacity = 64; capacity <= 256; capacity *= 2)
+        {
+            unsafe
+            {
+                int propsSize = Marshal.SizeOf<EVENT_TRACE_PROPERTIES>();
+                int nameBytes = (MaxNameChars + 1) * sizeof(char);
+                int slotSize  = propsSize + nameBytes;
+
+                // Allocate the property blocks and the pointer array in native heap.
+                byte* block = (byte*)NativeMemory.AllocZeroed((nuint)(capacity * slotSize));
+                EVENT_TRACE_PROPERTIES** ptrArray =
+                    (EVENT_TRACE_PROPERTIES**)NativeMemory.AllocZeroed((nuint)(capacity * sizeof(void*)));
+                try
+                {
+                    for (int i = 0; i < capacity; i++)
+                    {
+                        EVENT_TRACE_PROPERTIES* slot = (EVENT_TRACE_PROPERTIES*)(block + i * slotSize);
+                        slot->Wnode.BufferSize = (uint)slotSize;
+                        slot->LoggerNameOffset = (uint)propsSize;
+                        ptrArray[i]            = slot;
+                    }
+
+                    uint error = Etw.QueryAllTraces(ptrArray, (uint)capacity, out uint loggerCount);
+
+                    // ERROR_MORE_DATA (234) means more sessions exist than we allocated for;
+                    // we still process what was filled in and will retry the outer loop.
+                    if (error != 0 && error != 234u)
+                    {
+                        return [];
+                    }
+
+                    uint toRead = Math.Min(loggerCount, (uint)capacity);
+                    List<string> names = new((int)toRead);
+                    for (uint i = 0; i < toRead; i++)
+                    {
+                        EVENT_TRACE_PROPERTIES* slot = ptrArray[i];
+                        char* namePtr = (char*)((byte*)slot + slot->LoggerNameOffset);
+                        names.Add(new string(namePtr));
+                    }
+
+                    if (error == 234u && loggerCount > (uint)capacity)
+                    {
+                        // Outer loop will retry with doubled capacity.
+                        continue;
+                    }
+
+                    return names;
+                }
+                finally
+                {
+                    NativeMemory.Free(ptrArray);
+                    NativeMemory.Free(block);
+                }
+            }
+        }
+
+        return [];
+    }
+
     // -----------------------------------------------------------------------
     // Private streaming infrastructure
     // -----------------------------------------------------------------------

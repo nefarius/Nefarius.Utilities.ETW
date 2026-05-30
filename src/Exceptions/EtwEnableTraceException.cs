@@ -26,6 +26,14 @@ public sealed class EtwEnableTraceException : Win32Exception
                 $"Cannot modify provider {{{providerGuid}}} on session '{sessionName}': provider not registered " +
                 "on this system. The provider GUID may be incorrect.",
 
+            WIN32_ERROR.ERROR_NO_SYSTEM_RESOURCES =>
+                $"Cannot modify provider {{{providerGuid}}} on session '{sessionName}': the provider is already " +
+                "enabled in the maximum number of concurrent trace sessions. Modern (manifest-based / TraceLogging) " +
+                "providers allow up to 8 sessions; legacy WPP/MOF providers allow only 1. " +
+                "This is usually caused by leftover sessions from previous runs that were killed before they could " +
+                "stop cleanly. Run 'logman query -ets' to list them and 'logman stop <name> -ets' to remove " +
+                "each one, or use 'etwutils sessions clean' if available.",
+
             _ => $"Cannot modify provider {{{providerGuid}}} on session '{sessionName}': " +
                  $"EnableTraceEx2 failed with Win32 error 0x{(uint)error:X8}."
         };
