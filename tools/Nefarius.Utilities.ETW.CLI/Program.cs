@@ -103,6 +103,15 @@ Option<string?> realtimeFilterOpt = new("--filter")
         "Example: Provider != \"Foo\" && Message.StartsWith(\"Bar\"). Ignored when --format is not plain."
 };
 
+Option<bool> realtimeKeepOriginalProviderOpt = new("--keep-original-provider")
+{
+    Description =
+        "Keep the raw WPP Provider/GuidName value emitted by the decoder instead of rewriting it to the " +
+        "friendly control-GUID name (e.g. BthPS3TraceGuid) recovered from PDB TMC: annotations. " +
+        "By default the rewrite is active when PDB symbols containing TMC: records are loaded; " +
+        "it is a silent no-op when no such records are found."
+};
+
 // ---------------------------------------------------------------------------
 // 'realtime' subcommand
 // ---------------------------------------------------------------------------
@@ -122,7 +131,8 @@ Command realtime = new(
     colorOpt,
     realtimeColumnsOpt,
     realtimeHeaderOpt,
-    realtimeFilterOpt
+    realtimeFilterOpt,
+    realtimeKeepOriginalProviderOpt
 };
 
 realtime.SetAction(async (ParseResult result, CancellationToken cancellationToken) =>
@@ -140,6 +150,7 @@ realtime.SetAction(async (ParseResult result, CancellationToken cancellationToke
     string? columnsRaw = result.GetValue(realtimeColumnsOpt);
     bool emitHeader = result.GetValue(realtimeHeaderOpt);
     string? filterExpr = result.GetValue(realtimeFilterOpt);
+    bool keepOriginalProvider = result.GetValue(realtimeKeepOriginalProviderOpt);
 
     if (!formatRaw.Equals("ndjson", StringComparison.OrdinalIgnoreCase) &&
         !formatRaw.Equals("plain", StringComparison.OrdinalIgnoreCase))
@@ -223,6 +234,7 @@ realtime.SetAction(async (ParseResult result, CancellationToken cancellationToke
         columns,
         emitHeader,
         filter,
+        keepOriginalProvider,
         cancellationToken);
 });
 
@@ -473,6 +485,15 @@ Option<string?> parseFilterOpt = new("--filter")
         "Example: Provider != \"Foo\" && Message.StartsWith(\"Bar\"). Ignored when --format is not plain."
 };
 
+Option<bool> parseKeepOriginalProviderOpt = new("--keep-original-provider")
+{
+    Description =
+        "Keep the raw WPP Provider/GuidName value emitted by the decoder instead of rewriting it to the " +
+        "friendly control-GUID name (e.g. BthPS3TraceGuid) recovered from PDB TMC: annotations. " +
+        "By default the rewrite is active when PDB symbols containing TMC: records are loaded; " +
+        "it is a silent no-op when no such records are found."
+};
+
 // ---------------------------------------------------------------------------
 // 'parse' subcommand
 // ---------------------------------------------------------------------------
@@ -494,7 +515,8 @@ Command parse = new(
     parsePreserveRawTimestampsOpt,
     parseColumnsOpt,
     parseHeaderOpt,
-    parseFilterOpt
+    parseFilterOpt,
+    parseKeepOriginalProviderOpt
 };
 
 parse.SetAction(async (ParseResult result, CancellationToken cancellationToken) =>
@@ -511,6 +533,7 @@ parse.SetAction(async (ParseResult result, CancellationToken cancellationToken) 
     string?  columnsRaw        = result.GetValue(parseColumnsOpt);
     bool     emitHeader        = result.GetValue(parseHeaderOpt);
     string?  filterExpr        = result.GetValue(parseFilterOpt);
+    bool     keepOriginalProvider = result.GetValue(parseKeepOriginalProviderOpt);
 
     // --- Validate format / color ---
     if (!formatRaw.Equals("ndjson", StringComparison.OrdinalIgnoreCase) &&
@@ -633,16 +656,20 @@ parse.SetAction(async (ParseResult result, CancellationToken cancellationToken) 
     List<DecodingContextType> allTypes = [..explicitTypes, ..autoTypes];
     DecodingContext? decodingContext = allTypes.Count > 0 ? new DecodingContext(allTypes) : null;
 
+    // Build the provider-name rewrite map from PDB TMC: annotations.
+    IReadOnlyDictionary<Guid, string>? providerNameMap =
+        BuildProviderNameMap(allTypes, keepOriginalProvider);
+
     if (outDir is not null)
     {
         return await RunParsePerFileAsync(
             etlFiles, outDir, decodingContext, usePlain, preserveRaw,
-            columns, emitHeader, filter, cancellationToken);
+            columns, emitHeader, filter, providerNameMap, cancellationToken);
     }
 
     return await RunParseStdoutAsync(
         etlFiles, decodingContext, usePlain, useColor, preserveRaw,
-        columns, emitHeader, filter, cancellationToken);
+        columns, emitHeader, filter, providerNameMap, cancellationToken);
 });
 
 // ---------------------------------------------------------------------------
@@ -863,6 +890,36 @@ return await root.Parse(args).InvokeAsync();
 // Implementation
 // ---------------------------------------------------------------------------
 
+/// <summary>
+///     Builds the provider-name rewrite map from the loaded decoding contexts and the
+///     <c>--keep-original-provider</c> flag.
+///     Returns <see langword="null" /> when the flag is set or when no TMC records are available
+///     (in both cases the callers skip the rewrite entirely, preserving existing behaviour).
+///     When the flag is NOT set but the map ends up empty (e.g. only TMF sources were loaded),
+///     a single informational note is written to stderr and <see langword="null" /> is returned.
+/// </summary>
+static IReadOnlyDictionary<Guid, string>? BuildProviderNameMap(
+    IEnumerable<DecodingContextType> types,
+    bool keepOriginalProvider)
+{
+    if (keepOriginalProvider)
+    {
+        return null;
+    }
+
+    Dictionary<Guid, string> map = WppProviderRewriter.BuildNameMap(types);
+
+    if (map.Count == 0)
+    {
+        Console.Error.WriteLine(
+            "[*] WPP provider name rewrite: no TMC control-GUID names found in the loaded symbols; " +
+            "using original Provider values. Pass --keep-original-provider to suppress this notice.");
+        return null;
+    }
+
+    return map;
+}
+
 static ulong ParseKeywordMask(string raw)
 {
     ReadOnlySpan<char> s = raw.AsSpan().Trim();
@@ -888,10 +945,15 @@ static async Task<int> RunAsync(
     IReadOnlyList<PlainOutput.ColumnSpec> columns,
     bool emitHeader,
     Func<PlainOutput.PlainEvent, bool>? filter,
+    bool keepOriginalProvider,
     CancellationToken cancellationToken)
 {
     // Resolve --symbols paths into a DecodingContext and the raw context list.
     (DecodingContext? decodingContext, List<DecodingContextType> contextTypes) = ResolveSymbols(symbolPaths);
+
+    // Build provider-name rewrite map from PDB TMC: annotations.
+    IReadOnlyDictionary<Guid, string>? providerNameMap =
+        BuildProviderNameMap(contextTypes, keepOriginalProvider);
 
     // Determine the final provider list: explicit args take precedence; fall back to WPP control
     // GUIDs extracted from TMC: annotations in the PDB files.
@@ -1012,14 +1074,17 @@ static async Task<int> RunAsync(
 
             if (usePlain)
             {
-                await WritePlainLineAsync(json, plainOut!, useColor, columns, filter, cts.Token);
+                await WritePlainLineAsync(json, plainOut!, useColor, columns, filter, providerNameMap, cts.Token);
             }
             else
             {
                 // Each buffer is a self-contained JSON object; append a newline for NDJSON,
                 // then flush immediately so events appear in realtime rather than waiting
                 // for the buffer to fill.
-                await ndjsonOut!.WriteAsync(json, cts.Token);
+                ReadOnlyMemory<byte> outJson = providerNameMap is not null
+                    ? WppProviderRewriter.Rewrite(json, providerNameMap)
+                    : json;
+                await ndjsonOut!.WriteAsync(outJson, cts.Token);
                 ndjsonOut.WriteByte((byte)'\n');
                 await ndjsonOut.FlushAsync(cts.Token);
             }
@@ -1679,6 +1744,7 @@ static async Task<int> RunParseStdoutAsync(
     IReadOnlyList<PlainOutput.ColumnSpec> columns,
     bool emitHeader,
     Func<PlainOutput.PlainEvent, bool>? filter,
+    IReadOnlyDictionary<Guid, string>? providerNameMap,
     CancellationToken cancellationToken)
 {
     using CancellationTokenSource cts =
@@ -1729,11 +1795,14 @@ static async Task<int> RunParseStdoutAsync(
 
             if (usePlain)
             {
-                await WritePlainLineAsync(json, plainOut!, useColor, columns, filter, cts.Token);
+                await WritePlainLineAsync(json, plainOut!, useColor, columns, filter, providerNameMap, cts.Token);
             }
             else
             {
-                await ndjsonOut!.WriteAsync(json, cts.Token);
+                ReadOnlyMemory<byte> outJson = providerNameMap is not null
+                    ? WppProviderRewriter.Rewrite(json, providerNameMap)
+                    : json;
+                await ndjsonOut!.WriteAsync(outJson, cts.Token);
                 ndjsonOut.WriteByte((byte)'\n');
                 await ndjsonOut.FlushAsync(cts.Token);
             }
@@ -1781,6 +1850,7 @@ static async Task<int> RunParsePerFileAsync(
     IReadOnlyList<PlainOutput.ColumnSpec> columns,
     bool emitHeader,
     Func<PlainOutput.PlainEvent, bool>? filter,
+    IReadOnlyDictionary<Guid, string>? providerNameMap,
     CancellationToken cancellationToken)
 {
     string ext = usePlain ? ".tsv" : ".ndjson";
@@ -1861,7 +1931,7 @@ static async Task<int> RunParsePerFileAsync(
                                    cancellationToken))
                 {
                     bool written = await WritePlainLineAsync(
-                        json, writer, false, columns, filter, cancellationToken, flush: false);
+                        json, writer, false, columns, filter, providerNameMap, cancellationToken, flush: false);
                     if (written) eventCount++;
                 }
 
@@ -1881,7 +1951,10 @@ static async Task<int> RunParsePerFileAsync(
                                    },
                                    cancellationToken))
                 {
-                    await buffered.WriteAsync(json, cancellationToken);
+                    ReadOnlyMemory<byte> outJson = providerNameMap is not null
+                        ? WppProviderRewriter.Rewrite(json, providerNameMap)
+                        : json;
+                    await buffered.WriteAsync(outJson, cancellationToken);
                     buffered.WriteByte((byte)'\n');
                     eventCount++;
                 }
@@ -1982,13 +2055,14 @@ static async Task<bool> WritePlainLineAsync(
     bool useColor,
     IReadOnlyList<PlainOutput.ColumnSpec> columns,
     Func<PlainOutput.PlainEvent, bool>? filter,
+    IReadOnlyDictionary<Guid, string>? providerNameMap,
     CancellationToken cancellationToken,
     bool flush = true)
 {
     // Decode failures and filter evaluation exceptions are propagated as fatal errors so the
     // caller's outer try-catch logs them and returns exit code 1. A filter returning false
     // is a normal, non-fatal drop and still returns false here.
-    PlainOutput.PlainEvent evt = PlainOutput.Decode(json)
+    PlainOutput.PlainEvent evt = PlainOutput.Decode(json, providerNameMap)
         ?? throw new InvalidOperationException("Could not parse event JSON.");
 
     if (filter is not null && !filter(evt))
