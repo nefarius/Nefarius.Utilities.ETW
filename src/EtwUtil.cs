@@ -469,8 +469,8 @@ public static class EtwUtil
     /// </returns>
     /// <remarks>
     ///     The Windows default maximum is 64 concurrent sessions.  When the registry key
-    ///     <c>EtwMaxLoggers</c> raises the limit above 64, this method retries once with
-    ///     capacity 256 before giving up.
+    ///     <c>EtwMaxLoggers</c> raises the limit above 64, this method retries first with
+    ///     capacity 128 and then with capacity 256 before giving up.
     /// </remarks>
     /// <exception cref="Win32Exception">
     ///     <c>QueryAllTracesW</c> returned a non-zero, non-<c>ERROR_MORE_DATA</c> error code, or
@@ -482,7 +482,7 @@ public static class EtwUtil
         // ETW session names are limited to 1 024 characters including the null terminator.
         const int MaxNameChars = 1024;
 
-        // Try 64 first (system default); retry with 256 if QueryAllTracesW reports more sessions.
+        // Try 64 first (system default); retry with 128 then 256 if QueryAllTracesW reports more sessions.
         for (int capacity = 64; capacity <= 256; capacity *= 2)
         {
             unsafe
