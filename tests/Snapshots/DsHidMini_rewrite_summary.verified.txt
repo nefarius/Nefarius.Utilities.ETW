@@ -1,0 +1,32 @@
+{
+  TotalEventCount: 68183,
+  WppEventCount: 68179,
+  DecodedWppCount: 68179,
+  UniqueEventNames: [
+    MSNT_SystemTrace/EventTrace/BuildInfo,
+    MSNT_SystemTrace/EventTrace/DbgIdRSDS,
+    MSNT_SystemTrace/EventTrace/Header,
+    MSNT_SystemTrace/EventTrace/PartitionInfoExtensionV2,
+    WPP
+  ],
+  SampleDecodedEvents: [
+    {
+      Provider: DsHidMiniTraceGuid,
+      Function: DriverEntry,
+      Level: TRACE_LEVEL_INFORMATION,
+      FormattedString: [DriverEntry]DriverEntry Entry
+    },
+    {
+      Provider: DsHidMiniTraceGuid,
+      Function: InitIPC,
+      Level: TRACE_LEVEL_VERBOSE,
+      FormattedString: [InitIPC] --> Entry
+    },
+    {
+      Provider: DsHidMiniTraceGuid,
+      Function: InitIPC,
+      Level: TRACE_LEVEL_ERROR,
+      FormattedString: [InitIPC] ERROR:WdfRegistryQueryULong failed with status STATUS_NO_SUCH_FILE (0xC000000F)
+    }
+  ]
+}

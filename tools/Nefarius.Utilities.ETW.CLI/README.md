@@ -41,6 +41,7 @@ etwutils parse <etl-path> [<etl-path> ...]
     [--columns          <list>]        # plain only: comma-separated column tokens; default Timestamp,Provider,Level,Message
     [--header]                         # plain only: emit a TSV header line first
     [--filter           <expression>]  # plain only: DynamicExpresso predicate to drop events
+    [--keep-original-provider]         # keep raw WPP GuidName instead of rewriting to TMC: friendly name
 ```
 
 `<etl-path>` accepts individual `.etl` files, directories (top-level `*.etl` enumeration), and glob patterns (e.g. `C:\Traces\*.etl`). Multiple paths are accepted and deduplicated.
@@ -61,6 +62,15 @@ When `--symbols-search`, `--symbol-server`, or `--symbol-cache` is supplied (or 
 3. **Symbol server** — `GET <url>/<pdbname>/<GUID><AGE>/<pdbname>`; downloaded atomically into the cache.
 
 Unresolved PDBs log a `[!]` warning and are non-fatal; affected WPP events fall back to a `GUID=...` placeholder. In addition, each distinct provider GUID that triggers the placeholder also emits a one-time `[!]` warning to `stderr` at decode time, so symbol mismatches are surfaced immediately even when piping output through `--filter`.
+
+#### WPP provider name rewrite
+
+By default, when PDB files containing `WPP_DEFINE_CONTROL_GUID` declarations are loaded, the `Provider`/`GuidName` field in every WPP event is rewritten from the raw folder-derived token (e.g. `obj\amd64`) to the friendly name declared in the source (`BthPS3TraceGuid`). The rewrite is best-effort:
+
+- Events whose control GUID is not found in any loaded PDB are left unchanged.
+- TMF-only sources do not carry control-GUID names, so no rewrite occurs, but a one-time informational notice is emitted to stderr to make the situation visible.
+
+Pass `--keep-original-provider` to suppress the rewrite and use the original decoder value as-is.
 
 ##### Default cache directory
 
@@ -98,12 +108,15 @@ etwutils realtime [<provider-guid> ...]
     [--columns <list>]                 # plain only: comma-separated column tokens; default Timestamp,Provider,Level,Message
     [--header]                         # plain only: emit a TSV header line first
     [--filter <expression>]            # plain only: DynamicExpresso predicate to drop events
+    [--keep-original-provider]         # keep raw WPP GuidName instead of rewriting to TMC: friendly name
 ```
 
 `provider-guid` is **optional**. When omitted, the tool reads the `WPP_DEFINE_CONTROL_GUID` declarations embedded in the PDB files passed to `--symbols` and uses those as the provider list. Explicit GUIDs always take precedence; PDB-derived GUIDs are not added on top of explicit ones.
 
 > [!NOTE]  
 > Auto-derivation requires **PDB files**. TMF files do not contain the WPP control GUID (they only hold per-call-site message format data). If `--symbols` points to a directory or glob that contains only TMF files, you must also supply `provider-guid` explicitly.
+
+The provider name rewrite described under `parse` applies here too. Pass `--keep-original-provider` to disable it.
 
 ### `verbose`
 

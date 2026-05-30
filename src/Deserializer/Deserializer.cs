@@ -54,13 +54,14 @@ internal sealed partial class Deserializer<T>
 
     public Deserializer(T writer, Func<Guid, Stream?>? customProviderManifest,
         DecodingContext? decodingContext = null,
-        Action<Guid, ushort, uint>? onWppFormatMissing = null) : this(writer)
+        Action<Guid, ushort, uint>? onWppFormatMissing = null,
+        bool rewriteWppProviderName = false) : this(writer)
     {
         _customProviderManifest = customProviderManifest;
 
         if (decodingContext is not null)
         {
-            _wppTraceEventParser = new WppTraceEventParser(decodingContext, onWppFormatMissing);
+            _wppTraceEventParser = new WppTraceEventParser(decodingContext, onWppFormatMissing, rewriteWppProviderName);
         }
     }
 

@@ -296,7 +296,16 @@ internal static class PlainOutput
     ///     Returns <see langword="null" /> when the JSON cannot be parsed or does not contain
     ///     the expected structure.
     /// </summary>
-    public static PlainEvent? Decode(ReadOnlyMemory<byte> jsonBytes)
+    /// <param name="jsonBytes">Raw NDJSON event buffer.</param>
+    /// <param name="providerOverride">
+    ///     Optional <c>ControlGuid → friendly name</c> map built from PDB <c>TMC:</c> annotations.
+    ///     When non-null and an entry is found for the WPP event's <c>Properties[0].TraceGuid</c>,
+    ///     the <see cref="PlainEvent.Provider" /> field is set to the mapped name instead of the
+    ///     raw <c>GuidName</c> value.  A <see langword="null" /> map or a missing/empty entry
+    ///     falls back to the original value gracefully.
+    /// </param>
+    public static PlainEvent? Decode(ReadOnlyMemory<byte> jsonBytes,
+        IReadOnlyDictionary<Guid, string>? providerOverride = null)
     {
         JsonDocument doc;
         try
@@ -387,6 +396,19 @@ internal static class PlainOutput
                 if (p.TryGetProperty("SubComponentName",out JsonElement sc)) subComponent = sc.GetString() ?? string.Empty;
                 if (p.TryGetProperty("FlagsName",       out JsonElement fl)) flags        = fl.GetString() ?? string.Empty;
                 if (p.TryGetProperty("CpuNumber",       out JsonElement wppCpu)) wppCpu.TryGetInt32(out cpu);
+
+                // Apply provider-name override from PDB TMC: control-GUID annotations when available.
+                // Falls back to the GuidName read above when the map is null, the GUID is absent/unparseable,
+                // or the entry is not found / has an empty name.
+                if (providerOverride is not null &&
+                    p.TryGetProperty("TraceGuid", out JsonElement tgEl) &&
+                    tgEl.ValueKind == JsonValueKind.String &&
+                    Guid.TryParse(tgEl.GetString(), out Guid traceGuid) &&
+                    providerOverride.TryGetValue(traceGuid, out string? mappedName) &&
+                    !string.IsNullOrEmpty(mappedName))
+                {
+                    provider = mappedName;
+                }
 
                 levelNumber = DeriveLevelNumber(levelName);
             }
