@@ -161,3 +161,4 @@ See [tools/Nefarius.Utilities.ETW.CLI/README.md](tools/Nefarius.Utilities.ETW.CL
 - [MinVer](https://github.com/adamralph/minver)
 - [Fast access to .net fields/properties](https://github.com/mgravell/fast-member)
 - [Nefarius.Shared.PdbUtils](https://github.com/nefarius/PdbUtils)
+- [Information from Microsoft about the PDB format](https://github.com/microsoft/microsoft-pdb)
