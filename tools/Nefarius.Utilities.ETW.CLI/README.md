@@ -109,14 +109,35 @@ etwutils realtime [<provider-guid> ...]
     [--header]                         # plain only: emit a TSV header line first
     [--filter <expression>]            # plain only: DynamicExpresso predicate to drop events
     [--keep-original-provider]         # keep raw WPP GuidName instead of rewriting to TMC: friendly name
+    [--driver <service-name>] ...       # repeatable; auto-resolve binary, download PDB, derive provider GUIDs
+    [--driver-type <kernel|umdf|auto>] # applied to every --driver; default auto
+    [--driver-binary <path>]           # explicit binary override for a single --driver; skips ImagePath lookup
+    [--symbol-server <url>]            # symbol store root URL shared by all --driver resolutions
+    [--symbol-cache  <path>]           # local symstore-layout cache; default %LOCALAPPDATA%\Nefarius\etwutils\symcache
 ```
 
-`provider-guid` is **optional**. When omitted, the tool reads the `WPP_DEFINE_CONTROL_GUID` declarations embedded in the PDB files passed to `--symbols` and uses those as the provider list. Explicit GUIDs always take precedence; PDB-derived GUIDs are not added on top of explicit ones.
+`provider-guid` is **optional**. When omitted, the tool reads the `WPP_DEFINE_CONTROL_GUID` declarations embedded in the PDB files passed to `--symbols` (or resolved via `--driver`) and uses those as the provider list. Explicit GUIDs always take precedence; PDB-derived GUIDs are not added on top of explicit ones.
 
 > [!NOTE]  
 > Auto-derivation requires **PDB files**. TMF files do not contain the WPP control GUID (they only hold per-call-site message format data). If `--symbols` points to a directory or glob that contains only TMF files, you must also supply `provider-guid` explicitly.
 
 The provider name rewrite described under `parse` applies here too. Pass `--keep-original-provider` to disable it.
+
+#### `--driver` — zero-configuration capture from a service name
+
+When `--driver <name>` is supplied, `etwutils` performs the following steps automatically before starting the capture:
+
+1. **Locate the binary** — reads `HKLM\SYSTEM\CurrentControlSet\Services\<name>\ImagePath`, normalises the path (strips `\??\`, expands `\SystemRoot\` and `%SystemRoot%`), and verifies the file exists on disk.  Supply `--driver-binary <path>` to skip this step and provide the binary directly (required for UMDF drivers that do not store `ImagePath` in the standard location).
+2. **Extract PDB identity** — opens the binary as a PE file and reads the CodeView RSDS debug directory entry to obtain the embedded PDB filename, GUID, and age.
+3. **Resolve the PDB** — checks the local cache (`--symbol-cache`), then downloads from `--symbol-server` (or `_NT_SYMBOL_PATH`) using the standard SymSrv URL path `<server>/<pdbname>/<GUID><AGE>/<pdbname>`.
+4. **Feed into capture** — appends the resolved PDB to the `--symbols` list and auto-derives the WPP provider GUIDs from its `WPP_DEFINE_CONTROL_GUID` annotations, exactly as if `--symbols <pdb>` had been passed explicitly.
+
+`--driver` is repeatable: pass it multiple times to capture events from several drivers in one session. Each driver is resolved independently — a failure for one driver logs a warning and skips that driver without aborting the others. The command exits with code 2 only if every driver failed *and* no other provider source (`provider-guid` args or `--symbols`) was supplied.
+
+`--driver-type`, `--symbol-server`, and `--symbol-cache` are single-valued and apply to every named driver. `--driver-binary` is only valid when exactly one `--driver` is given (combining it with multiple drivers exits with code 2).
+
+> [!TIP]  
+> Point `--symbol-server` at `https://symbols.nefarius.at/download/symbols` to use the public Nefarius symbol server, which hosts PDBs for BthPS3, HidHide, ViGEm, and other projects. For WinDbg-compatible servers set `_NT_SYMBOL_PATH` and omit the flag entirely.
 
 ### `verbose`
 
@@ -323,6 +344,65 @@ Auto-derive the provider GUID from a PDB and stream all events:
 ```bash
 # The control GUID is extracted from WPP_DEFINE_CONTROL_GUID in the PDB.
 etwutils realtime --symbols C:\Symbols\MyDriver.pdb | jq .
+```
+
+#### Capture by driver service name (zero-config)
+
+Resolve everything automatically from a driver service name — binary path, PDB identity, download, and provider GUIDs:
+
+```bash
+# Locate HidHide.sys via its ImagePath registry value, download HidHide.pdb from
+# the Nefarius symbol server, derive the WPP provider GUID, and start capturing.
+etwutils realtime --driver HidHide \
+    --symbol-server https://symbols.nefarius.at/download/symbols | jq .
+# stderr:
+# [*] --driver 'HidHide': resolved binary: C:\Windows\System32\drivers\HidHide.sys
+# [*] --driver 'HidHide': PDB reference: HidHide.pdb (guid=…, age=1)
+#     [server] HidHide.pdb <- https://symbols.nefarius.at/download/symbols/hidhide.pdb/…/hidhide.pdb
+# [*] Session 'NefariusEtwCli-1234' started. Providers (auto-derived from symbols): {…} | level=Verbose | keywords=0xFFFFFFFFFFFFFFFF | matchAll=0x0
+# [*] Streaming events... (Ctrl+C to stop)
+```
+
+Capture events from multiple drivers in a single session:
+
+```bash
+etwutils realtime \
+    --driver HidHide \
+    --driver BthPS3 \
+    --symbol-server https://symbols.nefarius.at/download/symbols | jq .
+# Each driver is resolved independently; if one PDB is missing the other still loads.
+```
+
+Re-run without network access — the PDB is served from the local cache:
+
+```bash
+etwutils realtime --driver HidHide \
+    --symbol-server https://symbols.nefarius.at/download/symbols | jq .
+# stderr:
+#     [cache ] HidHide.pdb
+```
+
+Use `_NT_SYMBOL_PATH` so `--symbol-server` can be omitted:
+
+```bash
+# _NT_SYMBOL_PATH=srv*C:\symbols*https://symbols.nefarius.at/download/symbols
+etwutils realtime --driver HidHide | jq .
+```
+
+Target a UMDF driver and supply the binary path explicitly when `ImagePath` is not in the standard registry location:
+
+```bash
+etwutils realtime --driver MyUmdfDriver --driver-type umdf \
+    --driver-binary "C:\Windows\System32\drivers\UMDF\MyUmdfDriver.dll" \
+    --symbol-server https://symbols.nefarius.at/download/symbols | jq .
+```
+
+Combine `--driver` with `--format plain` and a filter for human-readable live output:
+
+```bash
+etwutils realtime --driver HidHide \
+    --symbol-server https://symbols.nefarius.at/download/symbols \
+    --format plain --filter "LevelNumber <= 3"
 ```
 
 Capture only errors and warnings, with WPP symbol files loaded from a directory:

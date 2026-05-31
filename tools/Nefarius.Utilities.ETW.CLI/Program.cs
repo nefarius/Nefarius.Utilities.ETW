@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http;
 using System.Reflection;
+using System.Reflection.PortableExecutable;
 using System.Text.Json;
 
 using Nefarius.Utilities.ETW;
@@ -114,12 +115,59 @@ Option<bool> realtimeKeepOriginalProviderOpt = new("--keep-original-provider")
         "it is a silent no-op when no such records are found."
 };
 
+Option<string[]> realtimeDriverOpt = new("--driver")
+{
+    Description =
+        "Driver service name (e.g. HidHide, BthPS3). Repeat for multiple drivers. " +
+        "Each driver's binary is located via the registry ImagePath, its CodeView PDB reference is read, " +
+        "the matching PDB is downloaded from the symbol server into the local cache, and all resolved " +
+        "PDBs are used as implicit --symbols sources. Provider GUIDs are auto-derived from every " +
+        "downloaded PDB unless provider-guid arguments are also supplied. " +
+        "--driver-type applies to every named driver; --symbol-server and --symbol-cache are shared.",
+    Arity = ArgumentArity.ZeroOrMore,
+    AllowMultipleArgumentsPerToken = false
+};
+
+Option<string?> realtimeDriverTypeOpt = new("--driver-type")
+{
+    Description =
+        "Driver kind to target when resolving the service binary: 'kernel', 'umdf', or 'auto' (default). " +
+        "'auto' prefers the kernel-mode candidate and falls back to UMDF when only a UMDF registration exists."
+};
+
+Option<string?> realtimeDriverBinaryOpt = new("--driver-binary")
+{
+    Description =
+        "Explicit path to the driver binary (.sys/.dll). " +
+        "Overrides the ImagePath registry lookup performed by --driver. " +
+        "Useful for UMDF drivers whose ImagePath is not stored under the standard services key. " +
+        "Only valid when exactly one --driver is specified."
+};
+
+Option<string?> realtimeSymbolServerOpt = new("--symbol-server")
+{
+    Description =
+        "Microsoft-style symbol store root URL used to download the PDB referenced by --driver " +
+        "(e.g. https://symbols.nefarius.at/download/symbols). " +
+        "Falls back to _NT_SYMBOL_PATH when absent."
+};
+
+Option<string?> realtimeSymbolCacheOpt = new("--symbol-cache")
+{
+    Description =
+        "Local symstore-layout cache directory for PDBs downloaded via --driver. " +
+        $"Defaults to %LOCALAPPDATA%\\Nefarius\\etwutils\\symcache. " +
+        "Falls back to _NT_SYMBOL_PATH when this flag and --symbol-server are both absent."
+};
+
 // ---------------------------------------------------------------------------
 // 'realtime' subcommand
 // ---------------------------------------------------------------------------
 Command realtime = new(
     "realtime",
-    "Attach to a realtime ETW session, enable a provider, and stream decoded events on stdout.")
+    "Attach to a realtime ETW session, enable a provider, and stream decoded events on stdout. " +
+    "Pass --driver <service-name> to resolve the driver binary automatically, download its PDB " +
+    "from a symbol server, and derive provider GUIDs without supplying any path by hand.")
 {
     providerArg,
     keywordsOpt,
@@ -134,7 +182,12 @@ Command realtime = new(
     realtimeColumnsOpt,
     realtimeHeaderOpt,
     realtimeFilterOpt,
-    realtimeKeepOriginalProviderOpt
+    realtimeKeepOriginalProviderOpt,
+    realtimeDriverOpt,
+    realtimeDriverTypeOpt,
+    realtimeDriverBinaryOpt,
+    realtimeSymbolServerOpt,
+    realtimeSymbolCacheOpt
 };
 
 realtime.SetAction(async (ParseResult result, CancellationToken cancellationToken) =>
@@ -153,6 +206,53 @@ realtime.SetAction(async (ParseResult result, CancellationToken cancellationToke
     bool emitHeader = result.GetValue(realtimeHeaderOpt);
     string? filterExpr = result.GetValue(realtimeFilterOpt);
     bool keepOriginalProvider = result.GetValue(realtimeKeepOriginalProviderOpt);
+    string[] driverNames = result.GetValue(realtimeDriverOpt) ?? [];
+    string? driverTypeRaw = result.GetValue(realtimeDriverTypeOpt);
+    string? driverBinaryOverride = result.GetValue(realtimeDriverBinaryOpt);
+    string? symbolServerRaw = result.GetValue(realtimeSymbolServerOpt);
+    string? symbolCacheRaw = result.GetValue(realtimeSymbolCacheOpt);
+
+    // --- Validate --driver-type ---
+    ServiceKind? driverKind = null;
+    if (driverTypeRaw is not null)
+    {
+        if (driverTypeRaw.Equals("kernel", StringComparison.OrdinalIgnoreCase))
+            driverKind = ServiceKind.Kernel;
+        else if (driverTypeRaw.Equals("umdf", StringComparison.OrdinalIgnoreCase))
+            driverKind = ServiceKind.Umdf;
+        else if (!driverTypeRaw.Equals("auto", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.Error.WriteLine(
+                $"[!] Unknown --driver-type value '{driverTypeRaw}'. Expected 'kernel', 'umdf', or 'auto'.");
+            return 2;
+        }
+    }
+
+    // --driver-binary requires exactly one --driver.
+    if (driverBinaryOverride is not null && driverNames.Length == 0)
+    {
+        Console.Error.WriteLine(
+            "[*] Warning: --driver-binary has no effect without --driver.");
+    }
+    if (driverBinaryOverride is not null && driverNames.Length > 1)
+    {
+        Console.Error.WriteLine(
+            "[!] --driver-binary can only be combined with a single --driver. " +
+            $"Got {driverNames.Length} --driver values.");
+        return 2;
+    }
+
+    // --- Validate --symbol-server ---
+    if (symbolServerRaw is not null)
+    {
+        if (!Uri.TryCreate(symbolServerRaw, UriKind.Absolute, out Uri? parsedUri) ||
+            (parsedUri.Scheme != Uri.UriSchemeHttp && parsedUri.Scheme != Uri.UriSchemeHttps))
+        {
+            Console.Error.WriteLine(
+                $"[!] --symbol-server must be an absolute http(s) URL. Got: '{symbolServerRaw}'");
+            return 2;
+        }
+    }
 
     if (!formatRaw.Equals("ndjson", StringComparison.OrdinalIgnoreCase) &&
         !formatRaw.Equals("plain", StringComparison.OrdinalIgnoreCase))
@@ -237,6 +337,11 @@ realtime.SetAction(async (ParseResult result, CancellationToken cancellationToke
         emitHeader,
         filter,
         keepOriginalProvider,
+        driverNames,
+        driverKind,
+        driverBinaryOverride,
+        symbolServerRaw,
+        symbolCacheRaw,
         cancellationToken);
 });
 
@@ -1102,8 +1207,110 @@ static async Task<int> RunAsync(
     bool emitHeader,
     Func<PlainOutput.PlainEvent, bool>? filter,
     bool keepOriginalProvider,
+    string[] driverNames,
+    ServiceKind? driverKind,
+    string? driverBinaryOverride,
+    string? symbolServerCliValue,
+    string? symbolCacheCliValue,
     CancellationToken cancellationToken)
 {
+    // ---------------------------------------------------------------------------
+    // --driver: for each named driver, resolve binary → read PDB identity → download/cache PDB
+    // ---------------------------------------------------------------------------
+    if (driverNames.Length > 0)
+    {
+        (string? effectiveServer, string effectiveCache) =
+            ResolveSymbolStoreConfig(symbolServerCliValue, symbolCacheCliValue);
+
+        string assemblyVersion =
+            Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion ?? "0.0.0";
+
+        using HttpClient http = new() { Timeout = TimeSpan.FromSeconds(30) };
+        http.DefaultRequestHeaders.UserAgent.ParseAdd($"etwutils/{assemblyVersion}");
+
+        Directory.CreateDirectory(effectiveCache);
+
+        List<string> driverPdbs = [];
+
+        foreach (string driverName in driverNames)
+        {
+            string tag = $"--driver '{driverName}'";
+
+            try
+            {
+                string? binaryPath = driverBinaryOverride is not null
+                    ? ResolveDriverBinaryOverride(driverBinaryOverride)
+                    : ResolveDriverBinaryPath(driverName, driverKind);
+
+                if (binaryPath is null)
+                {
+                    Console.Error.WriteLine(
+                        $"[*] {tag}: binary path could not be resolved; skipping this driver.");
+                    continue;
+                }
+
+                Console.Error.WriteLine($"[*] {tag}: resolved binary: {binaryPath}");
+
+                PdbMetaData? pdbMeta = TryReadPdbReference(binaryPath);
+                if (pdbMeta is null)
+                {
+                    Console.Error.WriteLine(
+                        $"[*] {tag}: no PDB reference found in binary; skipping this driver.");
+                    continue;
+                }
+
+                Console.Error.WriteLine(
+                    $"[*] {tag}: PDB reference: {Path.GetFileName(pdbMeta.Value.PdbName)} " +
+                    $"(guid={pdbMeta.Value.Guid:D}, age={pdbMeta.Value.Age})");
+
+                string? resolvedPdb = await ResolveSinglePdbAsync(
+                    pdbMeta.Value, [], effectiveServer, effectiveCache, http, cancellationToken);
+
+                if (resolvedPdb is not null)
+                {
+                    driverPdbs.Add(resolvedPdb);
+                }
+                else
+                {
+                    Console.Error.WriteLine(
+                        $"[*] {tag}: PDB could not be resolved; skipping this driver.");
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(
+                    $"[!] {tag}: unexpected error during driver resolution: " +
+                    $"{ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
+        if (driverPdbs.Count > 0)
+        {
+            symbolPaths = [..symbolPaths, ..driverPdbs];
+        }
+        else
+        {
+            // All driver resolutions failed — fatal only when nothing else can supply providers.
+            if (explicitProviderGuids.Length == 0 && symbolPaths.Length == 0)
+            {
+                Console.Error.WriteLine(
+                    "[!] --driver: no PDBs could be resolved for any of the specified driver(s) " +
+                    "and no explicit provider GUIDs or --symbols paths were supplied. " +
+                    "Cannot determine ETW provider(s) to enable.");
+                return 2;
+            }
+
+            Console.Error.WriteLine(
+                "[*] --driver: no PDBs resolved; continuing with existing symbol/provider sources.");
+        }
+    }
+
     // Resolve --symbols paths into a DecodingContext and the raw context list.
     (DecodingContext? decodingContext, List<DecodingContextType> contextTypes) = ResolveSymbols(symbolPaths);
 
@@ -1744,6 +1951,277 @@ static string? FindPdbInSearchPaths(
 }
 
 /// <summary>
+///     Validates the explicit binary override path supplied via <c>--driver-binary</c>.
+///     Prints an error and returns <see langword="null" /> when the file does not exist.
+/// </summary>
+static string? ResolveDriverBinaryOverride(string path)
+{
+    string expanded = Environment.ExpandEnvironmentVariables(path);
+    if (!File.Exists(expanded))
+    {
+        Console.Error.WriteLine(
+            $"[!] --driver-binary: path does not exist: '{expanded}'.");
+        return null;
+    }
+
+    return Path.GetFullPath(expanded);
+}
+
+/// <summary>
+///     Resolves the on-disk binary path for a driver service by reading the
+///     <c>ImagePath</c> REG_EXPAND_SZ value from the services registry key.
+///     Supports kernel-mode drivers directly; for UMDF drivers the same
+///     <c>Services</c> key is tried and <c>--driver-binary</c> is recommended as a fallback
+///     when <c>ImagePath</c> is absent.
+///     Uses <see cref="VerboseRegistry.Detect" /> for <c>auto</c> kind resolution.
+/// </summary>
+static string? ResolveDriverBinaryPath(string serviceName, ServiceKind? kind)
+{
+    try
+    {
+    return ResolveDriverBinaryPathCore(serviceName, kind);
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine(
+            $"[!] --driver: failed to resolve binary path for '{serviceName}': " +
+            $"{ex.GetType().Name}: {ex.Message}");
+        return null;
+    }
+}
+
+static string? ResolveDriverBinaryPathCore(string serviceName, ServiceKind? kind)
+{
+    // Normalise a raw ImagePath value to an absolute, rooted file-system path.
+    static string ExpandImagePath(string raw)
+    {
+        // Strip \??\ device-namespace prefix used by many kernel drivers.
+        if (raw.StartsWith(@"\??\", StringComparison.OrdinalIgnoreCase))
+            raw = raw[4..];
+
+        // Map \SystemRoot\ → %SystemRoot%
+        if (raw.StartsWith(@"\SystemRoot\", StringComparison.OrdinalIgnoreCase))
+        {
+            string sysRoot = Environment.GetEnvironmentVariable("SystemRoot") ?? @"C:\Windows";
+            raw = Path.Combine(sysRoot, raw[12..]);
+        }
+
+        // Expand any remaining %Foo% environment variables.
+        raw = Environment.ExpandEnvironmentVariables(raw);
+
+        // Relative paths (e.g. "system32\drivers\foo.sys") are relative to %SystemRoot%.
+        if (!Path.IsPathRooted(raw))
+        {
+            string sysRoot = Environment.GetEnvironmentVariable("SystemRoot") ?? @"C:\Windows";
+            raw = Path.Combine(sysRoot, raw);
+        }
+
+        return raw;
+    }
+
+    // Determine effective kind when 'auto' is requested.
+    ServiceKind effectiveKind;
+    if (kind is null)
+    {
+        DetectionResult detection = VerboseRegistry.Detect(serviceName);
+        if (detection.Kernel is not null)
+        {
+            effectiveKind = ServiceKind.Kernel;
+        }
+        else if (detection.Umdf is not null)
+        {
+            effectiveKind = ServiceKind.Umdf;
+            Console.Error.WriteLine(
+                $"[*] --driver: '{serviceName}' detected as UMDF (no kernel-mode candidate found). " +
+                "If ImagePath is absent, supply the binary path via --driver-binary.");
+        }
+        else
+        {
+            Console.Error.WriteLine(
+                $"[!] --driver: service '{serviceName}' was not found in the kernel or UMDF service hives. " +
+                "Verify the service name and that the driver is installed.");
+            return null;
+        }
+    }
+    else
+    {
+        effectiveKind = kind.Value;
+    }
+
+    const string ServicesRoot = @"SYSTEM\CurrentControlSet\Services";
+    string serviceKeyPath = $@"{ServicesRoot}\{serviceName}";
+
+    using Microsoft.Win32.RegistryKey hklm = Microsoft.Win32.RegistryKey.OpenBaseKey(
+        Microsoft.Win32.RegistryHive.LocalMachine, Microsoft.Win32.RegistryView.Registry64);
+
+    using Microsoft.Win32.RegistryKey? serviceKey = hklm.OpenSubKey(serviceKeyPath, writable: false);
+    if (serviceKey is null)
+    {
+        Console.Error.WriteLine(
+            $"[!] --driver: service registry key HKLM\\{serviceKeyPath} not found.");
+        return null;
+    }
+
+    // Read without automatic expansion so we can normalize the path ourselves.
+    object? imagePathVal = serviceKey.GetValue(
+        "ImagePath", null, Microsoft.Win32.RegistryValueOptions.DoNotExpandEnvironmentNames);
+
+    if (imagePathVal is null)
+    {
+        if (effectiveKind == ServiceKind.Umdf)
+        {
+            Console.Error.WriteLine(
+                $"[!] --driver: no ImagePath value found for UMDF service '{serviceName}'. " +
+                "Use --driver-binary to specify the WUDFHost-hosted DLL path explicitly.");
+        }
+        else
+        {
+            Console.Error.WriteLine(
+                $"[!] --driver: no ImagePath value found for service '{serviceName}'.");
+        }
+        return null;
+    }
+
+    string rawPath = imagePathVal.ToString()!;
+    string resolvedPath = ExpandImagePath(rawPath);
+
+    if (!File.Exists(resolvedPath))
+    {
+        Console.Error.WriteLine(
+            $"[!] --driver: resolved binary path does not exist on disk: '{resolvedPath}' " +
+            $"(ImagePath='{rawPath}'). The driver may not be installed.");
+        return null;
+    }
+
+    return resolvedPath;
+}
+
+/// <summary>
+///     Opens the PE binary at <paramref name="binaryPath" /> and reads the first
+///     <c>CodeView</c> debug directory entry (RSDS format).
+///     Returns a <see cref="PdbMetaData" /> populated from the embedded PDB path, GUID, and age,
+///     or <see langword="null" /> when no CodeView entry exists or an error occurs.
+/// </summary>
+static PdbMetaData? TryReadPdbReference(string binaryPath)
+{
+    try
+    {
+        using FileStream fs = new(binaryPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using PEReader pe   = new(fs);
+
+        foreach (DebugDirectoryEntry entry in pe.ReadDebugDirectory())
+        {
+            if (entry.Type != DebugDirectoryEntryType.CodeView) continue;
+
+            CodeViewDebugDirectoryData cv = pe.ReadCodeViewDebugDirectoryData(entry);
+
+            return new PdbMetaData
+            {
+                PdbName = cv.Path,
+                Guid    = cv.Guid,
+                Age     = cv.Age
+            };
+        }
+
+        Console.Error.WriteLine(
+            $"[!] --driver: no CodeView (RSDS) debug directory entry found in '{binaryPath}'. " +
+            "The binary may be stripped or produced without PDB reference embedding.");
+        return null;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine(
+            $"[!] --driver: failed to read PE debug directory from '{binaryPath}': " +
+            $"{ex.GetType().Name}: {ex.Message}");
+        return null;
+    }
+}
+
+/// <summary>
+///     Resolves a single PDB via (1) local cache, (2) <paramref name="searchPaths" /> directories,
+///     and (3) a remote symbol server, in that order.
+///     Returns the local file path of the resolved PDB, or <see langword="null" /> when the PDB
+///     could not be found through any source.
+///     Logs <c>[cache ]</c>, <c>[local ]</c>, <c>[server]</c>, or <c>[404   ]</c> lines to stderr.
+/// </summary>
+static async Task<string?> ResolveSinglePdbAsync(
+    PdbMetaData    pdb,
+    string[]       searchPaths,
+    string?        symbolServerUrl,
+    string         symbolCacheDir,
+    HttpClient     http,
+    CancellationToken cancellationToken)
+{
+    string pdbFileName   = Path.GetFileName(pdb.PdbName);
+    string indexPath     = pdb.IndexPrefix.Replace('/', Path.DirectorySeparatorChar);
+    string cacheFilePath = Path.GetFullPath(Path.Combine(symbolCacheDir, indexPath));
+
+    // 1. Cache hit
+    if (File.Exists(cacheFilePath))
+    {
+        Console.Error.WriteLine($"    [cache ] {pdbFileName}");
+        return cacheFilePath;
+    }
+
+    // 2. Local search paths
+    if (searchPaths.Length > 0)
+    {
+        string? found = FindPdbInSearchPaths(searchPaths, pdbFileName, pdb.Guid, pdb.Age);
+        if (found is not null)
+        {
+            Console.Error.WriteLine($"    [local ] {pdbFileName} <- {found}");
+            return found;
+        }
+    }
+
+    // 3. Symbol-server download
+    if (!string.IsNullOrWhiteSpace(symbolServerUrl))
+    {
+        string url     = $"{symbolServerUrl!.TrimEnd('/')}/{pdb.IndexPrefix}";
+        string tmpPath = cacheFilePath + ".tmp";
+
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(cacheFilePath)!);
+
+            using HttpResponseMessage response =
+                await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                          .ConfigureAwait(false);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                Console.Error.WriteLine($"    [404   ] {pdbFileName} ({url})");
+                return null;
+            }
+
+            response.EnsureSuccessStatusCode();
+
+            await using (FileStream tmp = new(tmpPath, FileMode.Create, FileAccess.Write,
+                             FileShare.None, 65536, useAsync: true))
+            {
+                await response.Content.CopyToAsync(tmp, cancellationToken).ConfigureAwait(false);
+            }
+
+            File.Move(tmpPath, cacheFilePath, overwrite: true);
+            Console.Error.WriteLine($"    [server] {pdbFileName} <- {url}");
+            return cacheFilePath;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(
+                $"[!] Failed to download '{pdbFileName}': {ex.GetType().Name}: {ex.Message}");
+            return null;
+        }
+    }
+
+    return null;
+}
+
+/// <summary>
 ///     Pre-scans the given .etl files with <see cref="EtwUtil.EnumeratePdbReferences" />, then
 ///     resolves each <see cref="PdbMetaData" /> against (1) the local symbol cache,
 ///     (2) the <paramref name="searchPaths" /> directories, and (3) a remote symbol server.
@@ -1781,110 +2259,45 @@ static async Task<List<DecodingContextType>> ResolveAutoSymbolsAsync(
         $"[*] Auto-discovery: resolving {refs.Count} PDB reference(s)...");
     Directory.CreateDirectory(symbolCacheDir);
 
-    bool hasServer      = !string.IsNullOrWhiteSpace(symbolServerUrl);
-    bool hasSearchPaths = searchPaths.Length > 0;
-
     foreach (PdbMetaData pdb in refs)
     {
         if (cancellationToken.IsCancellationRequested) break;
 
-        string pdbFileName = Path.GetFileName(pdb.PdbName);
-
-        // PdbMetaData.IndexPrefix uses '/' separators; convert for the local file system.
+        string pdbFileName   = Path.GetFileName(pdb.PdbName);
         string indexPath     = pdb.IndexPrefix.Replace('/', Path.DirectorySeparatorChar);
         string cacheFilePath = Path.GetFullPath(Path.Combine(symbolCacheDir, indexPath));
 
-        // 1. Cache lookup
-        if (File.Exists(cacheFilePath))
+        // Snapshot whether the file exists in cache *before* resolution so we can
+        // distinguish a pre-existing cache hit from a freshly downloaded file.
+        bool wasAlreadyCached = File.Exists(cacheFilePath);
+
+        string? resolved = await ResolveSinglePdbAsync(
+            pdb, searchPaths, symbolServerUrl, symbolCacheDir, http, cancellationToken);
+
+        if (resolved is not null)
         {
             try
             {
-                result.Add(new PdbFileDecodingContextType(cacheFilePath));
-                Console.Error.WriteLine($"    [cache ] {pdbFileName}");
-                fromCache++;
-                continue;
+                result.Add(new PdbFileDecodingContextType(resolved));
+
+                bool wasLocal = !resolved.Equals(cacheFilePath, StringComparison.OrdinalIgnoreCase);
+                if (wasLocal)            fromLocal++;
+                else if (wasAlreadyCached) fromCache++;
+                else                     fromServer++;
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine(
-                    $"[!] Cached PDB '{cacheFilePath}' could not be loaded: {ex.Message}");
+                    $"[!] PDB '{pdbFileName}' at '{resolved}' could not be loaded: {ex.Message}");
+                unresolved++;
             }
         }
-
-        // 2. Local search
-        if (hasSearchPaths)
+        else
         {
-            string? found = FindPdbInSearchPaths(searchPaths, pdbFileName, pdb.Guid, pdb.Age);
-            if (found is not null)
-            {
-                try
-                {
-                    result.Add(new PdbFileDecodingContextType(found));
-                    Console.Error.WriteLine($"    [local ] {pdbFileName} <- {found}");
-                    fromLocal++;
-                    continue;
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine(
-                        $"[!] Local PDB '{found}' could not be loaded: {ex.Message}");
-                }
-            }
+            Console.Error.WriteLine(
+                $"    [miss  ] {pdbFileName} (guid={pdb.Guid:D}, age={pdb.Age})");
+            unresolved++;
         }
-
-        // 3. Symbol-server download
-        if (hasServer)
-        {
-            // IndexPrefix already uses '/' so it is safe to embed in a URL directly.
-            string url     = $"{symbolServerUrl!.TrimEnd('/')}/{pdb.IndexPrefix}";
-            string tmpPath = cacheFilePath + ".tmp";
-
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(cacheFilePath)!);
-
-                using HttpResponseMessage response =
-                    await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-                              .ConfigureAwait(false);
-
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    Console.Error.WriteLine($"    [404   ] {pdbFileName}");
-                }
-                else
-                {
-                    response.EnsureSuccessStatusCode();
-
-                    await using (FileStream tmp = new(tmpPath, FileMode.Create, FileAccess.Write,
-                                     FileShare.None, 65536, useAsync: true))
-                    {
-                        await response.Content.CopyToAsync(tmp, cancellationToken)
-                                      .ConfigureAwait(false);
-                    }
-
-                    File.Move(tmpPath, cacheFilePath, overwrite: true);
-
-                    result.Add(new PdbFileDecodingContextType(cacheFilePath));
-                    Console.Error.WriteLine($"    [server] {pdbFileName} <- {url}");
-                    fromServer++;
-                    continue;
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine(
-                    $"[!] Failed to download '{pdbFileName}': {ex.GetType().Name}: {ex.Message}");
-            }
-        }
-
-        // 4. Unresolved (non-fatal – WPP events fall back to GUID=... placeholder)
-        Console.Error.WriteLine(
-            $"    [miss  ] {pdbFileName} (guid={pdb.Guid:D}, age={pdb.Age})");
-        unresolved++;
     }
 
     Console.Error.WriteLine(
