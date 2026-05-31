@@ -356,12 +356,10 @@ Resolve everything automatically from a driver service name — binary path, PDB
 etwutils realtime --driver HidHide \
     --symbol-server https://symbols.nefarius.at/download/symbols | jq .
 # stderr:
-# [*] _NT_SYMBOL_PATH: (or resolved from --symbol-server)
-# [*] --driver: resolved binary: C:\Windows\System32\drivers\HidHide.sys
-# [*] --driver: PDB reference: HidHide.pdb (guid=…, age=1)
+# [*] --driver 'HidHide': resolved binary: C:\Windows\System32\drivers\HidHide.sys
+# [*] --driver 'HidHide': PDB reference: HidHide.pdb (guid=…, age=1)
 #     [server] HidHide.pdb <- https://symbols.nefarius.at/download/symbols/hidhide.pdb/…/hidhide.pdb
-# [*] --driver: PDB resolved: C:\Users\…\symcache\hidhide.pdb\…\hidhide.pdb
-# [*] Session 'NefariusEtwCli-1234' started. Providers (auto-derived from symbols): {…} | level=Verbose | …
+# [*] Session 'NefariusEtwCli-1234' started. Providers (auto-derived from symbols): {…} | level=Verbose | keywords=0xFFFFFFFFFFFFFFFF | matchAll=0x0
 # [*] Streaming events... (Ctrl+C to stop)
 ```
 

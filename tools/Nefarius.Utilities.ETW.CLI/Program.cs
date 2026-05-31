@@ -1238,42 +1238,55 @@ static async Task<int> RunAsync(
         {
             string tag = $"--driver '{driverName}'";
 
-            string? binaryPath = driverBinaryOverride is not null
-                ? ResolveDriverBinaryOverride(driverBinaryOverride)
-                : ResolveDriverBinaryPath(driverName, driverKind);
+            try
+            {
+                string? binaryPath = driverBinaryOverride is not null
+                    ? ResolveDriverBinaryOverride(driverBinaryOverride)
+                    : ResolveDriverBinaryPath(driverName, driverKind);
 
-            if (binaryPath is null)
+                if (binaryPath is null)
+                {
+                    Console.Error.WriteLine(
+                        $"[*] {tag}: binary path could not be resolved; skipping this driver.");
+                    continue;
+                }
+
+                Console.Error.WriteLine($"[*] {tag}: resolved binary: {binaryPath}");
+
+                PdbMetaData? pdbMeta = TryReadPdbReference(binaryPath);
+                if (pdbMeta is null)
+                {
+                    Console.Error.WriteLine(
+                        $"[*] {tag}: no PDB reference found in binary; skipping this driver.");
+                    continue;
+                }
+
+                Console.Error.WriteLine(
+                    $"[*] {tag}: PDB reference: {Path.GetFileName(pdbMeta.Value.PdbName)} " +
+                    $"(guid={pdbMeta.Value.Guid:D}, age={pdbMeta.Value.Age})");
+
+                string? resolvedPdb = await ResolveSinglePdbAsync(
+                    pdbMeta.Value, [], effectiveServer, effectiveCache, http, cancellationToken);
+
+                if (resolvedPdb is not null)
+                {
+                    driverPdbs.Add(resolvedPdb);
+                }
+                else
+                {
+                    Console.Error.WriteLine(
+                        $"[*] {tag}: PDB could not be resolved; skipping this driver.");
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
             {
                 Console.Error.WriteLine(
-                    $"[*] {tag}: binary path could not be resolved; skipping this driver.");
-                continue;
-            }
-
-            Console.Error.WriteLine($"[*] {tag}: resolved binary: {binaryPath}");
-
-            PdbMetaData? pdbMeta = TryReadPdbReference(binaryPath);
-            if (pdbMeta is null)
-            {
-                Console.Error.WriteLine(
-                    $"[*] {tag}: no PDB reference found in binary; skipping this driver.");
-                continue;
-            }
-
-            Console.Error.WriteLine(
-                $"[*] {tag}: PDB reference: {Path.GetFileName(pdbMeta.Value.PdbName)} " +
-                $"(guid={pdbMeta.Value.Guid:D}, age={pdbMeta.Value.Age})");
-
-            string? resolvedPdb = await ResolveSinglePdbAsync(
-                pdbMeta.Value, [], effectiveServer, effectiveCache, http, cancellationToken);
-
-            if (resolvedPdb is not null)
-            {
-                driverPdbs.Add(resolvedPdb);
-            }
-            else
-            {
-                Console.Error.WriteLine(
-                    $"[*] {tag}: PDB could not be resolved; skipping this driver.");
+                    $"[!] {tag}: unexpected error during driver resolution: " +
+                    $"{ex.GetType().Name}: {ex.Message}");
             }
         }
 
@@ -1963,6 +1976,21 @@ static string? ResolveDriverBinaryOverride(string path)
 ///     Uses <see cref="VerboseRegistry.Detect" /> for <c>auto</c> kind resolution.
 /// </summary>
 static string? ResolveDriverBinaryPath(string serviceName, ServiceKind? kind)
+{
+    try
+    {
+    return ResolveDriverBinaryPathCore(serviceName, kind);
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine(
+            $"[!] --driver: failed to resolve binary path for '{serviceName}': " +
+            $"{ex.GetType().Name}: {ex.Message}");
+        return null;
+    }
+}
+
+static string? ResolveDriverBinaryPathCore(string serviceName, ServiceKind? kind)
 {
     // Normalise a raw ImagePath value to an absolute, rooted file-system path.
     static string ExpandImagePath(string raw)
