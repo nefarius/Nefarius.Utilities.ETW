@@ -137,7 +137,7 @@ When `--driver <name>` is supplied, `etwutils` performs the following steps auto
 `--driver-type`, `--symbol-server`, and `--symbol-cache` are single-valued and apply to every named driver. `--driver-binary` is only valid when exactly one `--driver` is given (combining it with multiple drivers exits with code 2).
 
 > [!TIP]  
-> Point `--symbol-server` at `https://symbols.nefarius.at/download/symbols` to use the public Nefarius symbol server, which hosts PDBs for BthPS3, HidHide, ViGEm, and other projects. For WinDbg-compatible servers set `_NT_SYMBOL_PATH` and omit the flag entirely.
+> Point `--symbol-server` at `https://symbols.nefarius.at/download/symbols` to use the public Nefarius symbol server, which hosts PDBs for BthPS3, HidHide, DsHidMini, and other projects. For WinDbg-compatible servers set `_NT_SYMBOL_PATH` and omit the flag entirely.
 
 ### `verbose`
 
