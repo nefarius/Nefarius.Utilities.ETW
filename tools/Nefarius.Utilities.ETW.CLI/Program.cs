@@ -115,14 +115,17 @@ Option<bool> realtimeKeepOriginalProviderOpt = new("--keep-original-provider")
         "it is a silent no-op when no such records are found."
 };
 
-Option<string?> realtimeDriverOpt = new("--driver")
+Option<string[]> realtimeDriverOpt = new("--driver")
 {
     Description =
-        "Driver service name (e.g. HidHide, BthPS3). " +
-        "Resolves the service binary via the registry ImagePath, reads its CodeView PDB reference, " +
-        "downloads the matching PDB from the symbol server into the local cache, and uses it as an " +
-        "implicit --symbols source. Provider GUIDs are auto-derived from the downloaded PDB unless " +
-        "provider-guid arguments are also supplied."
+        "Driver service name (e.g. HidHide, BthPS3). Repeat for multiple drivers. " +
+        "Each driver's binary is located via the registry ImagePath, its CodeView PDB reference is read, " +
+        "the matching PDB is downloaded from the symbol server into the local cache, and all resolved " +
+        "PDBs are used as implicit --symbols sources. Provider GUIDs are auto-derived from every " +
+        "downloaded PDB unless provider-guid arguments are also supplied. " +
+        "--driver-type applies to every named driver; --symbol-server and --symbol-cache are shared.",
+    Arity = ArgumentArity.ZeroOrMore,
+    AllowMultipleArgumentsPerToken = false
 };
 
 Option<string?> realtimeDriverTypeOpt = new("--driver-type")
@@ -137,7 +140,8 @@ Option<string?> realtimeDriverBinaryOpt = new("--driver-binary")
     Description =
         "Explicit path to the driver binary (.sys/.dll). " +
         "Overrides the ImagePath registry lookup performed by --driver. " +
-        "Useful for UMDF drivers whose ImagePath is not stored under the standard services key."
+        "Useful for UMDF drivers whose ImagePath is not stored under the standard services key. " +
+        "Only valid when exactly one --driver is specified."
 };
 
 Option<string?> realtimeSymbolServerOpt = new("--symbol-server")
@@ -202,7 +206,7 @@ realtime.SetAction(async (ParseResult result, CancellationToken cancellationToke
     bool emitHeader = result.GetValue(realtimeHeaderOpt);
     string? filterExpr = result.GetValue(realtimeFilterOpt);
     bool keepOriginalProvider = result.GetValue(realtimeKeepOriginalProviderOpt);
-    string? driverName = result.GetValue(realtimeDriverOpt);
+    string[] driverNames = result.GetValue(realtimeDriverOpt) ?? [];
     string? driverTypeRaw = result.GetValue(realtimeDriverTypeOpt);
     string? driverBinaryOverride = result.GetValue(realtimeDriverBinaryOpt);
     string? symbolServerRaw = result.GetValue(realtimeSymbolServerOpt);
@@ -224,12 +228,18 @@ realtime.SetAction(async (ParseResult result, CancellationToken cancellationToke
         }
     }
 
-    // --driver-binary without --driver is suspicious but harmless — driver resolution
-    // simply won't run and the path is ignored; emit a notice.
-    if (driverBinaryOverride is not null && driverName is null)
+    // --driver-binary requires exactly one --driver.
+    if (driverBinaryOverride is not null && driverNames.Length == 0)
     {
         Console.Error.WriteLine(
             "[*] Warning: --driver-binary has no effect without --driver.");
+    }
+    if (driverBinaryOverride is not null && driverNames.Length > 1)
+    {
+        Console.Error.WriteLine(
+            "[!] --driver-binary can only be combined with a single --driver. " +
+            $"Got {driverNames.Length} --driver values.");
+        return 2;
     }
 
     // --- Validate --symbol-server ---
@@ -327,7 +337,7 @@ realtime.SetAction(async (ParseResult result, CancellationToken cancellationToke
         emitHeader,
         filter,
         keepOriginalProvider,
-        driverName,
+        driverNames,
         driverKind,
         driverBinaryOverride,
         symbolServerRaw,
@@ -1197,7 +1207,7 @@ static async Task<int> RunAsync(
     bool emitHeader,
     Func<PlainOutput.PlainEvent, bool>? filter,
     bool keepOriginalProvider,
-    string? driverName,
+    string[] driverNames,
     ServiceKind? driverKind,
     string? driverBinaryOverride,
     string? symbolServerCliValue,
@@ -1205,88 +1215,86 @@ static async Task<int> RunAsync(
     CancellationToken cancellationToken)
 {
     // ---------------------------------------------------------------------------
-    // --driver: resolve binary → read PDB identity → download/cache PDB
+    // --driver: for each named driver, resolve binary → read PDB identity → download/cache PDB
     // ---------------------------------------------------------------------------
-    if (driverName is not null)
+    if (driverNames.Length > 0)
     {
         (string? effectiveServer, string effectiveCache) =
             ResolveSymbolStoreConfig(symbolServerCliValue, symbolCacheCliValue);
 
-        string? binaryPath = driverBinaryOverride is not null
-            ? ResolveDriverBinaryOverride(driverBinaryOverride)
-            : ResolveDriverBinaryPath(driverName, driverKind);
+        string assemblyVersion =
+            Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion ?? "0.0.0";
 
-        if (binaryPath is not null)
+        using HttpClient http = new() { Timeout = TimeSpan.FromSeconds(30) };
+        http.DefaultRequestHeaders.UserAgent.ParseAdd($"etwutils/{assemblyVersion}");
+
+        Directory.CreateDirectory(effectiveCache);
+
+        List<string> driverPdbs = [];
+
+        foreach (string driverName in driverNames)
         {
-            Console.Error.WriteLine($"[*] --driver: resolved binary: {binaryPath}");
+            string tag = $"--driver '{driverName}'";
 
-            PdbMetaData? pdbMeta = TryReadPdbReference(binaryPath);
-            if (pdbMeta is not null)
+            string? binaryPath = driverBinaryOverride is not null
+                ? ResolveDriverBinaryOverride(driverBinaryOverride)
+                : ResolveDriverBinaryPath(driverName, driverKind);
+
+            if (binaryPath is null)
             {
                 Console.Error.WriteLine(
-                    $"[*] --driver: PDB reference: {Path.GetFileName(pdbMeta.Value.PdbName)} " +
-                    $"(guid={pdbMeta.Value.Guid:D}, age={pdbMeta.Value.Age})");
+                    $"[*] {tag}: binary path could not be resolved; skipping this driver.");
+                continue;
+            }
 
-                string assemblyVersion =
-                    Assembly.GetExecutingAssembly()
-                        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                        ?.InformationalVersion ?? "0.0.0";
+            Console.Error.WriteLine($"[*] {tag}: resolved binary: {binaryPath}");
 
-                using HttpClient http = new() { Timeout = TimeSpan.FromSeconds(30) };
-                http.DefaultRequestHeaders.UserAgent.ParseAdd($"etwutils/{assemblyVersion}");
+            PdbMetaData? pdbMeta = TryReadPdbReference(binaryPath);
+            if (pdbMeta is null)
+            {
+                Console.Error.WriteLine(
+                    $"[*] {tag}: no PDB reference found in binary; skipping this driver.");
+                continue;
+            }
 
-                Directory.CreateDirectory(effectiveCache);
+            Console.Error.WriteLine(
+                $"[*] {tag}: PDB reference: {Path.GetFileName(pdbMeta.Value.PdbName)} " +
+                $"(guid={pdbMeta.Value.Guid:D}, age={pdbMeta.Value.Age})");
 
-                string? resolvedPdb = await ResolveSinglePdbAsync(
-                    pdbMeta.Value, [], effectiveServer, effectiveCache, http, cancellationToken);
+            string? resolvedPdb = await ResolveSinglePdbAsync(
+                pdbMeta.Value, [], effectiveServer, effectiveCache, http, cancellationToken);
 
-                if (resolvedPdb is not null)
-                {
-                    symbolPaths = [..symbolPaths, resolvedPdb];
-                }
-                else
-                {
-                    // PDB could not be resolved — fatal only when nothing else can supply providers.
-                    if (explicitProviderGuids.Length == 0 && symbolPaths.Length == 0)
-                    {
-                        Console.Error.WriteLine(
-                            "[!] --driver: the PDB could not be resolved and no explicit provider GUIDs " +
-                            "or --symbols paths were supplied. Cannot determine ETW provider(s) to enable.");
-                        return 2;
-                    }
-
-                    Console.Error.WriteLine(
-                        "[*] --driver: PDB could not be resolved; continuing with existing symbol/provider sources.");
-                }
+            if (resolvedPdb is not null)
+            {
+                driverPdbs.Add(resolvedPdb);
             }
             else
             {
-                // No CodeView entry found — fatal only when nothing else can supply providers.
-                if (explicitProviderGuids.Length == 0 && symbolPaths.Length == 0)
-                {
-                    Console.Error.WriteLine(
-                        "[!] --driver: could not read PDB reference from the binary and no other " +
-                        "symbol/provider sources were supplied. Cannot determine ETW provider(s) to enable.");
-                    return 2;
-                }
-
                 Console.Error.WriteLine(
-                    "[*] --driver: no PDB reference found in binary; continuing with existing symbol/provider sources.");
+                    $"[*] {tag}: PDB could not be resolved; skipping this driver.");
             }
+        }
+
+        if (driverPdbs.Count > 0)
+        {
+            symbolPaths = [..symbolPaths, ..driverPdbs];
         }
         else
         {
-            // Binary path could not be resolved — fatal only when nothing else can supply providers.
+            // All driver resolutions failed — fatal only when nothing else can supply providers.
             if (explicitProviderGuids.Length == 0 && symbolPaths.Length == 0)
             {
                 Console.Error.WriteLine(
-                    "[!] --driver: could not resolve the driver binary path and no other " +
-                    "symbol/provider sources were supplied. Cannot determine ETW provider(s) to enable.");
+                    "[!] --driver: no PDBs could be resolved for any of the specified driver(s) " +
+                    "and no explicit provider GUIDs or --symbols paths were supplied. " +
+                    "Cannot determine ETW provider(s) to enable.");
                 return 2;
             }
 
             Console.Error.WriteLine(
-                "[*] --driver: binary path could not be resolved; continuing with existing symbol/provider sources.");
+                "[*] --driver: no PDBs resolved; continuing with existing symbol/provider sources.");
         }
     }
 

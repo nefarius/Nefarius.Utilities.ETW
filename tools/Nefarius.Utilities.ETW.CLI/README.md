@@ -109,10 +109,10 @@ etwutils realtime [<provider-guid> ...]
     [--header]                         # plain only: emit a TSV header line first
     [--filter <expression>]            # plain only: DynamicExpresso predicate to drop events
     [--keep-original-provider]         # keep raw WPP GuidName instead of rewriting to TMC: friendly name
-    [--driver <service-name>]          # auto-resolve binary, download PDB, derive provider GUIDs
-    [--driver-type <kernel|umdf|auto>] # disambiguate when kernel & UMDF share a service name; default auto
-    [--driver-binary <path>]           # explicit binary override; skips ImagePath registry lookup
-    [--symbol-server <url>]            # symbol store root URL used by --driver
+    [--driver <service-name>] ...       # repeatable; auto-resolve binary, download PDB, derive provider GUIDs
+    [--driver-type <kernel|umdf|auto>] # applied to every --driver; default auto
+    [--driver-binary <path>]           # explicit binary override for a single --driver; skips ImagePath lookup
+    [--symbol-server <url>]            # symbol store root URL shared by all --driver resolutions
     [--symbol-cache  <path>]           # local symstore-layout cache; default %LOCALAPPDATA%\Nefarius\etwutils\symcache
 ```
 
@@ -132,7 +132,9 @@ When `--driver <name>` is supplied, `etwutils` performs the following steps auto
 3. **Resolve the PDB** — checks the local cache (`--symbol-cache`), then downloads from `--symbol-server` (or `_NT_SYMBOL_PATH`) using the standard SymSrv URL path `<server>/<pdbname>/<GUID><AGE>/<pdbname>`.
 4. **Feed into capture** — appends the resolved PDB to the `--symbols` list and auto-derives the WPP provider GUIDs from its `WPP_DEFINE_CONTROL_GUID` annotations, exactly as if `--symbols <pdb>` had been passed explicitly.
 
-`--driver` is non-exclusive: any explicitly supplied `provider-guid` arguments or `--symbols` paths remain active alongside it. If the PDB cannot be resolved (404, no CodeView entry, etc.) and no other provider source was supplied, the command exits with code 2; otherwise it continues with the remaining sources and logs a warning.
+`--driver` is repeatable: pass it multiple times to capture events from several drivers in one session. Each driver is resolved independently — a failure for one driver logs a warning and skips that driver without aborting the others. The command exits with code 2 only if every driver failed *and* no other provider source (`provider-guid` args or `--symbols`) was supplied.
+
+`--driver-type`, `--symbol-server`, and `--symbol-cache` are single-valued and apply to every named driver. `--driver-binary` is only valid when exactly one `--driver` is given (combining it with multiple drivers exits with code 2).
 
 > [!TIP]  
 > Point `--symbol-server` at `https://symbols.nefarius.at/download/symbols` to use the public Nefarius symbol server, which hosts PDBs for BthPS3, HidHide, ViGEm, and other projects. For WinDbg-compatible servers set `_NT_SYMBOL_PATH` and omit the flag entirely.
@@ -361,6 +363,16 @@ etwutils realtime --driver HidHide \
 # [*] --driver: PDB resolved: C:\Users\…\symcache\hidhide.pdb\…\hidhide.pdb
 # [*] Session 'NefariusEtwCli-1234' started. Providers (auto-derived from symbols): {…} | level=Verbose | …
 # [*] Streaming events... (Ctrl+C to stop)
+```
+
+Capture events from multiple drivers in a single session:
+
+```bash
+etwutils realtime \
+    --driver HidHide \
+    --driver BthPS3 \
+    --symbol-server https://symbols.nefarius.at/download/symbols | jq .
+# Each driver is resolved independently; if one PDB is missing the other still loads.
 ```
 
 Re-run without network access — the PDB is served from the local cache:
