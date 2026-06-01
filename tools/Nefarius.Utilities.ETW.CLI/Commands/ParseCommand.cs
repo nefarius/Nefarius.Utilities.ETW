@@ -494,68 +494,74 @@ internal static class ParseCommand
 
                 Console.Error.WriteLine($"[*] {Path.GetFileName(etl)} -> {outPath}");
 
+                string tmpPath = outPath + ".tmp";
                 long eventCount = 0;
                 try
                 {
-                    await using FileStream fileStream = new(outPath, FileMode.Create, FileAccess.Write,
-                        FileShare.None, 65536, useAsync: true);
-
-                    if (usePlain)
+                    // Write to a temp file so that cancellation or errors never leave a
+                    // partial output at the final outPath.
+                    await using (FileStream fileStream = new(tmpPath, FileMode.Create, FileAccess.Write,
+                        FileShare.None, 65536, useAsync: true))
                     {
-                        await using StreamWriter writer =
-                            new(fileStream, new System.Text.UTF8Encoding(false), 65536);
-
-                        if (emitHeader)
+                        if (usePlain)
                         {
-                            await writer.WriteLineAsync(PlainOutput.FormatHeader(columns).AsMemory(), cts.Token);
-                        }
+                            await using StreamWriter writer =
+                                new(fileStream, new System.Text.UTF8Encoding(false), 65536);
 
-                        await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateEventsAsync(
-                                           [etl],
-                                           o =>
-                                           {
-                                               o.WppDecodingContext     = decodingContext;
-                                               o.PreserveRawTimestamps  = preserveRawTimestamps;
-                                               o.OnWppFormatMissing     = missingFormatWarner;
-                                               o.RewriteWppProviderName = rewriteProviderName;
-                                           },
-                                           cts.Token))
+                            if (emitHeader)
+                            {
+                                await writer.WriteLineAsync(PlainOutput.FormatHeader(columns).AsMemory(), cts.Token);
+                            }
+
+                            await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateEventsAsync(
+                                               [etl],
+                                               o =>
+                                               {
+                                                   o.WppDecodingContext     = decodingContext;
+                                                   o.PreserveRawTimestamps  = preserveRawTimestamps;
+                                                   o.OnWppFormatMissing     = missingFormatWarner;
+                                                   o.RewriteWppProviderName = rewriteProviderName;
+                                               },
+                                               cts.Token))
+                            {
+                                bool written = await ConsoleOutput.WritePlainLineAsync(
+                                    json, writer, false, columns, filter, cts.Token, flush: false);
+                                if (written) eventCount++;
+                            }
+
+                            await writer.FlushAsync(cts.Token);
+                        }
+                        else
                         {
-                            bool written = await ConsoleOutput.WritePlainLineAsync(
-                                json, writer, false, columns, filter, cts.Token, flush: false);
-                            if (written) eventCount++;
+                            await using BufferedStream buffered = new(fileStream, 65536);
+
+                            await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateEventsAsync(
+                                               [etl],
+                                               o =>
+                                               {
+                                                   o.WppDecodingContext     = decodingContext;
+                                                   o.PreserveRawTimestamps  = preserveRawTimestamps;
+                                                   o.OnWppFormatMissing     = missingFormatWarner;
+                                                   o.RewriteWppProviderName = rewriteProviderName;
+                                               },
+                                               cts.Token))
+                            {
+                                await buffered.WriteAsync(json, cts.Token);
+                                buffered.WriteByte((byte)'\n');
+                                eventCount++;
+                            }
+
+                            await buffered.FlushAsync(cts.Token);
                         }
+                    } // fileStream flushed and closed here — safe to move
 
-                        await writer.FlushAsync(cts.Token);
-                    }
-                    else
-                    {
-                        await using BufferedStream buffered = new(fileStream, 65536);
-
-                        await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateEventsAsync(
-                                           [etl],
-                                           o =>
-                                           {
-                                               o.WppDecodingContext     = decodingContext;
-                                               o.PreserveRawTimestamps  = preserveRawTimestamps;
-                                               o.OnWppFormatMissing     = missingFormatWarner;
-                                               o.RewriteWppProviderName = rewriteProviderName;
-                                           },
-                                           cts.Token))
-                        {
-                            await buffered.WriteAsync(json, cts.Token);
-                            buffered.WriteByte((byte)'\n');
-                            eventCount++;
-                        }
-
-                        await buffered.FlushAsync(cts.Token);
-                    }
-
+                    File.Move(tmpPath, outPath, overwrite: true);
                     Console.Error.WriteLine($"    {eventCount:N0} event(s) written.");
                 }
                 catch (OperationCanceledException)
                 {
                     Console.Error.WriteLine("    [cancelled]");
+                    try { File.Delete(tmpPath); } catch { }
                     break;
                 }
                 catch (Exception ex)
@@ -563,6 +569,7 @@ internal static class ParseCommand
                     Console.Error.WriteLine(
                         $"[!] Failed to process '{Path.GetFileName(etl)}': " +
                         $"{ex.GetType().Name}: {ex.Message}");
+                    try { File.Delete(tmpPath); } catch { }
                     anyFailed = true;
                 }
             }
