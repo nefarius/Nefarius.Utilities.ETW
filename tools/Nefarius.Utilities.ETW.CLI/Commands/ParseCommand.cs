@@ -421,131 +421,159 @@ internal static class ParseCommand
         bool rewriteProviderName,
         CancellationToken cancellationToken)
     {
-        string ext = usePlain ? ".tsv" : ".ndjson";
+        using CancellationTokenSource cts =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        cts.Token.Register(() =>
+            Console.Error.WriteLine("\r[*] Interrupt received — stopping..."));
+
+        ConsoleCancelEventHandler cancelKeyHandler = (_, e) =>
+        {
+            e.Cancel = true;
+            try { cts.Cancel(); } catch (ObjectDisposedException) { }
+        };
+
+        EventHandler processExitHandler = (_, _) =>
+        {
+            try { cts.Cancel(); } catch (ObjectDisposedException) { }
+        };
+
+        Console.CancelKeyPress += cancelKeyHandler;
+        AppDomain.CurrentDomain.ProcessExit += processExitHandler;
 
         try
         {
-            Directory.CreateDirectory(outDir);
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine(
-                $"[!] Cannot create output directory '{outDir}': {ex.GetType().Name}: {ex.Message}");
-            return 2;
-        }
+            string ext = usePlain ? ".tsv" : ".ndjson";
 
-        // Detect output file name collisions before processing anything.
-        Dictionary<string, string> outputMap = new(StringComparer.OrdinalIgnoreCase);
-        bool hasCollision = false;
-
-        foreach (string etl in etlFiles)
-        {
-            string outName = Path.GetFileNameWithoutExtension(etl) + ext;
-            string outPath = Path.Combine(outDir, outName);
-
-            if (outputMap.TryGetValue(outName, out string? previous))
-            {
-                Console.Error.WriteLine(
-                    $"[!] Output file name collision: '{previous}' and '{etl}' " +
-                    $"both map to '{outPath}'.");
-                hasCollision = true;
-            }
-            else
-            {
-                outputMap[outName] = etl;
-            }
-        }
-
-        if (hasCollision) return 2;
-
-        bool anyFailed = false;
-
-        // One warner per command run so each provider GUID is reported at most once across all ETL files.
-        Action<Guid, ushort, uint> missingFormatWarner = ConsoleOutput.CreateMissingFormatWarner();
-
-        foreach (string etl in etlFiles)
-        {
-            if (cancellationToken.IsCancellationRequested) break;
-
-            string outName = Path.GetFileNameWithoutExtension(etl) + ext;
-            string outPath = Path.Combine(outDir, outName);
-
-            Console.Error.WriteLine($"[*] {Path.GetFileName(etl)} -> {outPath}");
-
-            long eventCount = 0;
             try
             {
-                await using FileStream fileStream = new(outPath, FileMode.Create, FileAccess.Write,
-                    FileShare.None, 65536, useAsync: true);
-
-                if (usePlain)
-                {
-                    await using StreamWriter writer =
-                        new(fileStream, new System.Text.UTF8Encoding(false), 65536);
-
-                    if (emitHeader)
-                    {
-                        await writer.WriteLineAsync(PlainOutput.FormatHeader(columns).AsMemory(), cancellationToken);
-                    }
-
-                    await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateEventsAsync(
-                                       [etl],
-                                       o =>
-                                       {
-                                           o.WppDecodingContext     = decodingContext;
-                                           o.PreserveRawTimestamps  = preserveRawTimestamps;
-                                           o.OnWppFormatMissing     = missingFormatWarner;
-                                           o.RewriteWppProviderName = rewriteProviderName;
-                                       },
-                                       cancellationToken))
-                    {
-                        bool written = await ConsoleOutput.WritePlainLineAsync(
-                            json, writer, false, columns, filter, cancellationToken, flush: false);
-                        if (written) eventCount++;
-                    }
-
-                    await writer.FlushAsync(cancellationToken);
-                }
-                else
-                {
-                    await using BufferedStream buffered = new(fileStream, 65536);
-
-                    await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateEventsAsync(
-                                       [etl],
-                                       o =>
-                                       {
-                                           o.WppDecodingContext     = decodingContext;
-                                           o.PreserveRawTimestamps  = preserveRawTimestamps;
-                                           o.OnWppFormatMissing     = missingFormatWarner;
-                                           o.RewriteWppProviderName = rewriteProviderName;
-                                       },
-                                       cancellationToken))
-                    {
-                        await buffered.WriteAsync(json, cancellationToken);
-                        buffered.WriteByte((byte)'\n');
-                        eventCount++;
-                    }
-
-                    await buffered.FlushAsync(cancellationToken);
-                }
-
-                Console.Error.WriteLine($"    {eventCount:N0} event(s) written.");
-            }
-            catch (OperationCanceledException)
-            {
-                Console.Error.WriteLine("    [cancelled]");
-                break;
+                Directory.CreateDirectory(outDir);
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine(
-                    $"[!] Failed to process '{Path.GetFileName(etl)}': " +
-                    $"{ex.GetType().Name}: {ex.Message}");
-                anyFailed = true;
+                    $"[!] Cannot create output directory '{outDir}': {ex.GetType().Name}: {ex.Message}");
+                return 2;
             }
-        }
 
-        Console.Error.WriteLine("[*] Done.");
-        return anyFailed ? 1 : 0;
+            // Detect output file name collisions before processing anything.
+            Dictionary<string, string> outputMap = new(StringComparer.OrdinalIgnoreCase);
+            bool hasCollision = false;
+
+            foreach (string etl in etlFiles)
+            {
+                string outName = Path.GetFileNameWithoutExtension(etl) + ext;
+                string outPath = Path.Combine(outDir, outName);
+
+                if (outputMap.TryGetValue(outName, out string? previous))
+                {
+                    Console.Error.WriteLine(
+                        $"[!] Output file name collision: '{previous}' and '{etl}' " +
+                        $"both map to '{outPath}'.");
+                    hasCollision = true;
+                }
+                else
+                {
+                    outputMap[outName] = etl;
+                }
+            }
+
+            if (hasCollision) return 2;
+
+            bool anyFailed = false;
+
+            // One warner per command run so each provider GUID is reported at most once across all ETL files.
+            Action<Guid, ushort, uint> missingFormatWarner = ConsoleOutput.CreateMissingFormatWarner();
+
+            foreach (string etl in etlFiles)
+            {
+                if (cts.Token.IsCancellationRequested) break;
+
+                string outName = Path.GetFileNameWithoutExtension(etl) + ext;
+                string outPath = Path.Combine(outDir, outName);
+
+                Console.Error.WriteLine($"[*] {Path.GetFileName(etl)} -> {outPath}");
+
+                long eventCount = 0;
+                try
+                {
+                    await using FileStream fileStream = new(outPath, FileMode.Create, FileAccess.Write,
+                        FileShare.None, 65536, useAsync: true);
+
+                    if (usePlain)
+                    {
+                        await using StreamWriter writer =
+                            new(fileStream, new System.Text.UTF8Encoding(false), 65536);
+
+                        if (emitHeader)
+                        {
+                            await writer.WriteLineAsync(PlainOutput.FormatHeader(columns).AsMemory(), cts.Token);
+                        }
+
+                        await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateEventsAsync(
+                                           [etl],
+                                           o =>
+                                           {
+                                               o.WppDecodingContext     = decodingContext;
+                                               o.PreserveRawTimestamps  = preserveRawTimestamps;
+                                               o.OnWppFormatMissing     = missingFormatWarner;
+                                               o.RewriteWppProviderName = rewriteProviderName;
+                                           },
+                                           cts.Token))
+                        {
+                            bool written = await ConsoleOutput.WritePlainLineAsync(
+                                json, writer, false, columns, filter, cts.Token, flush: false);
+                            if (written) eventCount++;
+                        }
+
+                        await writer.FlushAsync(cts.Token);
+                    }
+                    else
+                    {
+                        await using BufferedStream buffered = new(fileStream, 65536);
+
+                        await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateEventsAsync(
+                                           [etl],
+                                           o =>
+                                           {
+                                               o.WppDecodingContext     = decodingContext;
+                                               o.PreserveRawTimestamps  = preserveRawTimestamps;
+                                               o.OnWppFormatMissing     = missingFormatWarner;
+                                               o.RewriteWppProviderName = rewriteProviderName;
+                                           },
+                                           cts.Token))
+                        {
+                            await buffered.WriteAsync(json, cts.Token);
+                            buffered.WriteByte((byte)'\n');
+                            eventCount++;
+                        }
+
+                        await buffered.FlushAsync(cts.Token);
+                    }
+
+                    Console.Error.WriteLine($"    {eventCount:N0} event(s) written.");
+                }
+                catch (OperationCanceledException)
+                {
+                    Console.Error.WriteLine("    [cancelled]");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine(
+                        $"[!] Failed to process '{Path.GetFileName(etl)}': " +
+                        $"{ex.GetType().Name}: {ex.Message}");
+                    anyFailed = true;
+                }
+            }
+
+            Console.Error.WriteLine("[*] Done.");
+            return anyFailed ? 1 : 0;
+        }
+        finally
+        {
+            Console.CancelKeyPress -= cancelKeyHandler;
+            AppDomain.CurrentDomain.ProcessExit -= processExitHandler;
+        }
     }
 }
