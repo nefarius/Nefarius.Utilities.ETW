@@ -166,7 +166,7 @@ internal static class PlainOutput
     ///     <para>
     ///         To allow the short-hand <c>Provider != "Foo"</c> syntax we prepend property aliases
     ///         as let-variables in the Interpreter so the user expression can reference them directly.
-    ///         DynamicExpresso 2.x supports this via <see cref="Interpreter.SetVariable" /> combined
+    ///         DynamicExpresso 2.x supports this via <see cref="Interpreter.SetVariable(string, object)" /> combined
     ///         with a wrapping expression: we instead compile as a full delegate taking the record
     ///         and use identifier references to the record's properties via the interpreter's
     ///         <c>Parameter</c> mechanism.
