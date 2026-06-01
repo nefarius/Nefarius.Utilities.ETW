@@ -70,8 +70,11 @@ internal static class ConsoleOutput
     /// <summary>
     ///     Decodes one NDJSON event buffer, optionally filters it, formats it as a plain TSV line,
     ///     and writes it to <paramref name="writer" />.
-    ///     Returns <see langword="true" /> when the event was written, <see langword="false" /> when
-    ///     it was dropped (filtered out, decode failure, or filter evaluation error).
+    ///     Returns <see langword="true" /> when the event was written and <see langword="false" />
+    ///     when it was dropped because the <paramref name="filter" /> predicate returned
+    ///     <see langword="false" />.
+    ///     Decode failures throw <see cref="InvalidOperationException" />;
+    ///     exceptions raised by the filter predicate are propagated to the caller.
     /// </summary>
     internal static async Task<bool> WritePlainLineAsync(
         ReadOnlyMemory<byte> json,

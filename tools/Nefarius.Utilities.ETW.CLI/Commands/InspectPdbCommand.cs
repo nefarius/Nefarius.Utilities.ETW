@@ -85,17 +85,50 @@ internal static class InspectPdbCommand
                         continue;
                     }
 
-                    foreach (string file in Directory.EnumerateFiles(root, pattern, search))
+                    try
                     {
-                        SymbolResolution.TryAddPdb(pdbContexts, file);
+                        foreach (string file in Directory.EnumerateFiles(root, pattern, search))
+                        {
+                            SymbolResolution.TryAddPdb(pdbContexts, file);
+                        }
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        Console.Error.WriteLine($"[!] Access denied enumerating '{root}': {ex.Message}");
+                    }
+                    catch (IOException ex)
+                    {
+                        Console.Error.WriteLine($"[!] I/O error enumerating '{root}': {ex.Message}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"[!] Unexpected error enumerating '{root}': {ex.GetType().Name}: {ex.Message}");
                     }
                 }
                 else if (Directory.Exists(arg))
                 {
                     bool any = false;
-                    foreach (string pdb in Directory.EnumerateFiles(arg, "*.pdb", SearchOption.TopDirectoryOnly))
+                    try
                     {
-                        if (SymbolResolution.TryAddPdb(pdbContexts, pdb)) { any = true; }
+                        foreach (string pdb in Directory.EnumerateFiles(arg, "*.pdb", SearchOption.TopDirectoryOnly))
+                        {
+                            if (SymbolResolution.TryAddPdb(pdbContexts, pdb)) { any = true; }
+                        }
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        Console.Error.WriteLine($"[!] Access denied enumerating '{arg}': {ex.Message}");
+                        continue;
+                    }
+                    catch (IOException ex)
+                    {
+                        Console.Error.WriteLine($"[!] I/O error enumerating '{arg}': {ex.Message}");
+                        continue;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"[!] Unexpected error enumerating '{arg}': {ex.GetType().Name}: {ex.Message}");
+                        continue;
                     }
 
                     if (!any)
