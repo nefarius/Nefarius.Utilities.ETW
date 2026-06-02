@@ -58,7 +58,7 @@
             Owner: project maintainer (@nefarius). Target: as soon as a stable release is tagged.
         -->
         <PackageReference Include="Smx.PDBSharp" Version="1.0.0-alpha4" />
-        <PackageReference Include="System.CommandLine" Version="2.0.5" />
+        <PackageReference Include="System.CommandLine" Version="2.0.8" />
         <PackageReference Include="MinVer" Version="7.0.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
