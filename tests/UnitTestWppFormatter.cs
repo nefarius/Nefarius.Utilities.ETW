@@ -204,6 +204,91 @@ public class WppFormatterTests
     }
 
     // -----------------------------------------------------------------------
+    // Length-modifier specifiers (l, ll, h, hh — no-ops in .NET formatting)
+    // -----------------------------------------------------------------------
+
+    [Test]
+    public void Substitute_FormatsLongDecimal_WithLModifier()
+    {
+        // %ld is the most common real-world case: long int printed as decimal
+        FunctionParameter param = MakeParam(ItemType.ItemLong, index: 1);
+        TraceMessageFormat format = MakeFormat("%1!ld!", param);
+
+        string result = WppFormatter.Substitute(format, Params((1, param, -12345)));
+
+        Assert.That(result, Is.EqualTo("-12345"));
+    }
+
+    [Test]
+    public void Substitute_FormatsUnsignedLong_WithLuModifier()
+    {
+        FunctionParameter param = MakeParam(ItemType.ItemLong, index: 1);
+        TraceMessageFormat format = MakeFormat("%1!lu!", param);
+
+        string result = WppFormatter.Substitute(format, Params((1, param, 4294967295U)));
+
+        Assert.That(result, Is.EqualTo("4294967295"));
+    }
+
+    [Test]
+    public void Substitute_FormatsHexLong_WithLxModifier()
+    {
+        FunctionParameter param = MakeParam(ItemType.ItemLong, index: 1);
+        TraceMessageFormat format = MakeFormat("%1!lx!", param);
+
+        // lowercase x maps to uppercase X in .NET; value should be rendered in hex
+        string result = WppFormatter.Substitute(format, Params((1, param, (int)0xABCD)));
+
+        Assert.That(result, Is.EqualTo("ABCD"));
+    }
+
+    [Test]
+    public void Substitute_FormatsHexLong_WithLXModifier()
+    {
+        FunctionParameter param = MakeParam(ItemType.ItemLong, index: 1);
+        TraceMessageFormat format = MakeFormat("0x%1!lX!", param);
+
+        string result = WppFormatter.Substitute(format, Params((1, param, (int)0xBEEF)));
+
+        Assert.That(result, Is.EqualTo("0xBEEF"));
+    }
+
+    [Test]
+    public void Substitute_FormatsShortDecimal_WithHModifier()
+    {
+        FunctionParameter param = MakeParam(ItemType.ItemShort, index: 1);
+        TraceMessageFormat format = MakeFormat("%1!hd!", param);
+
+        string result = WppFormatter.Substitute(format, Params((1, param, (short)42)));
+
+        Assert.That(result, Is.EqualTo("42"));
+    }
+
+    [Test]
+    public void Substitute_FormatsUnsignedLong_ZeroPadded_WithLuModifier()
+    {
+        // Confirms pad/width still works when a length modifier is present
+        FunctionParameter param = MakeParam(ItemType.ItemLong, index: 1);
+        TraceMessageFormat format = MakeFormat("%1!08lu!", param);
+
+        string result = WppFormatter.Substitute(format, Params((1, param, 42U)));
+
+        Assert.That(result, Is.EqualTo("00000042"));
+    }
+
+    [Test]
+    public void Substitute_FormatsDecimalInteger_WithISpecifier()
+    {
+        // %i is a C alias for %d (signed decimal)
+        FunctionParameter param = MakeParam(ItemType.ItemLong, index: 1);
+        TraceMessageFormat format = MakeFormat("val=%1!i!", param);
+
+        string result = WppFormatter.Substitute(format, Params((1, param, -99)));
+
+        Assert.That(result, Is.EqualTo("val=-99"));
+    }
+
+    // -----------------------------------------------------------------------
     // Format-error fallback
     // -----------------------------------------------------------------------
 
