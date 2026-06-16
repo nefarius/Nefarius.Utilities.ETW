@@ -17,7 +17,7 @@ internal static partial class WppFormatter
     [GeneratedRegex(@"(0[xX])?%(\d+)!([^!]*)!", RegexOptions.Compiled)]
     internal static partial Regex PlaceholderRegex();
 
-    [GeneratedRegex(@"^(?<pad>0)?(?<width>\d+)?(?<modifier>I\d+)?(?<specifier>[XxduU])$")]
+    [GeneratedRegex(@"^(?<pad>0)?(?<width>\d+)?(?<modifier>I\d+|ll|l|hh|h|I)?(?<specifier>[XxduUi])$")]
     internal static partial Regex NumericFormatTokenRegex();
 
     // Matches %!NAME! context markers (e.g. %!FUNC!, %!LEVEL!)
@@ -119,7 +119,8 @@ internal static partial class WppFormatter
                         // so map it to "D". All other specifiers (x/X → "X", d → "D") are safe
                         // to uppercase directly.
                         string rawSpecifier = numberMatch.Groups["specifier"].Value;
-                        string specifier = rawSpecifier is "u" or "U" ? "D" : rawSpecifier.ToUpperInvariant();
+                        // u/U = unsigned decimal; i = signed decimal (C alias of d); both map to .NET "D"
+                        string specifier = rawSpecifier is "u" or "U" or "i" ? "D" : rawSpecifier.ToUpperInvariant();
                         string suffix    = $"{pad}{width}";
 
                         string finalFormat = isHexPrefixed
