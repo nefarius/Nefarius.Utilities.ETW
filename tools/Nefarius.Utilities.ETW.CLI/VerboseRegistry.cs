@@ -29,8 +29,8 @@ internal static class VerboseRegistry
     private const int ServiceKernelDriver     = 0x1;
     private const int ServiceFilesystemDriver = 0x2;
 
-    private const string ServicesRoot = @"SYSTEM\CurrentControlSet\Services";
-    private const string WudfRoot     = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\WUDF\Services";
+    internal const string ServicesRoot = @"SYSTEM\CurrentControlSet\Services";
+    internal const string WudfRoot     = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\WUDF\Services";
 
     /// <summary>
     ///     Probes both the kernel-mode services hive and the WUDF hive for <paramref name="serviceName" />.

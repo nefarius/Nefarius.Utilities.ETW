@@ -379,10 +379,11 @@ internal static class SymbolResolution
 
     /// <summary>
     ///     Resolves the on-disk binary path for a driver service by reading the
-    ///     <c>ImagePath</c> REG_EXPAND_SZ value from the services registry key.
-    ///     Supports kernel-mode drivers directly; for UMDF drivers the same
-    ///     <c>Services</c> key is tried and <c>--driver-binary</c> is recommended as a fallback
-    ///     when <c>ImagePath</c> is absent.
+    ///     <c>ImagePath</c> REG_EXPAND_SZ value from the appropriate services registry key.
+    ///     Kernel-mode drivers are looked up under <c>SYSTEM\CurrentControlSet\Services\&lt;name&gt;</c>;
+    ///     UMDF drivers are looked up under
+    ///     <c>SOFTWARE\Microsoft\Windows NT\CurrentVersion\WUDF\Services\&lt;name&gt;</c>.
+    ///     Use <c>--driver-binary</c> to bypass the registry lookup entirely.
     ///     Uses <see cref="VerboseRegistry.Detect" /> for <c>auto</c> kind resolution.
     /// </summary>
     internal static string? ResolveDriverBinaryPath(string serviceName, ServiceKind? kind)
@@ -458,8 +459,9 @@ internal static class SymbolResolution
             effectiveKind = kind.Value;
         }
 
-        const string ServicesRoot = @"SYSTEM\CurrentControlSet\Services";
-        string serviceKeyPath = $@"{ServicesRoot}\{serviceName}";
+        string serviceKeyPath = effectiveKind == ServiceKind.Umdf
+            ? $@"{VerboseRegistry.WudfRoot}\{serviceName}"
+            : $@"{VerboseRegistry.ServicesRoot}\{serviceName}";
 
         using Microsoft.Win32.RegistryKey hklm = Microsoft.Win32.RegistryKey.OpenBaseKey(
             Microsoft.Win32.RegistryHive.LocalMachine, Microsoft.Win32.RegistryView.Registry64);
