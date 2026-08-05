@@ -120,7 +120,8 @@ internal static class SymbolResolution
                     }
                     catch (Exception ex)
                     {
-                        Console.Error.WriteLine($"[!] Failed to load TMF directory '{tmfDir}': {ex.Message}");
+                        Console.Error.WriteLine(
+                            $"[!] Failed to load TMF directory '{tmfDir}': {ex.GetType().Name}: {ex.Message}");
                     }
                 }
 
@@ -178,7 +179,7 @@ internal static class SymbolResolution
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[!] Failed to load '{path}': {ex.Message}");
+            Console.Error.WriteLine($"[!] Failed to load '{path}': {ex.GetType().Name}: {ex.Message}");
             return false;
         }
     }
@@ -204,7 +205,7 @@ internal static class SymbolResolution
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[!] Failed to load '{path}': {ex.Message}");
+            Console.Error.WriteLine($"[!] Failed to load '{path}': {ex.GetType().Name}: {ex.Message}");
             return false;
         }
     }

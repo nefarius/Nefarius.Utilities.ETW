@@ -65,12 +65,27 @@ public sealed class PdbFileDecodingContextType()
     private void InitializeFromStream(KaitaiStream kaitaiStream)
     {
         MsPdb pdb = new(kaitaiStream);
-        string? originalName = pdb.GetOriginalPdbName();
+
+        // GetOriginalPdbName can NRE when the DBI EC substream is absent (EcInfo is null).
+        // A missing original name is non-fatal for WPP extraction.
+        string? originalName;
+        try
+        {
+            originalName = pdb.GetOriginalPdbName();
+        }
+        catch (NullReferenceException)
+        {
+            originalName = null;
+        }
 
         // Materialise the full flat symbol list once so we can pass it to both extractors
         // without iterating the module list twice.
+        // Modules with StreamNumber == -1 leave ModuleData null; modules with
+        // SymbolsSize == 0 leave SymbolsList null — skip those (same as PdbFacade.GetSymbols).
         List<MsPdb.DbiSymbol> allSymbols = pdb.DbiStream.ModulesList.Items
-            .SelectMany(m => m.ModuleData.SymbolsList.Items)
+            .Select(m => m?.ModuleData?.SymbolsList?.Items)
+            .Where(list => list is not null)
+            .SelectMany(list => list!)
             .ToList();
 
         TraceMessageFormats = TmfParser
