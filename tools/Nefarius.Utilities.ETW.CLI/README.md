@@ -5,6 +5,7 @@
 ![Windows only](https://img.shields.io/badge/Windows-8.0+-red)
 [![NuGet Version](https://img.shields.io/nuget/v/Nefarius.Utilities.ETW.CLI)](https://www.nuget.org/packages/Nefarius.Utilities.ETW.CLI/)
 [![NuGet](https://img.shields.io/nuget/dt/Nefarius.Utilities.ETW.CLI)](https://www.nuget.org/packages/Nefarius.Utilities.ETW.CLI/)
+[![Assisted by Cursor AI](https://img.shields.io/badge/Assisted%20by-Cursor%20AI-8B5CF6?style=flat)](https://cursor.com/)
 
 A .NET global tool (`etwutils`) that wraps the ETW API of [Nefarius.Utilities.ETW](https://www.nuget.org/packages/Nefarius.Utilities.ETW/) and writes decoded events as **NDJSON** or **plain tab-separated** text, making it trivial to pipe into `jq`, `grep`, log aggregators, or any line-oriented consumer. Supports both **realtime** capture and **offline** `.etl` file decoding.
 
