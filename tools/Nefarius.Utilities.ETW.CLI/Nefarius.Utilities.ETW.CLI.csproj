@@ -46,7 +46,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="DynamicExpresso.Core" Version="2.19.5" />
+        <PackageReference Include="DynamicExpresso.Core" Version="2.19.6" />
         <!--
             Smx.PDBSharp is pinned to 1.0.0-alpha4 because no stable release exists on NuGet.org
             as of May 2026; alpha4 is the latest published version. No known security advisories
