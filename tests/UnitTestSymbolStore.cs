@@ -85,10 +85,11 @@ public class SymbolStoreTests
     public async Task ResolveAsync_SkipsCacheFileWithTheWrongIdentity()
     {
         string root = CreateTempDirectory();
-        PdbMetaData reference = FixtureReference();
+        PdbMetaData reference = MismatchedFixtureReference();
         string cacheFile = CachePath(root, reference);
         Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)!);
-        await File.WriteAllTextAsync(cacheFile, "cached");
+        File.Copy(FixturePdb(), cacheFile);
+        Assert.That(PdbFileIdentityReader.TryRead(cacheFile, out _), Is.True);
 
         IReadOnlyList<ResolvedPdb> resolved = await SymbolStore.ResolveAsync(
             [reference],
@@ -134,10 +135,11 @@ public class SymbolStoreTests
     public async Task ResolveAsync_DoesNotCacheDownloadWithTheWrongIdentity()
     {
         string root = CreateTempDirectory();
-        PdbMetaData reference = FixtureReference();
+        PdbMetaData reference = MismatchedFixtureReference();
+        byte[] payload = await File.ReadAllBytesAsync(FixturePdb());
         using HttpClient client = new(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new ByteArrayContent("pdb-bytes"u8.ToArray())
+            Content = new ByteArrayContent(payload)
         }));
 
         IReadOnlyList<ResolvedPdb> resolved = await SymbolStore.ResolveAsync(
@@ -149,6 +151,7 @@ public class SymbolStoreTests
         {
             Assert.That(resolved[0].Origin, Is.EqualTo(PdbResolutionOrigin.Unresolved));
             Assert.That(resolved[0].Failure, Is.EqualTo(PdbResolutionFailure.DownloadFailed));
+            Assert.That(resolved[0].Detail, Does.Contain("does not match"));
             Assert.That(File.Exists(CachePath(root, reference)), Is.False);
             Assert.That(Directory.EnumerateFiles(root, "*.tmp", SearchOption.AllDirectories), Is.Empty);
         }
@@ -217,6 +220,17 @@ public class SymbolStoreTests
             PdbName = "BthPS3PSM.pdb",
             Guid = identity.Guid,
             Age = identity.Age
+        };
+    }
+
+    private static PdbMetaData MismatchedFixtureReference()
+    {
+        PdbMetaData reference = FixtureReference();
+        return new PdbMetaData
+        {
+            PdbName = reference.PdbName,
+            Guid = reference.Guid,
+            Age = reference.Age + 1
         };
     }
 
