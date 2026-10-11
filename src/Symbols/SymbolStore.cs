@@ -58,7 +58,7 @@ public static class SymbolStore
         string fileName = Path.GetFileName(reference.PdbName);
         string cacheFilePath = GetCachePath(configuration.CacheDirectory, reference);
 
-        if (File.Exists(cacheFilePath))
+        if (MatchesReference(cacheFilePath, reference))
         {
             return new ResolvedPdb
             {
@@ -85,7 +85,7 @@ public static class SymbolStore
         if (!string.IsNullOrWhiteSpace(configuration.ServerUrl))
         {
             string url = $"{configuration.ServerUrl!.TrimEnd('/')}/{reference.IndexPrefix}";
-            string temporaryPath = cacheFilePath + ".tmp";
+            string temporaryPath = $"{cacheFilePath}.{Guid.NewGuid():N}.tmp";
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(cacheFilePath)!);
@@ -114,6 +114,18 @@ public static class SymbolStore
                                  useAsync: true))
                 {
                     await response.Content.CopyToAsync(temporary, cancellationToken).ConfigureAwait(false);
+                }
+
+                if (!MatchesReference(temporaryPath, reference))
+                {
+                    DeleteIfExists(temporaryPath);
+                    return new ResolvedPdb
+                    {
+                        Reference = reference,
+                        Origin = PdbResolutionOrigin.Unresolved,
+                        Failure = PdbResolutionFailure.DownloadFailed,
+                        Detail = "Downloaded PDB identity does not match the requested GUID and age."
+                    };
                 }
 
                 File.Move(temporaryPath, cacheFilePath, overwrite: true);
@@ -149,6 +161,11 @@ public static class SymbolStore
             Origin = PdbResolutionOrigin.Unresolved
         };
     }
+
+    private static bool MatchesReference(string pdbPath, PdbMetaData reference) =>
+        PdbFileIdentityReader.TryRead(pdbPath, out PdbFileIdentity identity) &&
+        identity.Guid == reference.Guid &&
+        identity.Age == reference.Age;
 
     private static string GetCachePath(string cacheDirectory, PdbMetaData reference)
     {

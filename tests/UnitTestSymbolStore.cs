@@ -64,10 +64,10 @@ public class SymbolStoreTests
     public async Task ResolveAsync_ReturnsExistingCacheFile()
     {
         string root = CreateTempDirectory();
-        PdbMetaData reference = SampleReference();
-        string cacheFile = Path.Combine(root, reference.IndexPrefix.Replace('/', Path.DirectorySeparatorChar));
+        PdbMetaData reference = FixtureReference();
+        string cacheFile = CachePath(root, reference);
         Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)!);
-        await File.WriteAllTextAsync(cacheFile, "cached");
+        File.Copy(FixturePdb(), cacheFile);
 
         IReadOnlyList<ResolvedPdb> resolved = await SymbolStore.ResolveAsync(
             [reference],
@@ -82,11 +82,31 @@ public class SymbolStoreTests
     }
 
     [Test]
+    public async Task ResolveAsync_SkipsCacheFileWithTheWrongIdentity()
+    {
+        string root = CreateTempDirectory();
+        PdbMetaData reference = FixtureReference();
+        string cacheFile = CachePath(root, reference);
+        Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)!);
+        await File.WriteAllTextAsync(cacheFile, "cached");
+
+        IReadOnlyList<ResolvedPdb> resolved = await SymbolStore.ResolveAsync(
+            [reference],
+            new SymbolStoreConfiguration(root));
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(resolved[0].Origin, Is.EqualTo(PdbResolutionOrigin.Unresolved));
+            Assert.That(resolved[0].LocalPath, Is.Null);
+        }
+    }
+
+    [Test]
     public async Task ResolveAsync_DownloadsPdbIntoIndexCache()
     {
         string root = CreateTempDirectory();
-        PdbMetaData reference = SampleReference();
-        byte[] payload = "pdb-bytes"u8.ToArray();
+        PdbMetaData reference = FixtureReference();
+        byte[] payload = await File.ReadAllBytesAsync(FixturePdb());
         using HttpClient client = new(new StubHandler(request =>
         {
             Assert.That(request.RequestUri!.AbsolutePath, Does.EndWith(reference.IndexPrefix));
@@ -101,11 +121,36 @@ public class SymbolStoreTests
             new SymbolStoreConfiguration(root, "https://symbols.example/download/symbols"),
             client);
 
-        string cacheFile = Path.Combine(root, reference.IndexPrefix.Replace('/', Path.DirectorySeparatorChar));
+        string cacheFile = CachePath(root, reference);
         using (Assert.EnterMultipleScope())
         {
             Assert.That(resolved[0].Origin, Is.EqualTo(PdbResolutionOrigin.SymbolServer));
             Assert.That(await File.ReadAllBytesAsync(cacheFile), Is.EqualTo(payload));
+            Assert.That(Directory.EnumerateFiles(root, "*.tmp", SearchOption.AllDirectories), Is.Empty);
+        }
+    }
+
+    [Test]
+    public async Task ResolveAsync_DoesNotCacheDownloadWithTheWrongIdentity()
+    {
+        string root = CreateTempDirectory();
+        PdbMetaData reference = FixtureReference();
+        using HttpClient client = new(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent("pdb-bytes"u8.ToArray())
+        }));
+
+        IReadOnlyList<ResolvedPdb> resolved = await SymbolStore.ResolveAsync(
+            [reference],
+            new SymbolStoreConfiguration(root, "https://symbols.example/download/symbols"),
+            client);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(resolved[0].Origin, Is.EqualTo(PdbResolutionOrigin.Unresolved));
+            Assert.That(resolved[0].Failure, Is.EqualTo(PdbResolutionFailure.DownloadFailed));
+            Assert.That(File.Exists(CachePath(root, reference)), Is.False);
+            Assert.That(Directory.EnumerateFiles(root, "*.tmp", SearchOption.AllDirectories), Is.Empty);
         }
     }
 
@@ -160,6 +205,23 @@ public class SymbolStoreTests
         Guid = SampleGuid,
         Age = 1
     };
+
+    private static string FixturePdb() =>
+        Path.Combine(TestContext.CurrentContext.TestDirectory, "symbols", "BthPS3PSM.pdb");
+
+    private static PdbMetaData FixtureReference()
+    {
+        Assert.That(PdbFileIdentityReader.TryRead(FixturePdb(), out PdbFileIdentity identity), Is.True);
+        return new PdbMetaData
+        {
+            PdbName = "BthPS3PSM.pdb",
+            Guid = identity.Guid,
+            Age = identity.Age
+        };
+    }
+
+    private static string CachePath(string root, PdbMetaData reference) =>
+        Path.Combine(root, reference.IndexPrefix.Replace('/', Path.DirectorySeparatorChar));
 
     private static string CreateTempDirectory()
     {
