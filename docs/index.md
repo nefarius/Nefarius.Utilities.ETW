@@ -67,3 +67,31 @@
 - [TdhGetPropertySizeException](./nefarius.utilities.etw.exceptions.tdhgetpropertysizeexception.md)
 
 - [TdhGetWppPropertyException](./nefarius.utilities.etw.exceptions.tdhgetwpppropertyexception.md)
+
+## Namespace Nefarius.Utilities.ETW.Symbols
+
+- [CodeViewReadResult](./nefarius.utilities.etw.symbols.codeviewreadresult.md)
+
+- [DecodingSources](./nefarius.utilities.etw.symbols.decodingsources.md)
+
+- [DecodingSourceSet](./nefarius.utilities.etw.symbols.decodingsourceset.md)
+
+- [PdbFileIdentity](./nefarius.utilities.etw.symbols.pdbfileidentity.md)
+
+- [PdbFileIdentityReader](./nefarius.utilities.etw.symbols.pdbfileidentityreader.md)
+
+- [PdbResolutionFailure](./nefarius.utilities.etw.symbols.pdbresolutionfailure.md)
+
+- [PdbResolutionOrigin](./nefarius.utilities.etw.symbols.pdbresolutionorigin.md)
+
+- [PortableExecutableSymbols](./nefarius.utilities.etw.symbols.portableexecutablesymbols.md)
+
+- [ResolvedPdb](./nefarius.utilities.etw.symbols.resolvedpdb.md)
+
+- [SymbolPathPatterns](./nefarius.utilities.etw.symbols.symbolpathpatterns.md)
+
+- [SymbolStore](./nefarius.utilities.etw.symbols.symbolstore.md)
+
+- [SymbolStoreConfiguration](./nefarius.utilities.etw.symbols.symbolstoreconfiguration.md)
+
+- [TraceSymbolResolution](./nefarius.utilities.etw.symbols.tracesymbolresolution.md)
