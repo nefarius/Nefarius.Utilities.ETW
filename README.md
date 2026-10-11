@@ -127,6 +127,27 @@ await foreach (ReadOnlyMemory<byte> eventJson in EtwUtil.EnumerateRealtimeEvents
 - **WPP decoding** in realtime mode requires a pre-built `DecodingContext`. The file-based `EnumeratePdbReferences` pre-scan only works on `.etl` files, not on live sessions. Build the `DecodingContext` from known `.pdb` or `.tmf` paths before starting the session.
 - **Kernel-mode providers / NT Kernel Logger** are not supported in this release.
 
+## Symbol resolution
+
+`Nefarius.Utilities.ETW.Symbols` loads `.pdb` and `.tmf` inputs and resolves PDB identities without shelling out to the CLI:
+
+```csharp
+SymbolStoreConfiguration store = SymbolStoreConfiguration.Resolve(
+    configuredServer: null,
+    configuredCache: null,
+    ntSymbolPath: Environment.GetEnvironmentVariable("_NT_SYMBOL_PATH"),
+    defaultCacheDirectory: Path.Combine(Path.GetTempPath(), "symbols"));
+
+DecodingSourceSet explicitSources = DecodingSources.Load([@"D:\symbols\driver.pdb", @"D:\tmf"]);
+TraceSymbolResolution resolved = await DecodingSources.ResolveTraceSymbolsAsync(
+    [@"C:\traces\capture.etl"],
+    store);
+
+PortableExecutableSymbols.TryReadCodeViewPdb(@"C:\Windows\System32\drivers\example.sys");
+```
+
+Search order is the local symbol cache, then configured directories or filename globs whose PDB GUID and age match, then the HTTP symbol server. `srv*cache*url`, `srv*url`, and `cache*dir` segments of `_NT_SYMBOL_PATH` are recognized.
+
 ## CLI (`etwutils`)
 
 The `tools/Nefarius.Utilities.ETW.CLI` project builds a .NET global tool (`etwutils`) that wraps the realtime API and writes decoded events as NDJSON or plain tab-separated text to `stdout`.

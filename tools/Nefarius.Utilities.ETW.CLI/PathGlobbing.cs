@@ -1,3 +1,5 @@
+using Nefarius.Utilities.ETW.Symbols;
+
 namespace Nefarius.Utilities.ETW.CLI;
 
 /// <summary>
@@ -21,65 +23,13 @@ internal static class PathGlobbing
     ///     with no filename component produce an invalid <c>searchPattern</c> for
     ///     <see cref="Directory.EnumerateFiles(string, string, SearchOption)" />.
     /// </remarks>
-    internal static string? ValidateGlobPattern(string globArg)
-    {
-        string[] segments = globArg.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
-
-        // Every segment except the last is a directory segment.
-        for (int i = 0; i < segments.Length - 1; i++)
-        {
-            string seg = segments[i];
-            if (seg == "**") { continue; } // recursion marker — explicitly allowed
-
-            if (seg.Contains('*') || seg.Contains('?'))
-            {
-                return $"[!] Wildcard in directory segment '{seg}' is not supported in '{globArg}'. " +
-                       $"Use a filename-only wildcard (e.g. *.pdb) or '**' for recursion " +
-                       $"(e.g. Symbols\\**\\*.pdb).";
-            }
-        }
-
-        // The last segment is the filename pattern passed to Directory.EnumerateFiles as
-        // searchPattern. "**" and empty are not valid searchPattern values and would throw
-        // ArgumentException at runtime; reject them here with a clear message.
-        // Use Path.GetFileName rather than segments[^1] so that a trailing separator
-        // (e.g. "C:\Symbols\*.pdb\") is detected: Split(..., RemoveEmptyEntries) silently
-        // drops the trailing empty segment, but Path.GetFileName returns "" in that case.
-        string lastSeg = Path.GetFileName(globArg);
-        if (lastSeg == "**" || lastSeg.Length == 0)
-        {
-            return $"[!] Glob pattern '{globArg}' has no filename component. " +
-                   $"Use a filename wildcard (e.g. *.pdb) or '**' with a filename " +
-                   $"(e.g. Symbols\\**\\*.pdb).";
-        }
-
-        return null;
-    }
+    internal static string? ValidateGlobPattern(string globArg) => SymbolPathPatterns.Validate(globArg);
 
     /// <summary>
     ///     Returns the last path-directory segment of <paramref name="globArg" /> that does not
     ///     contain any wildcard characters (<c>*</c> or <c>?</c>).
-    ///     For example, <c>C:\Symbols\**\*.pdb</c> yields <c>C:\Symbols</c> rather than
-    ///     <c>C:\Symbols\**</c>, which allows <see cref="Directory.Exists" /> to succeed.
     /// </summary>
-    internal static string NormalizeGlobRoot(string globArg)
-    {
-        string? dir = Path.GetDirectoryName(globArg);
-        if (string.IsNullOrEmpty(dir)) return ".";
-
-        while (dir.Contains('*') || dir.Contains('?'))
-        {
-            string? parent = Path.GetDirectoryName(dir);
-            if (parent is null || parent.Length == 0 || parent == dir)
-            {
-                return ".";
-            }
-
-            dir = parent;
-        }
-
-        return dir;
-    }
+    internal static string NormalizeGlobRoot(string globArg) => SymbolPathPatterns.NormalizeRoot(globArg);
 
     /// <summary>
     ///     Expands the raw <c>etl-path</c> argument values into a deduplicated, ordered list of
