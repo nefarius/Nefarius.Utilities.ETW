@@ -104,6 +104,17 @@ public static class SymbolStore
                     };
                 }
 
+                if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
+                {
+                    return new ResolvedPdb
+                    {
+                        Reference = reference,
+                        Origin = PdbResolutionOrigin.Unresolved,
+                        Failure = PdbResolutionFailure.Unauthorized,
+                        Detail = $"{(int)response.StatusCode} {response.StatusCode}"
+                    };
+                }
+
                 response.EnsureSuccessStatusCode();
                 await using (FileStream temporary = new(
                                  temporaryPath,

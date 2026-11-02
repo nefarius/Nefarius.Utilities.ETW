@@ -174,6 +174,40 @@ public class SymbolStoreTests
     }
 
     [Test]
+    public async Task ResolveAsync_ReportsUnauthorized()
+    {
+        using HttpClient client = new(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.Unauthorized)));
+        IReadOnlyList<ResolvedPdb> resolved = await SymbolStore.ResolveAsync(
+            [SampleReference()],
+            new SymbolStoreConfiguration(CreateTempDirectory(), "https://symbols.example/download/symbols"),
+            client);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(resolved[0].Origin, Is.EqualTo(PdbResolutionOrigin.Unresolved));
+            Assert.That(resolved[0].Failure, Is.EqualTo(PdbResolutionFailure.Unauthorized));
+            Assert.That(resolved[0].Detail, Does.Contain("401"));
+        }
+    }
+
+    [Test]
+    public async Task ResolveAsync_ReportsForbidden()
+    {
+        using HttpClient client = new(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.Forbidden)));
+        IReadOnlyList<ResolvedPdb> resolved = await SymbolStore.ResolveAsync(
+            [SampleReference()],
+            new SymbolStoreConfiguration(CreateTempDirectory(), "https://symbols.example/download/symbols"),
+            client);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(resolved[0].Origin, Is.EqualTo(PdbResolutionOrigin.Unresolved));
+            Assert.That(resolved[0].Failure, Is.EqualTo(PdbResolutionFailure.Unauthorized));
+            Assert.That(resolved[0].Detail, Does.Contain("403"));
+        }
+    }
+
+    [Test]
     public void Load_ReportsMissingSymbolPath()
     {
         DecodingSourceSet loaded = DecodingSources.Load([Path.Combine(CreateTempDirectory(), "missing.pdb")]);

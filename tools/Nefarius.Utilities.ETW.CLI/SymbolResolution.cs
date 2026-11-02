@@ -176,6 +176,10 @@ internal static class SymbolResolution
                 {
                     Console.Error.WriteLine($"    [404   ] {fileName} ({resolved.Detail})");
                 }
+                else if (resolved.Failure == PdbResolutionFailure.Unauthorized)
+                {
+                    Console.Error.WriteLine($"    [auth  ] {fileName} ({resolved.Detail})");
+                }
                 else if (resolved.Failure == PdbResolutionFailure.DownloadFailed)
                 {
                     Console.Error.WriteLine($"[!] Failed to download '{fileName}': {resolved.Detail}");
