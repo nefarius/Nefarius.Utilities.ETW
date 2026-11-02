@@ -18,3 +18,4 @@ Implements [IComparable](https://learn.microsoft.com/dotnet/api/system.icomparab
 | None | 0 | The reference was resolved, or it was absent without a server response. |
 | NotFoundOnServer | 1 | The symbol server returned HTTP 404. |
 | DownloadFailed | 2 | The symbol server request failed before a PDB could be stored. |
+| Unauthorized | 3 | The symbol server returned HTTP 401 or 403. |

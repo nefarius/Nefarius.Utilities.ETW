@@ -32,7 +32,10 @@ public enum PdbResolutionFailure
     NotFoundOnServer,
 
     /// <summary>The symbol server request failed before a PDB could be stored.</summary>
-    DownloadFailed
+    DownloadFailed,
+
+    /// <summary>The symbol server returned HTTP 401 or 403.</summary>
+    Unauthorized
 }
 
 /// <summary>

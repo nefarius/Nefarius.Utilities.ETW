@@ -172,6 +172,10 @@ public static class DecodingSources
                     {
                         diagnostics.Add($"    [404   ] {fileName} ({pdb.Detail})");
                     }
+                    else if (pdb.Failure == PdbResolutionFailure.Unauthorized)
+                    {
+                        diagnostics.Add($"    [auth  ] {fileName} ({pdb.Detail})");
+                    }
                     else if (pdb.Failure == PdbResolutionFailure.DownloadFailed)
                     {
                         diagnostics.Add($"[!] Failed to download '{fileName}': {pdb.Detail}");
