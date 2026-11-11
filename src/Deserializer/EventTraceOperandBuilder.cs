@@ -12,6 +12,81 @@ internal static unsafe class EventTraceOperandBuilder
     }
 
     /// <summary>
+    ///     True when the buffer holds the whole <c>TRACE_EVENT_INFO</c> and every declared property record, every struct
+    ///     member range lies inside that array, every count or length index points at an operand already visited, and no
+    ///     struct range re-enters a struct still being expanded. A schema that fails this is not decoded: the caller caches
+    ///     whatever operand it builds, so a clamped range would become a permanent parser.
+    /// </summary>
+    internal static bool IsDecodableSchema(TRACE_EVENT_INFO* info, uint length)
+    {
+        if (info == null || length < (uint)sizeof(TRACE_EVENT_INFO) || info->PropertyCount > int.MaxValue
+            || info->TopLevelPropertyCount > info->PropertyCount)
+        {
+            return false;
+        }
+
+        ulong arrayOffset = (ulong)((byte*)&info->EventPropertyInfoArray - (byte*)info);
+        ulong required = arrayOffset + (ulong)info->PropertyCount * (ulong)sizeof(EVENT_PROPERTY_INFO);
+        if (required > length)
+        {
+            return false;
+        }
+
+        int count = (int)info->PropertyCount;
+        EVENT_PROPERTY_INFO* properties = (EVENT_PROPERTY_INFO*)&info->EventPropertyInfoArray;
+        HashSet<int> expanding = new();
+        int visited = 0;
+        return RangesFit(0, (int)info->TopLevelPropertyCount, 0);
+
+        // Struct nesting deeper than this is rejected. The operand walk is recursive, and a chain this deep is not a
+        // schema this decoder can traverse safely. Real manifest and TDH structs nest far less than this.
+        bool RangesFit(int start, int end, int depth)
+        {
+            if ((uint)start > (uint)end || end > count || depth > 64)
+            {
+                return false;
+            }
+
+            for (int i = start; i < end; i++)
+            {
+                if (!expanding.Add(i))
+                {
+                    return false;
+                }
+
+                visited++;
+                EVENT_PROPERTY_INFO* property = &properties[i];
+                if ((property->Flags & PROPERTY_FLAGS.PropertyParamCount) == PROPERTY_FLAGS.PropertyParamCount
+                    && property->Anonymous2.countPropertyIndex >= visited)
+                {
+                    return false;
+                }
+
+                if ((property->Flags & PROPERTY_FLAGS.PropertyParamLength) == PROPERTY_FLAGS.PropertyParamLength
+                    && property->Anonymous3.lengthPropertyIndex >= visited)
+                {
+                    return false;
+                }
+
+                if ((property->Flags & PROPERTY_FLAGS.PropertyStruct) == PROPERTY_FLAGS.PropertyStruct
+                    && property->Anonymous1.structType.NumOfStructMembers > 0)
+                {
+                    int memberStart = property->Anonymous1.structType.StructStartIndex;
+                    int memberEnd = memberStart + property->Anonymous1.structType.NumOfStructMembers;
+                    if (!RangesFit(memberStart, memberEnd, depth + 1))
+                    {
+                        return false;
+                    }
+                }
+
+                expanding.Remove(i);
+            }
+
+            return true;
+        }
+    }
+
+    /// <summary>
     ///     Reads a UTF-16 string that TDH places at a byte <paramref name="offset" /> inside a buffer of
     ///     <paramref name="size" /> bytes. The offset and the terminator must both lie inside the buffer.
     ///     Metadata that violates this yields <see langword="null" /> instead of reading past the allocation.

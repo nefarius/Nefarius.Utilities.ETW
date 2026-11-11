@@ -136,22 +136,12 @@ internal sealed partial class Deserializer<T>
     }
 
     /// <summary>
-    ///     True when the payload holds the fixed <c>TRACE_EVENT_INFO</c> header and every declared property record, and the
-    ///     top-level count does not exceed the record count. The result is cached as a schema, so a clamped partial schema
-    ///     would silently mis-decode later events.
+    ///     True when the payload is a complete schema: the header, every property record, every struct member range, and
+    ///     every count or length reference. Anything else returns no operand, so <c>SlowLookup</c> does not cache a parser
+    ///     built from a clamped subset of the records.
     /// </summary>
-    private static unsafe bool IsCompleteTraceEventInfo(void* userData, uint length)
-    {
-        if (userData == null || length < (uint)sizeof(TRACE_EVENT_INFO))
-        {
-            return false;
-        }
-
-        TRACE_EVENT_INFO* info = (TRACE_EVENT_INFO*)userData;
-        ulong arrayOffset = (ulong)((byte*)&info->EventPropertyInfoArray - (byte*)info);
-        ulong required = arrayOffset + (ulong)info->PropertyCount * (ulong)sizeof(EVENT_PROPERTY_INFO);
-        return info->TopLevelPropertyCount <= info->PropertyCount && required <= length;
-    }
+    private static unsafe bool IsCompleteTraceEventInfo(void* userData, uint length) =>
+        EventTraceOperandBuilder.IsDecodableSchema((TRACE_EVENT_INFO*)userData, length);
 
     private static unsafe IEventTraceOperand? BuildOperandFromTdh(EVENT_RECORD* eventRecord, int metadataTableIndex)
     {
@@ -173,7 +163,8 @@ internal sealed partial class Deserializer<T>
         TRACE_EVENT_INFO* buffer = (TRACE_EVENT_INFO*)Marshal.AllocHGlobal((int)bufferSize);
         try
         {
-            if (PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, &bufferSize) != (uint)WIN32_ERROR.ERROR_SUCCESS)
+            if (PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, &bufferSize) != (uint)WIN32_ERROR.ERROR_SUCCESS
+                || !EventTraceOperandBuilder.IsDecodableSchema(buffer, bufferSize))
             {
                 return null;
             }
