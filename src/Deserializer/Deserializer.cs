@@ -135,6 +135,24 @@ internal sealed partial class Deserializer<T>
                 metadataTableIndex);
     }
 
+    /// <summary>
+    ///     True when the payload holds the fixed <c>TRACE_EVENT_INFO</c> header and every declared property record, and the
+    ///     top-level count does not exceed the record count. The result is cached as a schema, so a clamped partial schema
+    ///     would silently mis-decode later events.
+    /// </summary>
+    private static unsafe bool IsCompleteTraceEventInfo(void* userData, uint length)
+    {
+        if (userData == null || length < (uint)sizeof(TRACE_EVENT_INFO))
+        {
+            return false;
+        }
+
+        TRACE_EVENT_INFO* info = (TRACE_EVENT_INFO*)userData;
+        ulong arrayOffset = (ulong)((byte*)&info->EventPropertyInfoArray - (byte*)info);
+        ulong required = arrayOffset + (ulong)info->PropertyCount * (ulong)sizeof(EVENT_PROPERTY_INFO);
+        return info->TopLevelPropertyCount <= info->PropertyCount && required <= length;
+    }
+
     private static unsafe IEventTraceOperand? BuildOperandFromTdh(EVENT_RECORD* eventRecord, int metadataTableIndex)
     {
         uint bufferSize = 0;
@@ -245,7 +263,7 @@ internal sealed partial class Deserializer<T>
         {
             // A truncated or missing payload is malformed metadata. Produce no operand and no fallback parser: SlowLookup
             // then caches nothing for this key, so a later valid record with the same key still registers its schema.
-            if (eventRecord->UserData == null || eventRecord->UserDataLength < (uint)sizeof(TRACE_EVENT_INFO))
+            if (!IsCompleteTraceEventInfo(eventRecord->UserData, eventRecord->UserDataLength))
             {
                 return null;
             }
