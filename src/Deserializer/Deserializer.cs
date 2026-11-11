@@ -240,13 +240,16 @@ internal sealed partial class Deserializer<T>
             }
         }
 
-        // A truncated or missing payload is malformed metadata: skip the shortcut so it is handled like any other
-        // event (TDH, then the unknown operand) instead of reading an incomplete TRACE_EVENT_INFO header.
         if (eventRecord->EventHeader.ProviderId == CustomParserGuids.KernelTraceControlMetaDataGuid &&
-            eventRecord->EventHeader.EventDescriptor.Opcode == 32 &&
-            eventRecord->UserData != null &&
-            eventRecord->UserDataLength >= (uint)sizeof(TRACE_EVENT_INFO))
+            eventRecord->EventHeader.EventDescriptor.Opcode == 32)
         {
+            // A truncated or missing payload is malformed metadata. Produce no operand and no fallback parser: SlowLookup
+            // then caches nothing for this key, so a later valid record with the same key still registers its schema.
+            if (eventRecord->UserData == null || eventRecord->UserDataLength < (uint)sizeof(TRACE_EVENT_INFO))
+            {
+                return null;
+            }
+
             isSpecialKernelTraceMetaDataEvent = true;
             return EventTraceOperandBuilder.Build((TRACE_EVENT_INFO*)eventRecord->UserData, eventRecord->UserDataLength,
                 metadataTableIndex);

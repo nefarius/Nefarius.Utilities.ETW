@@ -51,11 +51,12 @@ public unsafe class TdhMetadataDecodingTests
     [Test]
     public void InconsistentPropertyCountsNeverParseTrailingBytesAsPropertyRecords()
     {
-        // One real property record followed by its name; the header claims many more top-level properties.
+        // The buffer has room for a second, zeroed property record, so only the record counts can stop the iteration.
+        // The name sits after that spare capacity; the header claims many more top-level properties.
         int headerBytes = sizeof(TRACE_EVENT_INFO);
         int recordBytes = sizeof(EVENT_PROPERTY_INFO);
         byte[] name = Encoding.Unicode.GetBytes("Only\0");
-        int size = headerBytes + name.Length;
+        int size = headerBytes + recordBytes + name.Length;
         byte[] raw = new byte[size];
         fixed (byte* pointer = raw)
         {
@@ -63,7 +64,7 @@ public unsafe class TdhMetadataDecodingTests
             info->PropertyCount = 1;
             info->TopLevelPropertyCount = 50;
             EVENT_PROPERTY_INFO* first = (EVENT_PROPERTY_INFO*)&info->EventPropertyInfoArray;
-            first->NameOffset = (uint)((byte*)first + recordBytes - pointer);
+            first->NameOffset = (uint)(headerBytes + recordBytes);
             name.CopyTo(raw, (int)first->NameOffset);
 
             IEventTraceOperand operand = EventTraceOperandBuilder.Build(info, (uint)size, 0);
