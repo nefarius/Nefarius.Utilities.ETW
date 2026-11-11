@@ -2,6 +2,8 @@ using System.Text;
 
 using Nefarius.Utilities.ETW.Deserializer;
 
+using Windows.Win32.System.Diagnostics.Etw;
+
 namespace Nefarius.Utilities.ETW.Tests;
 
 [Category("Unit")]
@@ -40,5 +42,52 @@ public class TdhMetadataBoundsTests
         Assert.That(Read(bytes, (uint)bytes.Length), Is.Null);
         Assert.That(Read(bytes, uint.MaxValue - 1), Is.Null);
         Assert.That(Read(bytes, 9), Is.Null);
+    }
+}
+
+[Category("Unit")]
+public unsafe class TdhMetadataDecodingTests
+{
+    [Test]
+    public void InconsistentPropertyCountsNeverParseTrailingBytesAsPropertyRecords()
+    {
+        // One real property record followed by its name; the header claims many more top-level properties.
+        int headerBytes = sizeof(TRACE_EVENT_INFO);
+        int recordBytes = sizeof(EVENT_PROPERTY_INFO);
+        byte[] name = Encoding.Unicode.GetBytes("Only\0");
+        int size = headerBytes + name.Length;
+        byte[] raw = new byte[size];
+        fixed (byte* pointer = raw)
+        {
+            TRACE_EVENT_INFO* info = (TRACE_EVENT_INFO*)pointer;
+            info->PropertyCount = 1;
+            info->TopLevelPropertyCount = 50;
+            EVENT_PROPERTY_INFO* first = (EVENT_PROPERTY_INFO*)&info->EventPropertyInfoArray;
+            first->NameOffset = (uint)((byte*)first + recordBytes - pointer);
+            name.CopyTo(raw, (int)first->NameOffset);
+
+            IEventTraceOperand operand = EventTraceOperandBuilder.Build(info, (uint)size, 0);
+
+            Assert.That(operand.Metadata.Properties, Has.Length.EqualTo(1));
+            Assert.That(operand.Metadata.Properties[0].Name, Is.EqualTo("Only"));
+        }
+    }
+
+    [Test]
+    public void AnOutOfBoundsPropertyNameOffsetFallsBackInsteadOfReadingPastTheBuffer()
+    {
+        int size = sizeof(TRACE_EVENT_INFO);
+        byte[] raw = new byte[size];
+        fixed (byte* pointer = raw)
+        {
+            TRACE_EVENT_INFO* info = (TRACE_EVENT_INFO*)pointer;
+            info->PropertyCount = 1;
+            info->TopLevelPropertyCount = 1;
+            ((EVENT_PROPERTY_INFO*)&info->EventPropertyInfoArray)->NameOffset = uint.MaxValue - 1;
+
+            IEventTraceOperand operand = EventTraceOperandBuilder.Build(info, (uint)size, 0);
+
+            Assert.That(operand.Metadata.Properties[0].Name, Is.EqualTo("Property0"));
+        }
     }
 }

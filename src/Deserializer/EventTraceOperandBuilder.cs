@@ -161,6 +161,7 @@ internal static unsafe class EventTraceOperandBuilder
         private readonly List<IEventTracePropertyOperand> _flatPropertyList = new();
         private readonly TRACE_EVENT_INFO* _traceEventInfo;
         private readonly uint _infoSize;
+        private int _propertyLimit;
 
         public EventTraceOperandBuilderFromTDH(TRACE_EVENT_INFO* traceEventInfo, uint infoSize)
         {
@@ -184,9 +185,14 @@ internal static unsafe class EventTraceOperandBuilder
             // The property array must lie inside the buffer TDH filled in.
             long arrayOffset = (byte*)eventPropertyInfoArr - buffer;
             long capacity = (_infoSize - arrayOffset) / sizeof(EVENT_PROPERTY_INFO);
-            int end = _traceEventInfo->DecodingSource == DECODING_SOURCE.DecodingSourceWPP || arrayOffset > _infoSize
+            // The record count and the top-level count must both be honoured, or trailing name strings would be
+            // parsed as property records. Inconsistent counts use the smallest value.
+            _propertyLimit = arrayOffset > _infoSize
                 ? 0
-                : (int)Math.Min(_traceEventInfo->TopLevelPropertyCount, capacity);
+                : (int)Math.Min(Math.Min(_traceEventInfo->PropertyCount, capacity), int.MaxValue);
+            int end = _traceEventInfo->DecodingSource == DECODING_SOURCE.DecodingSourceWPP
+                ? 0
+                : (int)Math.Min(_traceEventInfo->TopLevelPropertyCount, _propertyLimit);
             List<EventTracePropertyOperand> topLevelOperands = IterateProperties(buffer, 0, end, eventPropertyInfoArr);
             return new EventTraceOperand(
                 new EventMetadata(_traceEventInfo->ProviderGuid, _traceEventInfo->EventDescriptor.Id,
@@ -275,6 +281,7 @@ internal static unsafe class EventTraceOperandBuilder
             List<EventTracePropertyOperand> operands, int start, int end, EVENT_PROPERTY_INFO* eventPropertyInfoArr)
         {
             List<EventTracePropertyOperand> returnList = new();
+            end = Math.Min(end, _propertyLimit);
             for (int i = start; i < end; ++i)
             {
                 EVENT_PROPERTY_INFO* eventPropertyInfo = &eventPropertyInfoArr[i];
