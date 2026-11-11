@@ -165,6 +165,16 @@ public unsafe class TdhMetadataDecodingTests
             properties[1].Flags = PROPERTY_FLAGS.PropertyStruct;
             properties[1].Anonymous1.structType.StructStartIndex = 2;
             properties[1].Anonymous1.structType.NumOfStructMembers = 1;
+        }, accepted => Assert.That(accepted, Is.False));
+
+        WithSchema(3, 1, (info, properties) =>
+        {
+            properties[0].Flags = PROPERTY_FLAGS.PropertyStruct;
+            properties[0].Anonymous1.structType.StructStartIndex = 1;
+            properties[0].Anonymous1.structType.NumOfStructMembers = 1;
+            properties[1].Flags = PROPERTY_FLAGS.PropertyStruct;
+            properties[1].Anonymous1.structType.StructStartIndex = 2;
+            properties[1].Anonymous1.structType.NumOfStructMembers = 1;
         }, accepted => Assert.That(accepted, Is.True));
     }
 

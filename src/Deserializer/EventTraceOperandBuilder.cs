@@ -13,9 +13,10 @@ internal static unsafe class EventTraceOperandBuilder
 
     /// <summary>
     ///     True when the buffer holds the whole <c>TRACE_EVENT_INFO</c> and every declared property record, every struct
-    ///     member range lies inside that array, every count or length index points at an operand already visited, and no
-    ///     struct range re-enters a struct still being expanded. A schema that fails this is not decoded: the caller caches
-    ///     whatever operand it builds, so a clamped range would become a permanent parser.
+    ///     member range lies inside that array, and the walk reaches each property-array index at most once.
+    ///     A count or length index must name a property whose own references were already checked; the current property is
+    ///     recorded only after its references pass. A schema that fails this is not decoded: the caller caches whatever
+    ///     operand it builds, so a clamped or repeated range would become a permanent parser.
     /// </summary>
     internal static bool IsDecodableSchema(TRACE_EVENT_INFO* info, uint length)
     {
@@ -34,8 +35,8 @@ internal static unsafe class EventTraceOperandBuilder
 
         int count = (int)info->PropertyCount;
         EVENT_PROPERTY_INFO* properties = (EVENT_PROPERTY_INFO*)&info->EventPropertyInfoArray;
-        HashSet<int> expanding = new();
-        int visited = 0;
+        HashSet<int> reached = new();
+        HashSet<int> validated = new();
         return RangesFit(0, (int)info->TopLevelPropertyCount, 0);
 
         // Struct nesting deeper than this is rejected. The operand walk is recursive, and a chain this deep is not a
@@ -49,25 +50,25 @@ internal static unsafe class EventTraceOperandBuilder
 
             for (int i = start; i < end; i++)
             {
-                if (!expanding.Add(i))
+                if (!reached.Add(i))
                 {
                     return false;
                 }
 
-                visited++;
                 EVENT_PROPERTY_INFO* property = &properties[i];
                 if ((property->Flags & PROPERTY_FLAGS.PropertyParamCount) == PROPERTY_FLAGS.PropertyParamCount
-                    && property->Anonymous2.countPropertyIndex >= visited)
+                    && !validated.Contains(property->Anonymous2.countPropertyIndex))
                 {
                     return false;
                 }
 
                 if ((property->Flags & PROPERTY_FLAGS.PropertyParamLength) == PROPERTY_FLAGS.PropertyParamLength
-                    && property->Anonymous3.lengthPropertyIndex >= visited)
+                    && !validated.Contains(property->Anonymous3.lengthPropertyIndex))
                 {
                     return false;
                 }
 
+                validated.Add(i);
                 if ((property->Flags & PROPERTY_FLAGS.PropertyStruct) == PROPERTY_FLAGS.PropertyStruct
                     && property->Anonymous1.structType.NumOfStructMembers > 0)
                 {
@@ -78,8 +79,6 @@ internal static unsafe class EventTraceOperandBuilder
                         return false;
                     }
                 }
-
-                expanding.Remove(i);
             }
 
             return true;
@@ -345,15 +344,29 @@ internal static unsafe class EventTraceOperandBuilder
             }
         }
 
+        private static bool TryOperand(EventTracePropertyOperand?[] byIndex, int index, out EventTracePropertyOperand operand)
+        {
+            if ((uint)index < (uint)byIndex.Length && byIndex[index] is { } found)
+            {
+                operand = found;
+                return true;
+            }
+
+            operand = null!;
+            return false;
+        }
+
         private List<EventTracePropertyOperand> IterateProperties(byte* buffer, int start, int end,
             EVENT_PROPERTY_INFO* eventPropertyInfoArr)
         {
-            List<EventTracePropertyOperand> operands = new();
-            return IterateProperties(buffer, operands, start, end, eventPropertyInfoArr);
+            EventTracePropertyOperand?[] byIndex = _propertyLimit > 0
+                ? new EventTracePropertyOperand[_propertyLimit]
+                : [];
+            return IterateProperties(buffer, byIndex, start, end, eventPropertyInfoArr);
         }
 
         private List<EventTracePropertyOperand> IterateProperties(byte* buffer,
-            List<EventTracePropertyOperand> operands, int start, int end, EVENT_PROPERTY_INFO* eventPropertyInfoArr)
+            EventTracePropertyOperand?[] byIndex, int start, int end, EVENT_PROPERTY_INFO* eventPropertyInfoArr)
         {
             List<EventTracePropertyOperand> returnList = new();
             end = Math.Min(end, _propertyLimit);
@@ -411,38 +424,45 @@ internal static unsafe class EventTraceOperandBuilder
                     isWbemXmlFragment);
 
                 _flatPropertyList.Add(operand);
-                operands.Add(operand);
                 returnList.Add(operand);
 
-                /* if this references a previous field, we need to capture that as a local */
+                /* Count and length indexes are property-array indexes, not positions in the walk. */
                 if (isVariableArray)
                 {
-                    EventTracePropertyOperand reference = operands[eventPropertyInfo->Anonymous2.countPropertyIndex];
-                    reference.IsReferencedByOtherProperties = true;
-                    operand.SetVariableArraySize(reference);
+                    if (TryOperand(byIndex, eventPropertyInfo->Anonymous2.countPropertyIndex, out EventTracePropertyOperand countReference))
+                    {
+                        countReference.IsReferencedByOtherProperties = true;
+                        operand.SetVariableArraySize(countReference);
+                    }
                 }
                 else if (isFixedArray)
                 {
                     operand.SetFixedArraySize(eventPropertyInfo->Anonymous2.count);
                 }
 
-                /* if this references a previous field, we need to capture that as a local */
                 if (isVariableLength)
                 {
-                    EventTracePropertyOperand reference = operands[eventPropertyInfo->Anonymous3.lengthPropertyIndex];
-                    reference.IsReferencedByOtherProperties = true;
-                    operand.SetVariableLengthSize(reference);
+                    if (TryOperand(byIndex, eventPropertyInfo->Anonymous3.lengthPropertyIndex, out EventTracePropertyOperand lengthReference))
+                    {
+                        lengthReference.IsReferencedByOtherProperties = true;
+                        operand.SetVariableLengthSize(lengthReference);
+                    }
                 }
                 else if (isFixedLength)
                 {
                     operand.SetFixedLengthSize(eventPropertyInfo->Anonymous3.length);
                 }
 
+                if ((uint)i < (uint)byIndex.Length)
+                {
+                    byIndex[i] = operand;
+                }
+
                 if ((eventPropertyInfo->Flags & PROPERTY_FLAGS.PropertyStruct) == PROPERTY_FLAGS.PropertyStruct)
                 {
                     List<EventTracePropertyOperand> innerProps = IterateProperties(
                         buffer,
-                        operands,
+                        byIndex,
                         eventPropertyInfo->Anonymous1.structType.StructStartIndex,
                         eventPropertyInfo->Anonymous1.structType.StructStartIndex +
                         eventPropertyInfo->Anonymous1.structType.NumOfStructMembers,
