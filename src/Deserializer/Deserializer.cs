@@ -135,27 +135,46 @@ internal sealed partial class Deserializer<T>
                 metadataTableIndex);
     }
 
+    /// <summary>
+    ///     True when the payload is a complete schema: the header, every property record, every struct member range, and
+    ///     every count or length reference. Anything else returns no operand, so <c>SlowLookup</c> does not cache a parser
+    ///     built from a clamped subset of the records.
+    /// </summary>
+    private static unsafe bool IsCompleteTraceEventInfo(void* userData, uint length) =>
+        EventTraceOperandBuilder.IsDecodableSchema((TRACE_EVENT_INFO*)userData, length);
+
     private static unsafe IEventTraceOperand? BuildOperandFromTdh(EVENT_RECORD* eventRecord, int metadataTableIndex)
     {
-        uint bufferSize;
-        TRACE_EVENT_INFO* buffer = null;
+        uint bufferSize = 0;
 
-        // Not Found
-        if (PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, &bufferSize) ==
-            (uint)WIN32_ERROR.ERROR_NOT_FOUND)
+        // Not Found. Any result other than "buffer too small" leaves nothing to decode.
+        uint sizing = PInvoke.TdhGetEventInformation(eventRecord, 0, null, null, &bufferSize);
+        if (sizing == (uint)WIN32_ERROR.ERROR_NOT_FOUND)
         {
             return null;
         }
 
-        buffer = (TRACE_EVENT_INFO*)Marshal.AllocHGlobal((int)bufferSize);
-        PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, &bufferSize);
+        if (sizing != (uint)WIN32_ERROR.ERROR_INSUFFICIENT_BUFFER || bufferSize < (uint)sizeof(TRACE_EVENT_INFO)
+                                                                   || bufferSize > int.MaxValue)
+        {
+            return null;
+        }
 
-        TRACE_EVENT_INFO* traceEventInfo = buffer;
-        IEventTraceOperand traceEventOperand = EventTraceOperandBuilder.Build(traceEventInfo, metadataTableIndex);
+        TRACE_EVENT_INFO* buffer = (TRACE_EVENT_INFO*)Marshal.AllocHGlobal((int)bufferSize);
+        try
+        {
+            if (PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, &bufferSize) != (uint)WIN32_ERROR.ERROR_SUCCESS
+                || !EventTraceOperandBuilder.IsDecodableSchema(buffer, bufferSize))
+            {
+                return null;
+            }
 
-        Marshal.FreeHGlobal((IntPtr)buffer);
-
-        return traceEventOperand;
+            return EventTraceOperandBuilder.Build(buffer, bufferSize, metadataTableIndex);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal((IntPtr)buffer);
+        }
     }
 
     private static unsafe IEventTraceOperand BuildUnknownOperand(EVENT_RECORD* eventRecord, int metadataTableIndex)
@@ -233,8 +252,16 @@ internal sealed partial class Deserializer<T>
         if (eventRecord->EventHeader.ProviderId == CustomParserGuids.KernelTraceControlMetaDataGuid &&
             eventRecord->EventHeader.EventDescriptor.Opcode == 32)
         {
+            // A truncated or missing payload is malformed metadata. Produce no operand and no fallback parser: SlowLookup
+            // then caches nothing for this key, so a later valid record with the same key still registers its schema.
+            if (!IsCompleteTraceEventInfo(eventRecord->UserData, eventRecord->UserDataLength))
+            {
+                return null;
+            }
+
             isSpecialKernelTraceMetaDataEvent = true;
-            return EventTraceOperandBuilder.Build((TRACE_EVENT_INFO*)eventRecord->UserData, metadataTableIndex);
+            return EventTraceOperandBuilder.Build((TRACE_EVENT_INFO*)eventRecord->UserData, eventRecord->UserDataLength,
+                metadataTableIndex);
         }
 
         if ((operand = BuildOperandFromTdh(eventRecord, metadataTableIndex)) == null)
