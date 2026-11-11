@@ -6,9 +6,34 @@ namespace Nefarius.Utilities.ETW.Deserializer;
 
 internal static unsafe class EventTraceOperandBuilder
 {
-    public static IEventTraceOperand Build(TRACE_EVENT_INFO* traceEventInfo, int metadataIndex)
+    public static IEventTraceOperand Build(TRACE_EVENT_INFO* traceEventInfo, uint infoSize, int metadataIndex)
     {
-        return new EventTraceOperandBuilderFromTDH(traceEventInfo).Build(metadataIndex);
+        return new EventTraceOperandBuilderFromTDH(traceEventInfo, infoSize).Build(metadataIndex);
+    }
+
+    /// <summary>
+    ///     Reads a UTF-16 string that TDH places at a byte <paramref name="offset" /> inside a buffer of
+    ///     <paramref name="size" /> bytes. The offset and the terminator must both lie inside the buffer.
+    ///     Metadata that violates this yields <see langword="null" /> instead of reading past the allocation.
+    /// </summary>
+    internal static string? ReadBoundedString(byte* buffer, uint size, uint offset)
+    {
+        if (offset == 0 || offset >= size || (offset & 1) != 0)
+        {
+            return null;
+        }
+
+        int maxChars = (int)((size - offset) / sizeof(char));
+        char* start = (char*)(buffer + offset);
+        for (int length = 0; length < maxChars; length++)
+        {
+            if (start[length] == '\0')
+            {
+                return new string(start, 0, length);
+            }
+        }
+
+        return null;
     }
 
     public static IEventTraceOperand Build(instrumentationManifest manifest, ushort eventId, int metadataIndex)
@@ -135,10 +160,12 @@ internal static unsafe class EventTraceOperandBuilder
     {
         private readonly List<IEventTracePropertyOperand> _flatPropertyList = new();
         private readonly TRACE_EVENT_INFO* _traceEventInfo;
+        private readonly uint _infoSize;
 
-        public EventTraceOperandBuilderFromTDH(TRACE_EVENT_INFO* traceEventInfo)
+        public EventTraceOperandBuilderFromTDH(TRACE_EVENT_INFO* traceEventInfo, uint infoSize)
         {
             this._traceEventInfo = traceEventInfo;
+            this._infoSize = infoSize;
         }
 
         public IEventTraceOperand Build(int eventMetadataTableIndex)
@@ -154,9 +181,12 @@ internal static unsafe class EventTraceOperandBuilder
                 _traceEventInfo->OpcodeNameOffset);
 
             // TODO: WPP properties not supported
-            int end = _traceEventInfo->DecodingSource == DECODING_SOURCE.DecodingSourceWPP
+            // The property array must lie inside the buffer TDH filled in.
+            long arrayOffset = (byte*)eventPropertyInfoArr - buffer;
+            long capacity = (_infoSize - arrayOffset) / sizeof(EVENT_PROPERTY_INFO);
+            int end = _traceEventInfo->DecodingSource == DECODING_SOURCE.DecodingSourceWPP || arrayOffset > _infoSize
                 ? 0
-                : (int)_traceEventInfo->TopLevelPropertyCount;
+                : (int)Math.Min(_traceEventInfo->TopLevelPropertyCount, capacity);
             List<EventTracePropertyOperand> topLevelOperands = IterateProperties(buffer, 0, end, eventPropertyInfoArr);
             return new EventTraceOperand(
                 new EventMetadata(_traceEventInfo->ProviderGuid, _traceEventInfo->EventDescriptor.Id,
@@ -169,12 +199,69 @@ internal static unsafe class EventTraceOperandBuilder
         {
             byte* buffer = (byte*)_traceEventInfo;
             string item = prefix + "(" + value + ")";
-            if (offset != 0)
+            if (ReadBoundedString(buffer, _infoSize, offset) is { } name)
             {
-                item = new string((char*)&buffer[offset]).Trim();
+                item = name.Trim();
             }
 
             return item;
+        }
+
+        /// <summary>
+        ///     Resolves a value map. TDH fills <c>EVENT_MAP_INFO</c> and its strings in one buffer; every offset it
+        ///     returns is a byte offset from the start of that buffer and is checked against its size.
+        /// </summary>
+        private Dictionary<uint, string>? ReadMap(string mapName)
+        {
+            EVENT_RECORD fakeEventRecord = new()
+            {
+                EventHeader = new EVENT_HEADER { ProviderId = _traceEventInfo->ProviderGuid }
+            };
+
+            uint bufferSize = 0;
+            fixed (char* mapNamePointer = mapName)
+            {
+                PWSTR name = new(mapNamePointer);
+                if (PInvoke.TdhGetEventMapInformation(&fakeEventRecord, name, null, &bufferSize)
+                    != (uint)WIN32_ERROR.ERROR_INSUFFICIENT_BUFFER
+                    || bufferSize < (uint)sizeof(EVENT_MAP_INFO)
+                    || bufferSize > int.MaxValue)
+                {
+                    return null;
+                }
+
+                byte* raw = (byte*)Marshal.AllocHGlobal((int)bufferSize);
+                try
+                {
+                    EVENT_MAP_INFO* mapInfo = (EVENT_MAP_INFO*)raw;
+                    if (PInvoke.TdhGetEventMapInformation(&fakeEventRecord, name, mapInfo, &bufferSize)
+                        != (uint)WIN32_ERROR.ERROR_SUCCESS
+                        || mapInfo->Anonymous.MapEntryValueType != MAP_VALUETYPE.EVENTMAP_ENTRY_VALUETYPE_ULONG)
+                    {
+                        return null;
+                    }
+
+                    byte* entries = (byte*)&mapInfo->MapEntryArray;
+                    long entriesOffset = entries - raw;
+                    long capacity = (bufferSize - entriesOffset) / sizeof(EVENT_MAP_ENTRY);
+                    long count = Math.Min(mapInfo->EntryCount, capacity);
+                    Dictionary<uint, string> values = new();
+                    EVENT_MAP_ENTRY* mapEntry = (EVENT_MAP_ENTRY*)entries;
+                    for (long j = 0; j < count; ++j)
+                    {
+                        if (ReadBoundedString(raw, bufferSize, mapEntry[j].OutputOffset) is { } entryName)
+                        {
+                            values.TryAdd(mapEntry[j].Anonymous.Value, entryName);
+                        }
+                    }
+
+                    return values;
+                }
+                finally
+                {
+                    Marshal.FreeHGlobal((IntPtr)raw);
+                }
+            }
         }
 
         private List<EventTracePropertyOperand> IterateProperties(byte* buffer, int start, int end,
@@ -191,7 +278,13 @@ internal static unsafe class EventTraceOperandBuilder
             for (int i = start; i < end; ++i)
             {
                 EVENT_PROPERTY_INFO* eventPropertyInfo = &eventPropertyInfoArr[i];
-                string propertyName = new((char*)&buffer[eventPropertyInfo->NameOffset]);
+                if (i < 0 || (byte*)(eventPropertyInfo + 1) > buffer + _infoSize)
+                {
+                    break;
+                }
+
+                string propertyName = ReadBoundedString(buffer, _infoSize, eventPropertyInfo->NameOffset)
+                                      ?? "Property" + i;
 
                 int structChildren = eventPropertyInfo->Anonymous1.structType.NumOfStructMembers;
                 bool isStruct = (eventPropertyInfo->Flags & PROPERTY_FLAGS.PropertyStruct) ==
@@ -213,57 +306,21 @@ internal static unsafe class EventTraceOperandBuilder
                     isFixedArray = true;
                 }
 
-                PWSTR mapName = null;
-                Dictionary<uint, string> mapOfValues = null;
-                if (eventPropertyInfo->Anonymous1.nonStructType.MapNameOffset != 0)
+                string? mapName = null;
+                Dictionary<uint, string>? mapOfValues = null;
+                if (eventPropertyInfo->Anonymous1.nonStructType.MapNameOffset != 0
+                    && !isStruct
+                    && ReadBoundedString(buffer, _infoSize, eventPropertyInfo->Anonymous1.nonStructType.MapNameOffset) is { } mapNameText)
                 {
-                    EVENT_MAP_INFO* mapBuffer = null;
-                    uint bufferSize;
-
-                    EVENT_RECORD fakeEventRecord = new()
-                    {
-                        EventHeader = new EVENT_HEADER { ProviderId = _traceEventInfo->ProviderGuid }
-                    };
-
-                    mapName = new PWSTR((char*)&buffer[eventPropertyInfo->Anonymous1.nonStructType.MapNameOffset]);
-
-                    PInvoke.TdhGetEventMapInformation(&fakeEventRecord, mapName, mapBuffer, &bufferSize);
-                    mapBuffer = (EVENT_MAP_INFO*)Marshal.AllocHGlobal((int)bufferSize);
-                    PInvoke.TdhGetEventMapInformation(&fakeEventRecord, mapName, mapBuffer, &bufferSize);
-
-                    EVENT_MAP_INFO* mapInfo = mapBuffer;
-                    if (mapInfo->Anonymous.MapEntryValueType == MAP_VALUETYPE.EVENTMAP_ENTRY_VALUETYPE_ULONG)
-                    {
-                        EVENT_MAP_ENTRY* mapEntry = (EVENT_MAP_ENTRY*)&mapInfo->MapEntryArray;
-                        mapOfValues = new Dictionary<uint, string>();
-                        for (int j = 0; j < mapInfo->EntryCount; ++j)
-                        {
-                            uint offset = mapEntry[j].OutputOffset;
-                            if (offset > bufferSize)
-                            {
-                                // TODO: TDH has a bug (it seems) that is giving rogue values here
-                                // We should log this
-                            }
-                            else
-                            {
-                                uint mapEntryValue = mapEntry[j].Anonymous.Value;
-                                if (!mapOfValues.TryGetValue(mapEntryValue, out string mapEntryName))
-                                {
-                                    mapEntryName = new string((char*)&mapBuffer[offset]);
-                                    mapOfValues.Add(mapEntryValue, mapEntryName);
-                                }
-                            }
-                        }
-                    }
-
-                    Marshal.FreeHGlobal((IntPtr)mapBuffer);
+                    mapName = mapNameText;
+                    mapOfValues = ReadMap(mapNameText);
                 }
 
                 /* save important information in an object */
                 EventTracePropertyOperand operand = new(
                     new PropertyMetadata((_TDH_IN_TYPE)eventPropertyInfo->Anonymous1.nonStructType.InType,
                         (_TDH_OUT_TYPE)eventPropertyInfo->Anonymous1.nonStructType.OutType, propertyName, mapOfValues != null,
-                        isStruct, isStruct ? structChildren : 0, new MapInformation(mapName.ToString(), mapOfValues)),
+                        isStruct, isStruct ? structChildren : 0, new MapInformation(mapName ?? string.Empty, mapOfValues)),
                     i,
                     isVariableArray,
                     isFixedArray,

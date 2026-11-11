@@ -137,25 +137,35 @@ internal sealed partial class Deserializer<T>
 
     private static unsafe IEventTraceOperand? BuildOperandFromTdh(EVENT_RECORD* eventRecord, int metadataTableIndex)
     {
-        uint bufferSize;
-        TRACE_EVENT_INFO* buffer = null;
+        uint bufferSize = 0;
 
-        // Not Found
-        if (PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, &bufferSize) ==
-            (uint)WIN32_ERROR.ERROR_NOT_FOUND)
+        // Not Found. Any result other than "buffer too small" leaves nothing to decode.
+        uint sizing = PInvoke.TdhGetEventInformation(eventRecord, 0, null, null, &bufferSize);
+        if (sizing == (uint)WIN32_ERROR.ERROR_NOT_FOUND)
         {
             return null;
         }
 
-        buffer = (TRACE_EVENT_INFO*)Marshal.AllocHGlobal((int)bufferSize);
-        PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, &bufferSize);
+        if (sizing != (uint)WIN32_ERROR.ERROR_INSUFFICIENT_BUFFER || bufferSize < (uint)sizeof(TRACE_EVENT_INFO)
+                                                                   || bufferSize > int.MaxValue)
+        {
+            return null;
+        }
 
-        TRACE_EVENT_INFO* traceEventInfo = buffer;
-        IEventTraceOperand traceEventOperand = EventTraceOperandBuilder.Build(traceEventInfo, metadataTableIndex);
+        TRACE_EVENT_INFO* buffer = (TRACE_EVENT_INFO*)Marshal.AllocHGlobal((int)bufferSize);
+        try
+        {
+            if (PInvoke.TdhGetEventInformation(eventRecord, 0, null, buffer, &bufferSize) != (uint)WIN32_ERROR.ERROR_SUCCESS)
+            {
+                return null;
+            }
 
-        Marshal.FreeHGlobal((IntPtr)buffer);
-
-        return traceEventOperand;
+            return EventTraceOperandBuilder.Build(buffer, bufferSize, metadataTableIndex);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal((IntPtr)buffer);
+        }
     }
 
     private static unsafe IEventTraceOperand BuildUnknownOperand(EVENT_RECORD* eventRecord, int metadataTableIndex)
@@ -234,7 +244,8 @@ internal sealed partial class Deserializer<T>
             eventRecord->EventHeader.EventDescriptor.Opcode == 32)
         {
             isSpecialKernelTraceMetaDataEvent = true;
-            return EventTraceOperandBuilder.Build((TRACE_EVENT_INFO*)eventRecord->UserData, metadataTableIndex);
+            return EventTraceOperandBuilder.Build((TRACE_EVENT_INFO*)eventRecord->UserData, eventRecord->UserDataLength,
+                metadataTableIndex);
         }
 
         if ((operand = BuildOperandFromTdh(eventRecord, metadataTableIndex)) == null)
