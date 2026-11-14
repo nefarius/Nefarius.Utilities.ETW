@@ -1,0 +1,11 @@
+---
+description: Require every change to be made on a new branch and delivered via pull request, never directly on master
+alwaysApply: true
+---
+
+# Branch per change
+
+- Before starting any new piece of work, create a descriptively named branch (`feat/...`, `fix/...`, `chore/...`) off the up-to-date default branch (`master`).
+- Never commit directly to `master`.
+- Deliver every change through a pull request.
+- Cloud agents use the `cursor/<descriptive-name>-<suffix>` branch naming required by their environment.
