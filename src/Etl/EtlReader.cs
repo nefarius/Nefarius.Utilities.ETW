@@ -1,0 +1,529 @@
+using System.Runtime.InteropServices;
+
+using Windows.Win32.Foundation;
+
+namespace Nefarius.Utilities.ETW.Etl;
+
+/// <summary>
+///     Receives one record at a time from the managed reader. The record and everything it points to are only valid
+///     until the callback returns.
+/// </summary>
+internal unsafe delegate void EtlRecordCallback(EVENT_RECORD* record, in EtlRecordExtras extras);
+
+/// <summary>
+///     Managed replacement for <c>OpenTrace</c>/<c>ProcessTrace</c> on ETL files: walks the logger buffers of one or
+///     more files, decodes the record headers into <see cref="EVENT_RECORD" />s and delivers the records merged in
+///     timestamp order.
+/// </summary>
+/// <remarks>
+///     Supported record header types: SYSTEM_TRACE (32/64), PERFINFO (32/64), TRACE_MESSAGE (WPP), EVENT_HEADER
+///     (32/64, without extended data), FULL_HEADER and INSTANCE (32/64). Anything else is skipped and reported once
+///     per header type. Compressed traces are rejected when the file is opened.
+/// </remarks>
+internal static unsafe class EtlReader
+{
+    private const uint EventHeaderFlagExtendedInfo = 0x0001;
+    private const ushort Flag32BitHeader = 0x0020;
+    private const ushort Flag64BitHeader = 0x0040;
+    private const ushort FlagTraceMessage = 0x0100;
+    private const ushort FlagClassicHeader = 0x0200;
+
+    // TRACE_MESSAGE option flags (ntwmi.h)
+    private const ushort MessageSequence = 0x01;
+    private const ushort MessageGuid = 0x02;
+    private const ushort MessageComponentId = 0x04;
+    private const ushort MessageTimestamp = 0x08;
+    private const ushort MessagePerfTimestamp = 0x10;
+    private const ushort MessageSystemInfo = 0x20;
+    private const ushort MessagePointer32 = 0x40;
+    private const ushort MessagePointer64 = 0x80;
+
+    private static readonly Guid EventTraceGuid = new("68fdd900-4a3e-11d1-84f4-0000f80464e3");
+
+    static EtlReader()
+    {
+        if (sizeof(EVENT_HEADER) != 80 || sizeof(EVENT_RECORD) != 112 && sizeof(void*) == 8)
+        {
+            throw new PlatformNotSupportedException("Unexpected EVENT_RECORD layout.");
+        }
+    }
+
+    /// <summary>
+    ///     Opens every file and delivers all records in timestamp order.
+    /// </summary>
+    /// <returns>
+    ///     <see langword="null" /> on success, otherwise the index of the file that could not be opened and the
+    ///     reason; no record is delivered in that case.
+    /// </returns>
+    /// <exception cref="EtlFormatException">A file passed the open checks but later turned out to be malformed.</exception>
+    public static (int Index, EtlFormatException Error)? Process(
+        IReadOnlyList<string> files,
+        bool preserveRawTimestamps,
+        EtlRecordCallback callback,
+        Action<string>? reportWarning,
+        CancellationToken cancellationToken)
+    {
+        List<EtlFile> opened = new(files.Count);
+        try
+        {
+            for (int i = 0; i < files.Count; i++)
+            {
+                try
+                {
+                    opened.Add(EtlFile.Open(files[i]));
+                }
+                catch (EtlFormatException ex)
+                {
+                    return (i, ex);
+                }
+            }
+
+            Merge(opened, preserveRawTimestamps, callback, reportWarning, cancellationToken);
+            return null;
+        }
+        finally
+        {
+            foreach (EtlFile file in opened)
+            {
+                file.Dispose();
+            }
+        }
+    }
+
+    private static void Merge(List<EtlFile> files, bool preserveRaw, EtlRecordCallback callback,
+        Action<string>? reportWarning, CancellationToken cancellationToken)
+    {
+        PriorityQueue<BufferCursor, (long, int, long, long)> queue = new();
+        HashSet<int> reportedTypes = [];
+
+        void Warn(int headerType, string message)
+        {
+            if (reportedTypes.Add(headerType))
+            {
+                reportWarning?.Invoke(message);
+            }
+        }
+
+        for (int f = 0; f < files.Count; f++)
+        {
+            EtlFile file = files[f];
+            for (long b = 0; b < file.BufferCount; b++)
+            {
+                long start = b * file.BufferSize;
+                long length = Math.Min(file.BufferSize, file.Length - start);
+                BufferCursor? cursor = BufferCursor.TryCreate(file, f, b, file.Pointer + start, (int)length);
+                if (cursor is not null && cursor.Advance(Warn))
+                {
+                    queue.Enqueue(cursor, cursor.Key);
+                }
+            }
+        }
+
+        // The record and extended data scratch space are reused for every event.
+        EVENT_RECORD* record = (EVENT_RECORD*)NativeMemory.AllocZeroed((nuint)sizeof(EVENT_RECORD));
+        try
+        {
+            long counter = 0;
+            while (queue.TryDequeue(out BufferCursor? cursor, out _))
+            {
+                if ((++counter & 0x3FF) == 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+
+                EtlRecordExtras extras = cursor.Fill(record, preserveRaw);
+                callback(record, extras);
+
+                if (cursor.Advance(Warn))
+                {
+                    queue.Enqueue(cursor, cursor.Key);
+                }
+            }
+        }
+        finally
+        {
+            NativeMemory.Free(record);
+        }
+    }
+
+    private enum Kind
+    {
+        System,
+        PerfInfo,
+        Message,
+        EventHeader,
+        FullHeader,
+        Instance
+    }
+
+    /// <summary>
+    ///     Walks the events of a single logger buffer.
+    /// </summary>
+    private sealed class BufferCursor
+    {
+        private readonly byte* _end;
+        private readonly EtlFile _file;
+        private readonly int _fileIndex;
+        private readonly long _bufferIndex;
+        private readonly byte _processor;
+        private readonly byte* _start;
+
+        private byte* _position;
+        private int _size;
+        private Kind _kind;
+        private bool _is64;
+        private long _rawTimestamp;
+        private long _fileTime;
+
+        private BufferCursor(EtlFile file, int fileIndex, long bufferIndex, byte* buffer, byte* end)
+        {
+            _file = file;
+            _fileIndex = fileIndex;
+            _bufferIndex = bufferIndex;
+            _start = buffer;
+            _position = buffer + EtlFile.BufferHeaderSize;
+            _end = end;
+            _processor = buffer[40];
+        }
+
+        public (long, int, long, long) Key => (_fileTime, _fileIndex, _bufferIndex, _position - _start);
+
+        public static BufferCursor? TryCreate(EtlFile file, int fileIndex, long bufferIndex, byte* buffer, int length)
+        {
+            if (length <= EtlFile.BufferHeaderSize)
+            {
+                return null;
+            }
+
+            uint offset = *(uint*)(buffer + 48);
+            if (offset == 0)
+            {
+                offset = *(uint*)(buffer + 4);
+            }
+
+            // Buffers are 8-byte aligned and never extend past the buffer size.
+            long usable = Math.Min(Math.Min(offset, (uint)length), file.BufferSize);
+            if (usable <= EtlFile.BufferHeaderSize)
+            {
+                return null;
+            }
+
+            return new BufferCursor(file, fileIndex, bufferIndex, buffer, buffer + usable);
+        }
+
+        /// <summary>
+        ///     Moves to the next decodable event. Returns false when the buffer is exhausted.
+        /// </summary>
+        public bool Advance(Action<int, string> warn)
+        {
+            if (_size != 0)
+            {
+                _position += (_size + 7) & ~7;
+                _size = 0;
+            }
+
+            while (_position + 8 <= _end)
+            {
+                uint marker = *(uint*)_position;
+                if (marker == 0 || marker == 0xFFFFFFFF)
+                {
+                    return false;
+                }
+
+                if (!TryClassify(marker, out Kind kind, out bool is64, out int size, out long raw, out int headerType))
+                {
+                    warn(headerType,
+                        $"Skipping events with unsupported ETL record header type 0x{headerType:X} " +
+                        $"(marker 0x{marker:X8}).");
+                    return false;
+                }
+
+                if (size < 8 || _position + size > _end)
+                {
+                    return false;
+                }
+
+                _kind = kind;
+                _is64 = is64;
+                _size = size;
+                _rawTimestamp = raw == long.MinValue ? *(long*)(_start + 16) : raw;
+                _fileTime = _file.Info.ToFileTime(_rawTimestamp);
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryClassify(uint marker, out Kind kind, out bool is64, out int size, out long raw,
+            out int headerType)
+        {
+            byte* p = _position;
+            kind = Kind.System;
+            is64 = true;
+            size = 0;
+            raw = long.MinValue;
+            headerType = (int)(marker >> 24);
+
+            if ((marker & 0xC0000000) == 0xC0000000)
+            {
+                headerType = (byte)(marker >> 16);
+                switch (headerType)
+                {
+                    case 1:
+                    case 2:
+                        kind = Kind.System;
+                        is64 = headerType == 2;
+                        size = *(ushort*)(p + 4);
+                        raw = size >= 32 ? *(long*)(p + 16) : long.MinValue;
+                        return size >= 32;
+                    case 0x10:
+                    case 0x11:
+                        kind = Kind.PerfInfo;
+                        is64 = headerType == 0x11;
+                        size = *(ushort*)(p + 4);
+                        raw = size >= 16 ? *(long*)(p + 8) : long.MinValue;
+                        return size >= 16;
+                    case 18:
+                    case 19:
+                        kind = Kind.EventHeader;
+                        is64 = headerType == 19;
+                        size = *(ushort*)p;
+                        raw = size >= 80 ? *(long*)(p + 16) : long.MinValue;
+                        return size >= 80;
+                    case 10:
+                    case 20:
+                        kind = Kind.FullHeader;
+                        is64 = headerType == 20;
+                        size = *(ushort*)p;
+                        raw = size >= 48 ? *(long*)(p + 16) : long.MinValue;
+                        return size >= 48;
+                    case 11:
+                    case 21:
+                        kind = Kind.Instance;
+                        is64 = headerType == 21;
+                        size = *(ushort*)p;
+                        raw = size >= 72 ? *(long*)(p + 16) : long.MinValue;
+                        return size >= 72;
+                    default:
+                        return false;
+                }
+            }
+
+            if ((marker & 0x80000000) != 0)
+            {
+                kind = Kind.Message;
+                headerType = (byte)(marker >> 24);
+                size = (ushort)marker;
+                if (size < 8)
+                {
+                    return false;
+                }
+
+                ushort options = *(ushort*)(p + 6);
+                is64 = (options & MessagePointer32) == 0;
+                MessageLayout layout = MessageLayout.Parse(p, size, options);
+                raw = layout.HasTimestamp ? *(long*)(p + layout.TimestampOffset) : long.MinValue;
+                return layout.Valid;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        ///     Fills the <see cref="EVENT_RECORD" /> for the current event.
+        /// </summary>
+        public EtlRecordExtras Fill(EVENT_RECORD* record, bool preserveRaw)
+        {
+            byte* p = _position;
+            byte* h = (byte*)&record->EventHeader;
+            new Span<byte>(h, sizeof(EVENT_HEADER)).Clear();
+            *(h + 80) = _processor;
+            *(ushort*)(h + 82) = *(ushort*)(_start + 42);
+            record->ExtendedDataCount = 0;
+            record->ExtendedData = null;
+
+            long stamp = preserveRaw ? _rawTimestamp : _fileTime;
+            ushort flags = _is64 ? Flag64BitHeader : Flag32BitHeader;
+            uint sequence = 0;
+            byte headerVersion = 0;
+            byte* payload;
+            int payloadLength;
+
+            switch (_kind)
+            {
+                case Kind.System:
+                {
+                    Guid group = GroupGuid(p[7]);
+                    byte opcode = p[6];
+                    WriteHeader(h, 32, (ushort)(flags | FlagClassicHeader), *(uint*)(p + 8), *(uint*)(p + 12), stamp,
+                        group, 0, (byte)*(ushort*)p, 0, opcode);
+                    *(ulong*)(h + 56) = *(ulong*)(p + 24);
+                    headerVersion = (byte)*(ushort*)p;
+                    payload = p + 32;
+                    payloadLength = _size - 32;
+                    break;
+                }
+                case Kind.PerfInfo:
+                {
+                    ushort hook = *(ushort*)(p + 6);
+                    Guid group = GroupGuid((byte)(hook >> 8));
+                    WriteHeader(h, 16, (ushort)(flags | FlagClassicHeader), 0, 0, stamp, group, 0,
+                        (byte)*(ushort*)p, 0, (byte)hook);
+                    headerVersion = (byte)*(ushort*)p;
+                    payload = p + 16;
+                    payloadLength = _size - 16;
+                    break;
+                }
+                case Kind.Message:
+                {
+                    ushort options = *(ushort*)(p + 6);
+                    MessageLayout layout = MessageLayout.Parse(p, _size, options);
+                    Guid guid = layout.HasGuid ? *(Guid*)(p + layout.GuidOffset) : Guid.Empty;
+                    sequence = layout.HasSequence ? *(uint*)(p + 8) : 0;
+                    uint thread = layout.HasSystemInfo ? *(uint*)(p + layout.SystemInfoOffset) : 0;
+                    uint process = layout.HasSystemInfo ? *(uint*)(p + layout.SystemInfoOffset + 4) : 0;
+                    if (!layout.HasTimestamp)
+                    {
+                        stamp = preserveRaw ? *(long*)(_start + 16) : _file.Info.ToFileTime(*(long*)(_start + 16));
+                    }
+
+                    headerVersion = p[3];
+                    WriteHeader(h, (ushort)_size, (ushort)(flags | FlagTraceMessage), thread, process, stamp, guid,
+                        *(ushort*)(p + 4), 0, 0, 0);
+                    payload = p + layout.DataOffset;
+                    payloadLength = _size - layout.DataOffset;
+                    break;
+                }
+                case Kind.EventHeader:
+                {
+                    Buffer.MemoryCopy(p, h, sizeof(EVENT_HEADER), sizeof(EVENT_HEADER));
+                    *(long*)(h + 16) = stamp;
+                    ushort headerFlags = *(ushort*)(h + 4);
+                    *(ushort*)(h + 4) = (ushort)(headerFlags | flags);
+                    headerVersion = *(h + 42);
+                    payload = p + 80;
+                    payloadLength = _size - 80;
+                    if ((headerFlags & EventHeaderFlagExtendedInfo) != 0)
+                    {
+                        // Extended data is not decoded yet; the user data length cannot be determined reliably.
+                        *(ushort*)(h + 4) = (ushort)(*(ushort*)(h + 4) & ~EventHeaderFlagExtendedInfo);
+                    }
+
+                    break;
+                }
+                default:
+                {
+                    int headerSize = _kind == Kind.Instance ? 72 : 48;
+                    Guid guid = *(Guid*)(p + 24);
+                    WriteHeader(h, (ushort)headerSize, (ushort)(flags | FlagClassicHeader), *(uint*)(p + 8),
+                        *(uint*)(p + 12), stamp, guid, 0, (byte)*(ushort*)(p + 6), p[5], p[4]);
+                    *(ulong*)(h + 56) = *(ulong*)(p + 40);
+                    headerVersion = (byte)*(ushort*)(p + 6);
+                    payload = p + headerSize;
+                    payloadLength = _size - headerSize;
+                    break;
+                }
+            }
+
+            if (payloadLength < 0)
+            {
+                payloadLength = 0;
+            }
+
+            record->UserData = payload;
+            record->UserContext = payload;
+            record->UserDataLength = (ushort)Math.Min(payloadLength, ushort.MaxValue);
+
+            return new EtlRecordExtras
+            {
+                IsManaged = true,
+                SequenceNumber = sequence,
+                FileTime = _fileTime,
+                HeaderVersion = headerVersion
+            };
+        }
+
+        // EVENT_HEADER: Size@0 Flags@4 ThreadId@8 ProcessId@12 TimeStamp@16 ProviderId@24
+        // EventDescriptor@40 (Id@40 Version@42 Channel@43 Level@44 Opcode@45 Task@46 Keyword@48)
+        private static void WriteHeader(byte* h, ushort size, ushort flags, uint thread, uint process, long stamp,
+            Guid provider, ushort id, byte version, byte level, byte opcode)
+        {
+            *(ushort*)h = size;
+            *(ushort*)(h + 4) = flags;
+            *(uint*)(h + 8) = thread;
+            *(uint*)(h + 12) = process;
+            *(long*)(h + 16) = stamp;
+            *(Guid*)(h + 24) = provider;
+            *(ushort*)(h + 40) = id;
+            *(h + 42) = version;
+            *(h + 44) = level;
+            *(h + 45) = opcode;
+        }
+
+        private static Guid GroupGuid(byte group) => group == 0 ? EventTraceGuid : Guid.Empty;
+    }
+
+    /// <summary>
+    ///     Offsets of the optional fields in a TRACE_MESSAGE record, driven by its option flags.
+    /// </summary>
+    private readonly struct MessageLayout
+    {
+        public bool Valid { get; init; }
+        public bool HasSequence { get; init; }
+        public bool HasGuid { get; init; }
+        public int GuidOffset { get; init; }
+        public bool HasTimestamp { get; init; }
+        public int TimestampOffset { get; init; }
+        public bool HasSystemInfo { get; init; }
+        public int SystemInfoOffset { get; init; }
+        public int DataOffset { get; init; }
+
+        public static MessageLayout Parse(byte* p, int size, ushort options)
+        {
+            int offset = 8;
+            bool sequence = (options & MessageSequence) != 0;
+            if (sequence)
+            {
+                offset += 4;
+            }
+
+            bool guid = (options & MessageGuid) != 0;
+            int guidOffset = offset;
+            if (guid)
+            {
+                offset += 16;
+            }
+            else if ((options & MessageComponentId) != 0)
+            {
+                offset += 4;
+            }
+
+            bool timestamp = (options & (MessageTimestamp | MessagePerfTimestamp)) != 0;
+            int timestampOffset = offset;
+            if (timestamp)
+            {
+                offset += 8;
+            }
+
+            bool systemInfo = (options & MessageSystemInfo) != 0;
+            int systemInfoOffset = offset;
+            if (systemInfo)
+            {
+                offset += 8;
+            }
+
+            return new MessageLayout
+            {
+                Valid = offset <= size,
+                HasSequence = sequence,
+                HasGuid = guid,
+                GuidOffset = guidOffset,
+                HasTimestamp = timestamp,
+                TimestampOffset = timestampOffset,
+                HasSystemInfo = systemInfo,
+                SystemInfoOffset = systemInfoOffset,
+                DataOffset = offset
+            };
+        }
+    }
+}
