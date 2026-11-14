@@ -55,7 +55,7 @@ public static class SymbolStore
         HttpClient httpClient,
         CancellationToken cancellationToken)
     {
-        string fileName = Path.GetFileName(reference.PdbName);
+        string fileName = PathHelper.GetFileName(reference.PdbName);
         string cacheFilePath = GetCachePath(configuration.CacheDirectory, reference);
 
         if (MatchesReference(cacheFilePath, reference))

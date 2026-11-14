@@ -15,7 +15,7 @@ public static class Shared
     public static ReadOnlyCollection<TraceMessageFormat> ExtractFromFormatFiles()
     {
         return TmfFilesDirectoryDecodingContextType
-            .CreateFrom(@".\symbols")
+            .CreateFrom(@"./symbols")
             .SelectMany(item => item.TraceMessageFormats)
             .Distinct()
             .ToList()
@@ -26,9 +26,9 @@ public static class Shared
     {
         return PdbFileDecodingContextType
             .CreateFrom(
-                @".\symbols\BthPS3.pdb",
-                @".\symbols\BthPS3PSM.pdb",
-                @".\symbols\DsHidMini.pdb"
+                @"./symbols/BthPS3.pdb",
+                @"./symbols/BthPS3PSM.pdb",
+                @"./symbols/dshidmini.pdb"
             )
             .SelectMany(pdb => pdb.TraceMessageFormats)
             .Distinct()
@@ -41,15 +41,15 @@ public static class Shared
     /// </summary>
     public static string BthPs3EtlTraceDecodeToString()
     {
-        const string etwFilePath = @".\traces\BthPS3_0.etl";
+        const string etwFilePath = @"./traces/BthPS3_0.etl";
 
         JsonWriterOptions options = new() { Indented = true };
 
         using MemoryStream ms = new();
         using Utf8JsonWriter jsonWriter = new(ms, options);
         DecodingContext decodingContext = new(PdbFileDecodingContextType.CreateFrom(
-            @".\symbols\BthPS3.pdb",
-            @".\symbols\BthPS3PSM.pdb"
+            @"./symbols/BthPS3.pdb",
+            @"./symbols/BthPS3PSM.pdb"
         ));
 
         if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
@@ -69,14 +69,14 @@ public static class Shared
     /// </summary>
     public static string BthPs3EtlIncompleteContextDecodeToString()
     {
-        const string etwFilePath = @".\traces\BthPS3_0.etl";
+        const string etwFilePath = @"./traces/BthPS3_0.etl";
 
         JsonWriterOptions options = new() { Indented = true };
 
         using MemoryStream ms = new();
         using Utf8JsonWriter jsonWriter = new(ms, options);
         DecodingContext decodingContext = new(PdbFileDecodingContextType.CreateFrom(
-            @".\symbols\BthPS3.pdb"
+            @"./symbols/BthPS3.pdb"
         ));
 
         if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
@@ -91,17 +91,17 @@ public static class Shared
     }
 
     /// <summary>
-    ///     Decodes <c>DsHidMini.etl</c> with <c>DsHidMini.pdb</c> and returns the resulting JSON as a string.
+    ///     Decodes <c>DsHidMini.etl</c> with <c>dshidmini.pdb</c> and returns the resulting JSON as a string.
     /// </summary>
     public static string DsHidMiniEtlTraceDecodeToString()
     {
-        const string etwFilePath = @".\traces\DsHidMini.etl";
+        const string etwFilePath = @"./traces/DsHidMini.etl";
 
         JsonWriterOptions options = new() { Indented = true };
 
         using MemoryStream ms = new();
         using Utf8JsonWriter jsonWriter = new(ms, options);
-        DecodingContext decodingContext = new(new PdbFileDecodingContextType(@".\symbols\DsHidMini.pdb"));
+        DecodingContext decodingContext = new(new PdbFileDecodingContextType(@"./symbols/dshidmini.pdb"));
 
         if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
             {
@@ -119,15 +119,15 @@ public static class Shared
     /// </summary>
     public static string BthPs3EtlTraceDecodeToStringWithRewrite()
     {
-        const string etwFilePath = @".\traces\BthPS3_0.etl";
+        const string etwFilePath = @"./traces/BthPS3_0.etl";
 
         JsonWriterOptions options = new() { Indented = true };
 
         using MemoryStream ms = new();
         using Utf8JsonWriter jsonWriter = new(ms, options);
         DecodingContext decodingContext = new(PdbFileDecodingContextType.CreateFrom(
-            @".\symbols\BthPS3.pdb",
-            @".\symbols\BthPS3PSM.pdb"
+            @"./symbols/BthPS3.pdb",
+            @"./symbols/BthPS3PSM.pdb"
         ));
 
         if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
@@ -143,17 +143,17 @@ public static class Shared
     }
 
     /// <summary>
-    ///     Decodes <c>DsHidMini.etl</c> with <c>DsHidMini.pdb</c> and the provider-name rewrite enabled.
+    ///     Decodes <c>DsHidMini.etl</c> with <c>dshidmini.pdb</c> and the provider-name rewrite enabled.
     /// </summary>
     public static string DsHidMiniEtlTraceDecodeToStringWithRewrite()
     {
-        const string etwFilePath = @".\traces\DsHidMini.etl";
+        const string etwFilePath = @"./traces/DsHidMini.etl";
 
         JsonWriterOptions options = new() { Indented = true };
 
         using MemoryStream ms = new();
         using Utf8JsonWriter jsonWriter = new(ms, options);
-        DecodingContext decodingContext = new(new PdbFileDecodingContextType(@".\symbols\DsHidMini.pdb"));
+        DecodingContext decodingContext = new(new PdbFileDecodingContextType(@"./symbols/dshidmini.pdb"));
 
         if (!EtwUtil.ConvertToJson(jsonWriter, [etwFilePath], converterOptions =>
             {

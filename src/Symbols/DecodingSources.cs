@@ -155,7 +155,7 @@ public static class DecodingSources
         int unresolved = 0;
         foreach (ResolvedPdb pdb in resolved)
         {
-            string fileName = Path.GetFileName(pdb.Reference.PdbName);
+            string fileName = PathHelper.GetFileName(pdb.Reference.PdbName);
             switch (pdb.Origin)
             {
                 case PdbResolutionOrigin.Cache:

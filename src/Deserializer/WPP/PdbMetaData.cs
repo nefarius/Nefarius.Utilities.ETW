@@ -37,7 +37,7 @@ public readonly struct PdbMetaData : IEquatable<PdbMetaData>
         {
             ArgumentException.ThrowIfNullOrEmpty(PdbName);
 
-            string filename = Path.GetFileName(PdbName).ToLowerInvariant();
+            string filename = PathHelper.GetFileName(PdbName).ToLowerInvariant();
 
             return
                 $"{filename}/{Guid.ToString("N").ToUpperInvariant()}{Age.ToString("X").ToUpperInvariant()}/{filename}";
@@ -53,8 +53,8 @@ public readonly struct PdbMetaData : IEquatable<PdbMetaData>
     public bool Equals(PdbMetaData other) =>
         Guid == other.Guid && Age == other.Age &&
         string.Equals(
-            Path.GetFileName(PdbName),
-            Path.GetFileName(other.PdbName),
+            PathHelper.GetFileName(PdbName),
+            PathHelper.GetFileName(other.PdbName),
             StringComparison.OrdinalIgnoreCase);
 
     /// <inheritdoc />
@@ -65,7 +65,7 @@ public readonly struct PdbMetaData : IEquatable<PdbMetaData>
         HashCode.Combine(
             Guid,
             Age,
-            StringComparer.OrdinalIgnoreCase.GetHashCode(Path.GetFileName(PdbName) ?? string.Empty));
+            StringComparer.OrdinalIgnoreCase.GetHashCode(PathHelper.GetFileName(PdbName) ?? string.Empty));
 
     /// <inheritdoc />
     public static bool operator ==(PdbMetaData left, PdbMetaData right) => left.Equals(right);

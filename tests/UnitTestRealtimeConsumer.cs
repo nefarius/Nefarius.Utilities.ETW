@@ -11,6 +11,7 @@ namespace Nefarius.Utilities.ETW.Tests;
 /// </summary>
 [Category("Realtime")]
 [Category("RequiresAdmin")]
+[Platform("Win")]
 public class RealtimeConsumerTests
 {
     private const string SessionName = "Nefarius.ETW.Tests.RealtimeConsumer";

@@ -52,7 +52,7 @@ public class EtwUtilArgumentValidationTests
         List<string> errors = [];
 
         IReadOnlyCollection<PdbMetaData> result = EtwUtil.EnumeratePdbReferences(
-            [@".\traces\__does_not_exist__.etl"],
+            [@"./traces/__does_not_exist__.etl"],
             opts => opts.ReportError = errors.Add);
 
         using (Assert.EnterMultipleScope())
@@ -77,7 +77,7 @@ public class EtwUtilArgumentValidationTests
 
         bool result = EtwUtil.ConvertToJson(
             writer,
-            [@".\traces\__does_not_exist__.etl"],
+            [@"./traces/__does_not_exist__.etl"],
             opts => opts.ReportError = errors.Add);
 
         using (Assert.EnterMultipleScope())

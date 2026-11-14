@@ -15,7 +15,7 @@ namespace Nefarius.Utilities.ETW.Tests;
 [Category("EndToEnd")]
 public class ScanCallbackTests
 {
-    private const string EtwFilePath = @".\traces\BthPS3_0.etl";
+    private const string EtwFilePath = @"./traces/BthPS3_0.etl";
 
     // -----------------------------------------------------------------------
     // OnKernelDbgIdRsds  (the path BthPS3_0.etl actually uses)

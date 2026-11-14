@@ -199,7 +199,7 @@ public class Tests
     [Category("EndToEnd")]
     public void EnumeratePdbReferencesTest()
     {
-        const string etwFilePath = @".\traces\BthPS3_0.etl";
+        const string etwFilePath = @"./traces/BthPS3_0.etl";
 
         IReadOnlyCollection<PdbMetaData> refs = EtwUtil.EnumeratePdbReferences([etwFilePath]);
 
@@ -227,7 +227,7 @@ public class Tests
             Assert.Ignore("Set RUN_INTEGRATION_TESTS=true to run integration tests.");
         }
 
-        const string etwFilePath = @".\traces\BthPS3_0.etl";
+        const string etwFilePath = @"./traces/BthPS3_0.etl";
 
         ServiceCollection services = new();
         services.AddHttpClient();

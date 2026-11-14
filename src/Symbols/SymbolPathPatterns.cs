@@ -31,7 +31,7 @@ public static class SymbolPathPatterns
             }
         }
 
-        string fileName = Path.GetFileName(glob);
+        string fileName = PathHelper.GetFileName(glob);
         if (fileName == "**" || fileName.Length == 0)
         {
             return $"[!] Glob pattern '{glob}' has no filename component. " +
@@ -49,7 +49,7 @@ public static class SymbolPathPatterns
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(glob);
 
-        string? directory = Path.GetDirectoryName(glob);
+        string? directory = PathHelper.GetDirectoryName(glob);
         if (string.IsNullOrEmpty(directory))
         {
             return ".";
@@ -57,7 +57,7 @@ public static class SymbolPathPatterns
 
         while (directory.Contains('*') || directory.Contains('?'))
         {
-            string? parent = Path.GetDirectoryName(directory);
+            string? parent = PathHelper.GetDirectoryName(directory);
             if (parent is null || parent.Length == 0 || parent == directory)
             {
                 return ".";
@@ -75,7 +75,7 @@ public static class SymbolPathPatterns
     public static IEnumerable<string> Enumerate(string glob)
     {
         string root = NormalizeRoot(glob);
-        string pattern = Path.GetFileName(glob);
+        string pattern = PathHelper.GetFileName(glob);
         SearchOption search = glob.Contains("**", StringComparison.Ordinal)
             ? SearchOption.AllDirectories
             : SearchOption.TopDirectoryOnly;
