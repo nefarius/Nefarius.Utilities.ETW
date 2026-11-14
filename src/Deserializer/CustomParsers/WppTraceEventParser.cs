@@ -1,6 +1,9 @@
 ﻿using System.Runtime.InteropServices.ComTypes;
 
 using Nefarius.Utilities.ETW.Deserializer.WPP;
+using Nefarius.Utilities.ETW.Etl;
+
+using Windows.Win32.Foundation;
 
 namespace Nefarius.Utilities.ETW.Deserializer.CustomParsers;
 
@@ -98,8 +101,14 @@ internal sealed class WppTraceEventParser : ICustomParser
 
     public DecodingContext DecodingContext { get; init; }
 
-    public unsafe void Parse<T>(EventRecordReader reader, T writer, EventMetadata[] metadataArray,
+    public void Parse<T>(EventRecordReader reader, T writer, EventMetadata[] metadataArray,
         RuntimeEventMetadata runtimeMetadata) where T : IEtwWriter
+    {
+        ParseRecord(reader, writer, metadataArray, runtimeMetadata, default);
+    }
+
+    public unsafe void ParseRecord<T>(EventRecordReader reader, T writer, EventMetadata[] metadataArray,
+        RuntimeEventMetadata runtimeMetadata, in EtlRecordExtras extras) where T : IEtwWriter
     {
         ushort id = reader.NativeEventRecord->EventHeader.EventDescriptor.Id;
 
@@ -119,7 +128,14 @@ internal sealed class WppTraceEventParser : ICustomParser
 
         WppEventRecord decodedRecord = new(reader);
         // this does the heavy lifting of retrieving properties with the decoding context 
-        decodedRecord.Decode(DecodingContext, _onFormatMissing, _rewriteProviderName);
+        if (extras.IsManaged)
+        {
+            decodedRecord.DecodeManaged(DecodingContext, extras, _onFormatMissing, _rewriteProviderName);
+        }
+        else
+        {
+            decodedRecord.Decode(DecodingContext, _onFormatMissing, _rewriteProviderName);
+        }
 
         writer.WriteEventBegin(eventMetadata, runtimeMetadata);
 
@@ -144,10 +160,9 @@ internal sealed class WppTraceEventParser : ICustomParser
         writer.WritePropertyEnd();
 
         writer.WritePropertyBegin(SystemTimeMetadata);
-        PInvoke.SystemTimeToFileTime(decodedRecord.SystemTime, out FILETIME systemTimeAsFile);
-        long liSystemTime = ((long)systemTimeAsFile.dwHighDateTime << 32) |
-                            (uint)systemTimeAsFile.dwLowDateTime;
-        writer.WriteFileTime(DateTime.FromFileTimeUtc(liSystemTime));
+        SYSTEMTIME st = decodedRecord.SystemTime;
+        writer.WriteFileTime(new DateTime(st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond,
+            st.wMilliseconds, DateTimeKind.Utc));
         writer.WritePropertyEnd();
 
         writer.WritePropertyBegin(UserTimeMetadata);
