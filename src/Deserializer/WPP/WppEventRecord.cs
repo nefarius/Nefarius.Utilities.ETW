@@ -9,6 +9,7 @@ using Windows.Win32.Foundation;
 using FastMember;
 
 using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
+using Nefarius.Utilities.ETW.Etl;
 using Nefarius.Utilities.ETW.Exceptions;
 
 namespace Nefarius.Utilities.ETW.Deserializer.WPP;
@@ -70,6 +71,82 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
         {
             Marshal.FreeHGlobal((IntPtr)propertyBuffer);
         }
+    }
+
+    /// <summary>
+    ///     Decodes the well-known WPP properties straight from the record header and payload, without TDH. This is what
+    ///     the managed ETL backend uses; it yields the same property set the TDH based <see cref="Decode" /> produces.
+    /// </summary>
+    /// <param name="decodingContext">The <see cref="DecodingContext" /> to use.</param>
+    /// <param name="extras">Header details supplied by the managed ETL reader.</param>
+    /// <param name="onFormatMissing">See <see cref="Decode" />.</param>
+    /// <param name="rewriteProviderName">See <see cref="Decode" />.</param>
+    public void DecodeManaged(DecodingContext decodingContext, in EtlRecordExtras extras,
+        Action<Guid, ushort, uint>? onFormatMissing = null,
+        bool rewriteProviderName = false)
+    {
+        EVENT_RECORD* record = eventRecordReader.NativeEventRecord;
+
+        Version = record->EventHeader.EventDescriptor.Version;
+        TraceGuid = record->EventHeader.ProviderId;
+        ProviderGuid = record->EventHeader.ProviderId;
+        ThreadId = record->EventHeader.ThreadId;
+        ProcessId = record->EventHeader.ProcessId;
+        SequenceNum = extras.SequenceNumber;
+        CpuNumber = *((byte*)record + 80);
+        Indent = 0;
+        UserTime = 0;
+        KernelTime = 0;
+
+        long fileTime = extras.FileTime;
+        RawSystemTime = new FILETIME
+        {
+            dwLowDateTime = unchecked((int)(uint)fileTime),
+            dwHighDateTime = unchecked((int)(uint)(fileTime >> 32))
+        };
+
+        DateTime utc = DateTime.FromFileTimeUtc(fileTime);
+        SystemTime = new SYSTEMTIME
+        {
+            wYear = (ushort)utc.Year,
+            wMonth = (ushort)utc.Month,
+            wDayOfWeek = (ushort)utc.DayOfWeek,
+            wDay = (ushort)utc.Day,
+            wHour = (ushort)utc.Hour,
+            wMinute = (ushort)utc.Minute,
+            wSecond = (ushort)utc.Second,
+            wMilliseconds = (ushort)utc.Millisecond
+        };
+
+        TraceMessageFormat? format = decodingContext.GetTraceMessageFormatFor(TraceGuid, GuidTypeNameFormatId);
+
+        if (format is null)
+        {
+            FormattedString = new StringBuilder().Append("GUID=")
+                .Append(TraceGuid.ToString().ToUpperInvariant())
+                .Append(", ID=")
+                .Append(GuidTypeNameFormatId)
+                .Append(", Version=")
+                .Append(Version)
+                .Append(" - No format information found.")
+                .ToString();
+
+            onFormatMissing?.Invoke(TraceGuid, GuidTypeNameFormatId, Version);
+            return;
+        }
+
+        GuidName = (rewriteProviderName ? decodingContext.GetWppProviderNameOverride(format) : null) ??
+                   format.Provider;
+        GuidTypeName = format.Opcode;
+        FlagsName = format.Flags;
+        LevelName = format.Level;
+        FunctionName = format.Function;
+        ComponentName = string.Empty;
+        SubComponentName = string.Empty;
+
+        eventRecordReader.Reset();
+        FormattedString = SubstituteFunctionParameters(format);
+        eventRecordReader.Reset();
     }
 
     /// <summary>

@@ -17,6 +17,12 @@ internal readonly struct EventRecordReader
         _originalUserData = (IntPtr)eventRecord->UserData;
     }
 
+    /// <summary>
+    ///     Number of payload bytes not consumed yet.
+    /// </summary>
+    public unsafe int RemainingBytes =>
+        Math.Max(0, NativeEventRecord->UserDataLength - (int)((byte*)NativeEventRecord->UserData - (byte*)_originalUserData));
+
     private unsafe void IncrementBy(ref void* ptr, int value)
     {
         ptr = (byte*)ptr + value;

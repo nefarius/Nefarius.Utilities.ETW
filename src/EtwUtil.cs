@@ -10,6 +10,7 @@ using Windows.Win32.Foundation;
 
 using Nefarius.Utilities.ETW.Deserializer;
 using Nefarius.Utilities.ETW.Deserializer.WPP;
+using Nefarius.Utilities.ETW.Etl;
 using Nefarius.Utilities.ETW.Exceptions;
 
 namespace Nefarius.Utilities.ETW;
@@ -91,6 +92,11 @@ public static class EtwUtil
             opts.RewriteWppProviderName
         );
 
+        if (TraceProcessor.Resolve(opts.Backend) == EtwBackend.Managed)
+        {
+            return ConvertToJsonManaged(jsonWriter, list, opts, deserializer);
+        }
+
         int count = list.Count;
         EVENT_TRACE_LOGFILEW[] fileSessions = new EVENT_TRACE_LOGFILEW[count];
         ulong[] handles = new ulong[count];
@@ -161,6 +167,53 @@ public static class EtwUtil
             Etw.CloseTrace(handles[i]);
         }
 
+        jsonWriter.Flush();
+        return true;
+    }
+
+    private static unsafe bool ConvertToJsonManaged(Utf8JsonWriter jsonWriter, List<string> files,
+        EtwJsonConverterOptions opts, Deserializer<EtwJsonWriter> deserializer)
+    {
+        bool started = false;
+
+        void EnsureStarted()
+        {
+            if (started)
+            {
+                return;
+            }
+
+            started = true;
+            jsonWriter.WriteStartObject();
+            jsonWriter.WritePropertyName("Events");
+            jsonWriter.WriteStartArray();
+        }
+
+        try
+        {
+            TraceOpenFailure? failure = TraceProcessor.ProcessFiles(files, opts.Backend, opts.PreserveRawTimestamps,
+                default, opts.ReportError,
+                (EVENT_RECORD* record, in EtlRecordExtras extras) =>
+                {
+                    EnsureStarted();
+                    deserializer.Deserialize(record, extras);
+                });
+
+            if (failure is { } f)
+            {
+                opts.ReportError?.Invoke($"ERROR: For file: {files[f.Index]} {f.Message}");
+                return false;
+            }
+        }
+        catch (EtlFormatException ex)
+        {
+            opts.ReportError?.Invoke($"ERROR: {ex.Message}");
+            return false;
+        }
+
+        EnsureStarted();
+        jsonWriter.WriteEndArray();
+        jsonWriter.WriteEndObject();
         jsonWriter.Flush();
         return true;
     }
@@ -571,6 +624,12 @@ public static class EtwUtil
         bool isRealtime = realtimeSessionName is not null;
         int sessionCount = isRealtime ? 1 : files!.Count;
 
+        if (!isRealtime && TraceProcessor.Resolve(opts.Backend) == EtwBackend.Managed)
+        {
+            RunManagedWorker(files!, opts, deserializer, writer, cancellationToken);
+            return;
+        }
+
         EVENT_TRACE_LOGFILEW[] sessions = new EVENT_TRACE_LOGFILEW[sessionCount];
         ulong[] handles = new ulong[sessionCount];
         int[] openTraceErrors = new int[sessionCount];
@@ -691,6 +750,40 @@ public static class EtwUtil
                     }
                 }
             }
+        }
+
+        writer.TryComplete();
+    }
+
+    private static unsafe void RunManagedWorker(
+        List<string> files,
+        EtwJsonConverterOptions opts,
+        Deserializer<EtwJsonChannelWriter> deserializer,
+        ChannelWriter<PooledEventBuffer> writer,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            TraceOpenFailure? failure = TraceProcessor.ProcessFiles(files, opts.Backend, opts.PreserveRawTimestamps,
+                cancellationToken, opts.ReportError,
+                (EVENT_RECORD* record, in EtlRecordExtras extras) => deserializer.Deserialize(record, extras));
+
+            if (failure is { } f)
+            {
+                EtwOpenTraceException ex = new(f.Error, files[f.Index]);
+                opts.ReportError?.Invoke("ERROR: " + ex.Message);
+                writer.TryComplete(ex);
+                return;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // cancellation ends the stream normally, like the native buffer callback does
+        }
+        catch (Exception ex)
+        {
+            writer.TryComplete(ex);
+            return;
         }
 
         writer.TryComplete();

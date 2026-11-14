@@ -293,6 +293,11 @@ internal static unsafe class EventTraceOperandBuilder
         /// </summary>
         private Dictionary<uint, string>? ReadMap(string mapName)
         {
+            if (!OperatingSystem.IsWindows())
+            {
+                return null;
+            }
+
             EVENT_RECORD fakeEventRecord = new()
             {
                 EventHeader = new EVENT_HEADER { ProviderId = _traceEventInfo->ProviderGuid }
