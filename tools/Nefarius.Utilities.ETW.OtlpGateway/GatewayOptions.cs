@@ -33,12 +33,16 @@ public sealed class GatewayOptions
 
         /// <summary>
         ///     Base URL of an OTLP/HTTP receiver for <b>traces</b>, e.g. <c>http://jaeger:4318</c>. When set, every decoded
-        ///     event is also exported as a span (one trace per relay session), so trace-only backends such as Jaeger can
-        ///     show it.
+        ///     event is also exported as a span (one trace per tenant and relay session), so trace-only backends such as
+        ///     Jaeger can show it. The same <see cref="Headers" /> sent to <see cref="Endpoint" />, including any
+        ///     credentials, are sent here too.
         /// </summary>
         public string TracesEndpoint { get; set; } = string.Empty;
 
-        /// <summary>Extra HTTP headers for the downstream receiver, e.g. an API key.</summary>
+        /// <summary>
+        ///     Extra HTTP headers for both downstream receivers, e.g. an API key. The same headers, including any
+        ///     credentials, are sent to <see cref="Endpoint" /> and to <see cref="TracesEndpoint" />.
+        /// </summary>
         public Dictionary<string, string> Headers { get; set; } = [];
 
         /// <summary>Maximum decoded batches waiting for export before senders get a retryable error.</summary>

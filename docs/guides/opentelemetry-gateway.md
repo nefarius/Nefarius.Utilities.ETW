@@ -24,7 +24,7 @@ Configure it through the `Gateway` section of `appsettings.json` or environment 
 | Key | Purpose |
 |-----|---------|
 | `Export:Endpoint` | downstream OTLP/HTTP base URL for decoded logs |
-| `Export:TracesEndpoint` | OTLP/HTTP base URL of a trace backend such as Jaeger; each decoded event is also exported as a span (one trace per relay session) |
+| `Export:TracesEndpoint` | OTLP/HTTP base URL of a trace backend such as Jaeger; each decoded event is also exported as a span (one trace per tenant and relay session). The log and trace receivers get the same headers |
 | `Export:Headers`, `QueueCapacity`, `MaxAttempts`, `InitialRetryDelay`, `MaxRetryDelay`, `RequestTimeout` | delivery, bounded queue and retry |
 | `Wpp:PdbFiles`, `Wpp:PdbDirectories`, `Wpp:TmfDirectories`, `Wpp:RewriteProviderName` | server-only WPP assets |
 | `Limits:*` | body size, frame size, session counts (total and per tenant), records per request, idle timeout |

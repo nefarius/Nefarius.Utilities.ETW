@@ -217,16 +217,30 @@ public class GatewayTests
         resource.ScopeLogs.Add(scope);
         decoded.ResourceLogs.Add(resource);
 
-        var first = EtwSpanMapper.ToTraceRequest(decoded).ResourceSpans.Single().ScopeSpans.Single().Spans;
-        var second = EtwSpanMapper.ToTraceRequest(decoded).ResourceSpans.Single().ScopeSpans.Single().Spans;
+        const string tenant = "anonymous";
+        var first = EtwSpanMapper.ToTraceRequest(decoded, tenant).ResourceSpans.Single().ScopeSpans.Single().Spans;
+        var again = EtwSpanMapper.ToTraceRequest(decoded, tenant).ResourceSpans.Single().ScopeSpans.Single().Spans;
 
+        // The trace id is a hash of the tenant and the session, not the session GUID itself. Span ids are
+        // EtwSpanMapper.SpanId(traceId, sequence): stable inside that trace, different for each sequence.
+        byte[] traceId = EtwSpanMapper.TraceId(tenant, Session);
         Assert.That(first, Has.Count.EqualTo(2));
-        Assert.That(first[0].TraceId, Is.EqualTo(first[1].TraceId));
-        Assert.That(first[0].TraceId.ToByteArray(), Is.EqualTo(Session.ToByteArray(true)));
+        Assert.That(first[0].TraceId.ToByteArray(), Is.EqualTo(traceId));
+        Assert.That(first[1].TraceId.ToByteArray(), Is.EqualTo(traceId));
+        Assert.That(first[0].SpanId.ToByteArray(), Is.EqualTo(EtwSpanMapper.SpanId(traceId, 1)));
+        Assert.That(first[1].SpanId.ToByteArray(), Is.EqualTo(EtwSpanMapper.SpanId(traceId, 2)));
         Assert.That(first[0].SpanId, Is.Not.EqualTo(first[1].SpanId));
-        Assert.That(first.Select(s => s.SpanId), Is.EqualTo(second.Select(s => s.SpanId)));
+        Assert.That(first.Select(s => s.SpanId), Is.EqualTo(again.Select(s => s.SpanId)));
         Assert.That(first[0].Name, Is.EqualTo("MyEvent"));
         Assert.That(first[0].Attributes.Single(a => a.Key == "etw.property.Count").Value.IntValue, Is.EqualTo(5));
+
+        // A second tenant using the same session GUID does not share the trace, so its span ids differ too.
+        byte[] otherTrace = EtwSpanMapper.TraceId("bob", Session);
+        var other = EtwSpanMapper.ToTraceRequest(decoded, "bob").ResourceSpans.Single().ScopeSpans.Single().Spans;
+        Assert.That(other[0].TraceId.ToByteArray(), Is.EqualTo(otherTrace));
+        Assert.That(other[0].TraceId, Is.Not.EqualTo(first[0].TraceId));
+        Assert.That(other[0].SpanId.ToByteArray(), Is.EqualTo(EtwSpanMapper.SpanId(otherTrace, 1)));
+        Assert.That(other[0].SpanId, Is.Not.EqualTo(first[0].SpanId));
     }
 
     // ---------------------------------------------------------------------------------------------------------------
@@ -509,10 +523,10 @@ public class GatewayTests
     public void ExportEndpoint_RejectsCredentialsOnPlainHttp()
     {
         Assert.Throws<InvalidOperationException>(() => new OtlpHttpSink(new HttpClient(), "http://collector:4318",
-            "v1/logs", new Dictionary<string, string> { ["Authorization"] = "secret" }, static batch => batch));
+            "v1/logs", new Dictionary<string, string> { ["Authorization"] = "secret" }, static batch => batch.Request));
 
         OtlpHttpSink plaintext = new(new HttpClient(), "http://jaeger:4318", "v1/traces",
-            new Dictionary<string, string>(), static batch => batch);
+            new Dictionary<string, string>(), static batch => batch.Request);
         Assert.That(plaintext, Is.Not.Null);
     }
 

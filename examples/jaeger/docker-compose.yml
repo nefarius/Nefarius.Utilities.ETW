@@ -25,7 +25,8 @@ services:
     # volumes:
     #   - ./wpp:/wpp:ro
     ports:
-      - "4318:4318"
+      # Host access stays on loopback. The sender uses the Compose DNS name, not this mapping.
+      - "127.0.0.1:4318:4318"
     depends_on:
       - jaeger
 

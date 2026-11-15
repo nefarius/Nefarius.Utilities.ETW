@@ -6,6 +6,7 @@ using Google.Protobuf;
 using Grpc.Core;
 
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
 
 using Nefarius.Utilities.ETW.Deserializer.WPP;
@@ -83,7 +84,7 @@ public sealed class GatewayPipeline(
                 long events = result.Decoded.ResourceLogs.Sum(r => r.ScopeLogs.Sum(s => (long)s.LogRecords.Count));
                 metrics.EventsDecoded.Add(events);
                 // Ignore the caller's cancellation: the frames are already consumed, and the slot was reserved.
-                queue.EnqueueReserved(result.Decoded);
+                queue.EnqueueReserved(new DecodedBatch(tenant, result.Decoded));
                 queued = true;
             }
 
@@ -161,18 +162,15 @@ public static class GatewayExtensions
             client.Timeout = provider.GetRequiredService<IOptions<GatewayOptions>>().Value.Export.RequestTimeout)
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 
-        // Each configured destination is its own sink; the exporter retries them independently.
-        GatewayOptions.ExportOptions configured =
-            configuration.GetSection(GatewayOptions.SectionName).Get<GatewayOptions>()?.Export ?? new();
-        int sinkCount = ConfiguredSinks.Count(configured);
-        for (int i = 0; i < sinkCount; i++)
+        // One evaluation of the export options. Host-added IDecodedLogSink registrations are separate and are
+        // appended by the exporter.
+        services.AddSingleton(provider =>
         {
-            int index = i;
-            services.AddSingleton<IDecodedLogSink>(provider => ConfiguredSinks.Create(
-                provider.GetRequiredService<IOptions<GatewayOptions>>().Value.Export,
-                provider.GetRequiredService<IHttpClientFactory>().CreateClient(ConfiguredSinks.HttpClientName))
-                .ElementAt(index));
-        }
+            GatewayOptions.ExportOptions export = provider.GetRequiredService<IOptions<GatewayOptions>>().Value.Export;
+            HttpClient client = provider.GetRequiredService<IHttpClientFactory>()
+                .CreateClient(ConfiguredSinks.HttpClientName);
+            return new ConfiguredExportSinks(ConfiguredSinks.Create(export, client).ToArray());
+        });
 
         services.AddHostedService<DecodedLogExporter>();
         services.AddGrpc();

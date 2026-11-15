@@ -8,7 +8,7 @@ sender (no symbols) --OTLP Logs, raw relay frames--> gateway --OTLP traces--> Ja
 * `gateway` is [`tools/Nefarius.Utilities.ETW.OtlpGateway`](../../tools/Nefarius.Utilities.ETW.OtlpGateway). It decodes the frames on the server.
 * [Jaeger](https://www.jaegertracing.io/) v2 stores and shows the result.
 
-Jaeger stores **traces only** and cannot show logs, so the gateway runs with `Gateway:Export:TracesEndpoint` set: every decoded event is also exported as an instantaneous span. All events of one relay session form one trace (the trace ID is the session GUID), event properties become `etw.property.*` attributes, WPP messages become `etw.message`, and events at error level or above get an error status. Use `Gateway:Export:Endpoint` as well (or instead) to send the decoded events as OTLP Logs to a logs backend such as an OpenTelemetry Collector with Loki.
+Jaeger stores **traces only** and cannot show logs, so the gateway runs with `Gateway:Export:TracesEndpoint` set: every decoded event is also exported as an instantaneous span. All events of one tenant and relay session form one trace (the trace ID is derived from both, so two tenants do not share a trace), event properties become `etw.property.*` attributes, WPP messages become `etw.message`, and events at error level or above get an error status. Use `Gateway:Export:Endpoint` as well (or instead) to send the decoded events as OTLP Logs to a logs backend such as an OpenTelemetry Collector with Loki.
 
 ## Run
 

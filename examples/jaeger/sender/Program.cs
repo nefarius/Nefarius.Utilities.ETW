@@ -15,6 +15,8 @@ int intervalMs = int.Parse(Environment.GetEnvironmentVariable("INTERVAL_MS") ?? 
 int total = int.Parse(Environment.GetEnvironmentVariable("EVENT_COUNT") ?? "0"); // 0 = run until stopped
 
 using HttpClient http = new() { BaseAddress = new Uri(gateway) };
+// No shutdown source is wired up. A cancelled token here is a real shutdown and must not be retried as a timeout.
+CancellationToken shutdown = CancellationToken.None;
 Guid provider = new("6f3e0f19-6e4c-4a52-8a6b-9a1d0c2b7e11");
 string[] names = ["Alice", "Bob", "Carol"];
 int sent = 0;
@@ -25,27 +27,23 @@ while (total == 0 || sent < total)
     ulong sequence = 0;
     Console.WriteLine($"Starting relay session {session}");
 
-    List<byte[]> frames = [RawEtwFrameCodec.Encode(new RawEtwFrame
-    {
-        Type = RawEtwFrameType.Hello,
-        Sequence = sequence++,
-        Hello = new RawEtwHello { SessionId = session, MaxFrameLength = 1 << 20, Producer = "relay-sample-sender" }
-    })];
+    List<byte[]> frames = [HelloFrame(session, sequence++)];
+    RawEtwRecord? pending = null;
 
     bool ok = true;
     while (ok && (total == 0 || sent < total))
     {
-        // Frames stay pending until the gateway accepted them, so a retry resends the identical request.
-        frames.Add(RawEtwFrameCodec.Encode(new RawEtwFrame
+        // The event stays pending until the gateway accepts it, so a retry resends the same record.
+        RawEtwRecord record = pending ??
+            SampleRecord(provider, (uint)sent, names[sent % names.Length], (byte)(sent % 7 == 6 ? 2 : 4));
+        pending = record;
+        if (frames.Count == 0 || !IsEventFrame(frames[^1]))
         {
-            Type = RawEtwFrameType.Event,
-            Sequence = sequence++,
-            Record = SampleRecord(provider, (uint)sent, names[sent % names.Length], (byte)(sent % 7 == 6 ? 2 : 4))
-        }));
-        sent++;
+            frames.Add(EventFrame(sequence++, record));
+        }
 
         bool delivered = false;
-        while (!delivered)
+        while (!delivered && ok)
         {
             ExportLogsServiceRequest request = RelayLogRecords.CreateRequest(session,
                 frames.Select(f => (ReadOnlyMemory<byte>)f),
@@ -55,39 +53,83 @@ while (total == 0 || sent < total)
             {
                 using ByteArrayContent content = new(request.ToByteArray());
                 content.Headers.ContentType = new MediaTypeHeaderValue("application/x-protobuf");
-                using HttpResponseMessage response = await http.PostAsync("/v1/logs", content);
+                using HttpResponseMessage response = await http.PostAsync("/v1/logs", content, shutdown);
 
                 if (!response.IsSuccessStatusCode)
                 {
                     // 503 means "queue full, resend the identical request".
                     Console.WriteLine($"Gateway answered {(int)response.StatusCode}; retrying.");
-                    await Task.Delay(intervalMs);
+                    await Task.Delay(intervalMs, shutdown);
                     continue;
                 }
 
                 ExportLogsServiceResponse body =
-                    ExportLogsServiceResponse.Parser.ParseFrom(await response.Content.ReadAsByteArrayAsync());
+                    ExportLogsServiceResponse.Parser.ParseFrom(await response.Content.ReadAsByteArrayAsync(shutdown));
                 if (body.PartialSuccess is { RejectedLogRecords: > 0 } rejected)
                 {
+                    if (rejected.ErrorMessage.Contains("session is unknown", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // The gateway forgot the session. Open another one and send this same event again.
+                        Console.WriteLine("Session unknown; opening a replacement session and retrying the event.");
+                        session = Guid.NewGuid();
+                        sequence = 0;
+                        frames = [HelloFrame(session, sequence++), EventFrame(sequence++, record)];
+                        continue;
+                    }
+
+                    // Any other rejection abandons the event and starts a new session, as before.
                     Console.WriteLine($"Rejected: {rejected.ErrorMessage}. Starting a new session.");
+                    sent++;
+                    pending = null;
+                    frames.Clear();
                     ok = false;
+                    delivered = true;
+                    continue;
                 }
 
-                delivered = true;
+                sent++;
+                pending = null;
                 frames.Clear();
+                delivered = true;
             }
             catch (HttpRequestException ex)
             {
                 Console.WriteLine($"Gateway unreachable ({ex.Message}); retrying.");
-                await Task.Delay(intervalMs);
+                await Task.Delay(intervalMs, shutdown);
+            }
+            catch (OperationCanceledException) when (!shutdown.IsCancellationRequested)
+            {
+                Console.WriteLine("Gateway request timed out; retrying.");
+                await Task.Delay(intervalMs, shutdown);
             }
         }
 
-        await Task.Delay(intervalMs);
+        if (ok)
+        {
+            await Task.Delay(intervalMs, shutdown);
+        }
     }
 }
 Console.WriteLine($"Sent {sent} events.");
 return;
+
+static byte[] HelloFrame(Guid session, ulong sequence) => RawEtwFrameCodec.Encode(new RawEtwFrame
+{
+    Type = RawEtwFrameType.Hello,
+    Sequence = sequence,
+    Hello = new RawEtwHello { SessionId = session, MaxFrameLength = 1 << 20, Producer = "relay-sample-sender" }
+});
+
+static byte[] EventFrame(ulong sequence, RawEtwRecord record) => RawEtwFrameCodec.Encode(new RawEtwFrame
+{
+    Type = RawEtwFrameType.Event,
+    Sequence = sequence,
+    Record = record
+});
+
+static bool IsEventFrame(byte[] frame) =>
+    frame.Length >= 8 &&
+    System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(frame.AsSpan(6)) == (ushort)RawEtwFrameType.Event;
 
 static RawEtwRecord SampleRecord(Guid provider, uint count, string name, byte level)
 {

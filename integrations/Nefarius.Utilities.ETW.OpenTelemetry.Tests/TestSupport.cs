@@ -146,7 +146,7 @@ internal sealed class CapturingSink : IDecodedLogSink
 
     public void Unblock() => _gateSignal?.TrySetResult();
 
-    public async Task SendAsync(ExportLogsServiceRequest batch, CancellationToken cancellationToken)
+    public async Task SendAsync(DecodedBatch batch, CancellationToken cancellationToken)
     {
         lock (_gate)
         {
@@ -174,7 +174,7 @@ internal sealed class CapturingSink : IDecodedLogSink
 
         lock (_gate)
         {
-            _batches.Add(batch);
+            _batches.Add(batch.Request);
         }
     }
 

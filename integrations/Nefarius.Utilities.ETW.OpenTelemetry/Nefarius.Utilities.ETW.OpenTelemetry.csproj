@@ -41,4 +41,8 @@
         <ProjectReference Include="..\..\src\Nefarius.Utilities.ETW.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <InternalsVisibleTo Include="Nefarius.Utilities.ETW.OpenTelemetry.Tests" />
+    </ItemGroup>
+
 </Project>
