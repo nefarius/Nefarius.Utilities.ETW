@@ -71,6 +71,35 @@ public class SymbolPathPatternsTests
     }
 
     [Test]
+    public void ConsecutiveDoubleStars_BehaveLikeOne()
+    {
+        Assert.That(Names("**/**/**/*.pdb"), Is.EqualTo(Names("**/*.pdb")));
+        Assert.That(Names("**/**/sub/**/**/*.pdb"), Is.EqualTo(Names("**/sub/**/*.pdb")));
+    }
+
+    [Test]
+    public void HiddenDirectories_AreSearched()
+    {
+        string hidden = Path.Combine(_root, ".hidden");
+        Directory.CreateDirectory(hidden);
+        File.WriteAllText(Path.Combine(hidden, "secret.pdb"), string.Empty);
+        if (OperatingSystem.IsWindows())
+        {
+            File.SetAttributes(hidden, File.GetAttributes(hidden) | FileAttributes.Hidden);
+        }
+
+        Assert.That(Names("**/*.pdb"), Does.Contain(".hidden/secret.pdb"));
+    }
+
+    [Test]
+    public void StarDotStar_MatchesExtensionlessFiles()
+    {
+        File.WriteAllText(Path.Combine(_root, "symbols"), string.Empty);
+
+        Assert.That(Names("*.*"), Does.Contain("symbols"));
+    }
+
+    [Test]
     public void MissingRoot_YieldsNothing()
     {
         Assert.That(Names("nope/**/*.pdb"), Is.Empty);

@@ -86,7 +86,10 @@ public static class SymbolPathPatterns
         string[] segments = glob.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
         string[] directories = segments[..^1];
         int firstWildcard = Array.FindIndex(directories, s => s.Contains('*') || s.Contains('?'));
-        string[] rest = firstWildcard < 0 ? [] : directories[firstWildcard..];
+        // Consecutive ** segments are equivalent to one; collapsing them avoids revisiting the same states.
+        string[] rest = firstWildcard < 0
+            ? []
+            : directories[firstWildcard..].Where((s, i) => i == 0 || s != "**" || directories[firstWildcard + i - 1] != "**").ToArray();
 
         return Walk(root, rest, 0, PathHelper.GetFileName(glob)).Distinct(StringComparer.Ordinal);
     }
@@ -94,14 +97,22 @@ public static class SymbolPathPatterns
     private static readonly EnumerationOptions DirectoryOptions = new()
     {
         IgnoreInaccessible = true,
-        AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReparsePoint
+        AttributesToSkip = FileAttributes.ReparsePoint
+    };
+
+    private static readonly EnumerationOptions FileOptions = new()
+    {
+        IgnoreInaccessible = true,
+        AttributesToSkip = 0,
+        // Keep the matching semantics of the Directory.EnumerateFiles(string, string, SearchOption) overload.
+        MatchType = MatchType.Win32
     };
 
     private static IEnumerable<string> Walk(string directory, string[] rest, int index, string filePattern)
     {
         if (index == rest.Length)
         {
-            foreach (string file in Directory.EnumerateFiles(directory, filePattern, SearchOption.TopDirectoryOnly))
+            foreach (string file in Directory.EnumerateFiles(directory, filePattern, FileOptions))
             {
                 yield return file;
             }
