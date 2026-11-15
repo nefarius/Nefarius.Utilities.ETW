@@ -1,4 +1,4 @@
-﻿using Nefarius.Utilities.ETW.Deserializer.WPP;
+using Nefarius.Utilities.ETW.Deserializer.WPP;
 
 namespace Nefarius.Utilities.ETW;
 
