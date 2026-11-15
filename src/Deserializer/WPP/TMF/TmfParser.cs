@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
@@ -220,6 +220,12 @@ public static partial class TmfParser
                             arrayItems.Select((value, index) => new KeyValuePair<int, string>(index, value.Trim()))
                                 .ToDictionary(pair => pair.Key, pair => pair.Value))
                     };
+                }
+
+                if (type is ItemType.ItemEnum or ItemType.ItemFlagsEnum && parameterMatch.Groups[3].Success &&
+                    !string.IsNullOrWhiteSpace(parameterMatch.Groups[3].Value))
+                {
+                    parsed = parsed with { EnumTypeName = parameterMatch.Groups[3].Value.Trim() };
                 }
 
                 parameters.Add(parsed);

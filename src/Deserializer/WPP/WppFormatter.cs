@@ -142,6 +142,49 @@ internal static partial class WppFormatter
     ///     Converts a single parameter value to its string representation, handling enum lists,
     ///     NTSTATUS, WINERROR, HRESULT, timestamps, IP addresses, and all other WPP ItemTypes.
     /// </summary>
+    private static string FormatFlags(IReadOnlyDictionary<long, string>? names, uint raw)
+    {
+        string hex = $"0x{raw:X8}";
+        if (names is null || names.Count == 0)
+        {
+            return hex;
+        }
+
+        if (names.TryGetValue(raw, out string? exact))
+        {
+            return exact;
+        }
+
+        List<string> parts = [];
+        uint remaining = raw;
+        foreach (KeyValuePair<long, string> pair in names.OrderBy(p => p.Key))
+        {
+            if (pair.Key <= 0 || pair.Key > uint.MaxValue)
+            {
+                continue;
+            }
+
+            uint flag = (uint)pair.Key;
+            if ((raw & flag) == flag && (remaining & flag) != 0)
+            {
+                parts.Add(pair.Value);
+                remaining &= ~flag;
+            }
+        }
+
+        if (parts.Count == 0)
+        {
+            return hex;
+        }
+
+        if (remaining != 0)
+        {
+            parts.Add($"0x{remaining:X}");
+        }
+
+        return string.Join(" | ", parts);
+    }
+
     internal static string ItemToString(FunctionParameter parameter, object value)
     {
         // List-byte enum (ItemListByte, ItemListShort, ItemListLong): look up by zero-based index
@@ -265,14 +308,18 @@ internal static partial class WppFormatter
                 }
                 return sb.ToString();
             }
-            // Enum types: PDB-based lookup is out of scope; emit raw value
+            // Enum types: names come from the PDB type stream when available, otherwise the raw value is shown
             case ItemType.ItemEnum:
             {
-                return Convert.ToUInt32(value).ToString();
+                uint raw = Convert.ToUInt32(value);
+                return parameter.EnumValues is not null && parameter.EnumValues.TryGetValue(raw, out string? enumName)
+                    ? enumName
+                    : raw.ToString();
             }
             case ItemType.ItemFlagsEnum:
             {
-                return $"0x{Convert.ToUInt32(value):X8}";
+                uint raw = Convert.ToUInt32(value);
+                return FormatFlags(parameter.EnumValues, raw);
             }
             default:
                 return value.ToString() ?? throw new InvalidOperationException("Unexpected null value.");

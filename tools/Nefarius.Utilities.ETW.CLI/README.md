@@ -581,7 +581,7 @@ All column tokens listed above are available as identifiers directly in the expr
 ## Known limitations
 
 - Currently relies on **Windows-only** APIs so no support for other platforms.
-- `%!ItemEnum!`/`%!ItemFlagsEnum!` types display raw numeric values; PDB-based enum name resolution is not yet implemented.
+- `%!ItemEnum!`/`%!ItemFlagsEnum!` types show enumerator names when the enum type is found in a supplied PDB; otherwise (TMF sources, missing type) the raw value is shown.
 - Kernel-mode ETW providers and the NT Kernel Logger session are not yet supported.
 
 ## Links
