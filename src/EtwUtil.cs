@@ -20,7 +20,7 @@ namespace Nefarius.Utilities.ETW;
 ///     ETW utility class.
 /// </summary>
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
-public static class EtwUtil
+public static partial class EtwUtil
 {
     /// <summary>
     ///     Performs a lightweight pre-scan of one or more <c>.ETL</c> files and returns the deduplicated set of
