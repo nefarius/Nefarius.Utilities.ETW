@@ -269,9 +269,9 @@ public unsafe class CustomManifestTests
 
     private static readonly Guid SyntheticProvider = new("5a1c0f5e-3b2d-4e7a-9a11-0d2c5b7e9f01");
 
-    private static instrumentationManifest LoadSynthetic(string templates)
+    private static string SyntheticXml(string templates)
     {
-        string xml = $$"""
+        return $$"""
             <instrumentationManifest xmlns="http://schemas.microsoft.com/win/2004/08/events"
                                      xmlns:win="http://manifests.microsoft.com/win/2004/08/windows/events"
                                      xmlns:xs="http://www.w3.org/2001/XMLSchema">
@@ -309,7 +309,12 @@ public unsafe class CustomManifestTests
               </localization>
             </instrumentationManifest>
             """;
-        return new EventSourceManifest(SyntheticProvider, new MemoryStream(Encoding.UTF8.GetBytes(xml))).Schema;
+    }
+
+    private static instrumentationManifest LoadSynthetic(string templates)
+    {
+        return new EventSourceManifest(SyntheticProvider,
+            new MemoryStream(Encoding.UTF8.GetBytes(SyntheticXml(templates)))).Schema;
     }
 
     [Test]
@@ -355,9 +360,68 @@ public unsafe class CustomManifestTests
         }
     }
 
+    private static string DecodeSynthetic(string members, byte[] payload)
+    {
+        using MemoryStream ms = new();
+        using (Utf8JsonWriter json = new(ms))
+        {
+            Deserializer<EtwJsonWriter> deserializer = new(new EtwJsonWriter(json),
+                provider => provider == SyntheticProvider
+                    ? new MemoryStream(Encoding.UTF8.GetBytes(SyntheticXml($"""<template tid="T1">{members}</template>""")))
+                    : null);
+
+            json.WriteStartArray();
+            Feed(deserializer, SyntheticProvider, 1, payload);
+            json.WriteEndArray();
+        }
+
+        return Encoding.UTF8.GetString(ms.ToArray());
+    }
+
+    private static uint TailValue(string json)
+    {
+        using JsonDocument doc = JsonDocument.Parse(json);
+        JsonElement props = doc.RootElement[0].GetProperty("Event").GetProperty("Properties");
+        return props.EnumerateArray().Last().GetProperty("Tail").GetUInt32();
+    }
+
+    [Test]
+    public void Manifest_StructCountIsAnArrayCount()
+    {
+        byte[] payload = [.. BitConverter.GetBytes(1u), .. BitConverter.GetBytes(2u), .. BitConverter.GetBytes(0xAABBCCDDu)];
+
+        string json = DecodeSynthetic(
+            """<struct name="S" count="2"><data name="Inner" inType="win:UInt32"/></struct><data name="Tail" inType="win:UInt32"/>""",
+            payload);
+
+        Assert.That(TailValue(json), Is.EqualTo(0xAABBCCDDu));
+    }
+
+    [Test]
+    public void Manifest_UnicodeLengthsCountCharacters()
+    {
+        byte[] name = Encoding.Unicode.GetBytes("abcd");
+        byte[] tail = BitConverter.GetBytes(0x11223344u);
+
+        string fixedLength = DecodeSynthetic(
+            """<data name="Name" inType="win:UnicodeString" length="4"/><data name="Tail" inType="win:UInt32"/>""",
+            [.. name, .. tail]);
+        string referenced = DecodeSynthetic(
+            """<data name="Len" inType="win:UInt16"/><data name="Name" inType="win:UnicodeString" length="Len"/><data name="Tail" inType="win:UInt32"/>""",
+            [.. BitConverter.GetBytes((ushort)4), .. name, .. tail]);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(TailValue(fixedLength), Is.EqualTo(0x11223344u));
+            Assert.That(TailValue(referenced), Is.EqualTo(0x11223344u));
+        }
+    }
+
     [TestCase("""<data name="Items" inType="win:UInt16" count="Missing"/>""")]
     [TestCase("""<data name="Items" inType="win:UInt16" count="Later"/><data name="Later" inType="win:UInt32"/>""")]
     [TestCase("""<struct name="S" count="1"><data name="I" inType="win:UInt32"/></struct><data name="B" inType="win:Binary" length="S"/>""")]
+    [TestCase("""<data name="G" inType="win:GUID"/><data name="B" inType="win:Binary" length="G"/>""")]
+    [TestCase("""<data name="G" inType="win:GUID"/><data name="B" inType="win:UInt16" count="G"/>""")]
     public void Manifest_UnresolvedOrInvalidReferencesRejectTheEvent(string members)
     {
         instrumentationManifest manifest = LoadSynthetic($"""<template tid="T1">{members}</template>""");

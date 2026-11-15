@@ -217,7 +217,7 @@ internal static unsafe class EventTraceOperandBuilder
                             PropertyMetadata metadata = new(_TDH_IN_TYPE.TDH_INTYPE_NULL,
                                 _TDH_OUT_TYPE.TDH_OUTTYPE_NULL, structure.name, false, true,
                                 structure.data?.Length ?? 0, null);
-                            if (!TryCreate(metadata, null, null, allowArray: false, out operand))
+                            if (!TryCreate(metadata, structure.count, null, allowArray: true, out operand))
                             {
                                 return false;
                             }
@@ -243,8 +243,8 @@ internal static unsafe class EventTraceOperandBuilder
                 out EventTracePropertyOperand operand)
             {
                 operand = null!;
-                if (!TryParseSize(count, out int fixedCount, out EventTracePropertyOperand? countRef) ||
-                    !TryParseSize(length, out int fixedLength, out EventTracePropertyOperand? lengthRef))
+                if (!TryParseSize(count, forLength: false, out int fixedCount, out EventTracePropertyOperand? countRef) ||
+                    !TryParseSize(length, forLength: true, out int fixedLength, out EventTracePropertyOperand? lengthRef))
                 {
                     return false;
                 }
@@ -267,6 +267,8 @@ internal static unsafe class EventTraceOperandBuilder
                     }
                 }
 
+                bool characters = metadata.InType == _TDH_IN_TYPE.TDH_INTYPE_UNICODESTRING;
+                operand.LengthIsInCharacters = characters;
                 if (hasLength)
                 {
                     if (lengthRef is not null)
@@ -275,14 +277,14 @@ internal static unsafe class EventTraceOperandBuilder
                     }
                     else
                     {
-                        operand.SetFixedLengthSize(fixedLength);
+                        operand.SetFixedLengthSize(characters ? fixedLength * 2 : fixedLength);
                     }
                 }
 
                 return true;
             }
 
-            bool TryParseSize(string? text, out int value, out EventTracePropertyOperand? reference)
+            bool TryParseSize(string? text, bool forLength, out int value, out EventTracePropertyOperand? reference)
             {
                 value = 0;
                 reference = null;
@@ -302,7 +304,8 @@ internal static unsafe class EventTraceOperandBuilder
                 {
                     if (scopes[i].TryGetValue(text, out EventTracePropertyOperand? found))
                     {
-                        if (found.Metadata.IsStruct || found.IsVariableArray || found.IsFixedArray)
+                        if (found.Metadata.IsStruct || found.IsVariableArray || found.IsFixedArray ||
+                            !IsSizeType(found.Metadata.InType, forLength))
                         {
                             return false;
                         }
@@ -314,6 +317,17 @@ internal static unsafe class EventTraceOperandBuilder
                 }
 
                 return false;
+            }
+
+            static bool IsSizeType(_TDH_IN_TYPE inType, bool forLength)
+            {
+                return inType switch
+                {
+                    _TDH_IN_TYPE.TDH_INTYPE_INT16 or _TDH_IN_TYPE.TDH_INTYPE_UINT16 or
+                        _TDH_IN_TYPE.TDH_INTYPE_INT32 or _TDH_IN_TYPE.TDH_INTYPE_UINT32 => true,
+                    _TDH_IN_TYPE.TDH_INTYPE_INT8 or _TDH_IN_TYPE.TDH_INTYPE_UINT8 => !forLength,
+                    _ => false
+                };
             }
         }
 

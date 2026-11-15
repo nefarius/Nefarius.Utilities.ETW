@@ -114,6 +114,11 @@ internal static class XpressLz77
                             inPos += 4;
                         }
 
+                        if (length < 15 + 7)
+                        {
+                            return false;
+                        }
+
                         length -= 15 + 7;
                     }
 

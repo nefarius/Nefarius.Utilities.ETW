@@ -130,7 +130,13 @@ internal sealed unsafe class EtlFile : IDisposable
         // The first buffer carries the logfile header and is stored as is. Every following buffer is a 72 byte
         // buffer header whose first field holds the size of the whole record (header and data), followed by the
         // Xpress LZ77 compressed buffer contents. Records are not aligned.
-        _buffers.Add(new BufferSegment(_base, (int)Math.Min(bufferSize, Length)));
+        if (Length < bufferSize)
+        {
+            throw new EtlFormatException(WIN32_ERROR.ERROR_INVALID_DATA,
+                $"'{path}' ends inside the first buffer of a compressed file.");
+        }
+
+        _buffers.Add(new BufferSegment(_base, (int)bufferSize));
 
         long position = bufferSize;
         long decompressed = 0;
@@ -176,7 +182,7 @@ internal sealed unsafe class EtlFile : IDisposable
 
             ReadOnlySpan<byte> compressed = new(_base + position + BufferHeaderSize, (int)recordSize - BufferHeaderSize);
             Span<byte> target = new(buffer + BufferHeaderSize, (int)bufferSize - BufferHeaderSize);
-            if (!XpressLz77.TryDecompress(compressed, target, out _))
+            if (!XpressLz77.TryDecompress(compressed, target, out int written) || written != target.Length)
             {
                 throw new EtlFormatException(WIN32_ERROR.ERROR_INVALID_DATA,
                     $"'{path}' has a corrupt compressed buffer at offset {position}.");
