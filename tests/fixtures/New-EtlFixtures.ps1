@@ -24,6 +24,9 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+# The controller lays out EVENT_TRACE_PROPERTIES with x64 offsets, so it must run in a 64-bit host.
+if (-not [Environment]::Is64BitProcess) { throw 'Run this script from a 64-bit PowerShell host; 32-bit producers are launched separately.' }
 $producer = Join-Path $PSScriptRoot 'producers\EventSourceProducer.ps1'
 $null = New-Item -ItemType Directory -Force -Path $OutDir
 $OutDir = (Resolve-Path $OutDir).Path
