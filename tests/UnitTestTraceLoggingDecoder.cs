@@ -267,6 +267,54 @@ public unsafe class TraceLoggingDecoderTests
         Assert.That(Try(schema, BitConverter.GetBytes((ushort)5000)), Is.False);
     }
 
+    [Test]
+    public void UnterminatedStrings_AreRejected()
+    {
+        Assert.That(Try(Schema("U", Field("Name", 1)), [0x41, 0x00]), Is.False);
+        Assert.That(Try(Schema("A", Field("Name", 2)), [0x41]), Is.False);
+    }
+
+    [Test]
+    public void OddCountedString_DoesNotShiftTheNextField()
+    {
+        byte[] schema = Schema("Pair", Field("Name", 22), Field("Next", 4));
+        byte[] payload = [3, 0, 0x41, 0x00, 0x42, 7];
+
+        Assert.That(Try(schema, payload), Is.False);
+    }
+
+    [Test]
+    public void NonFiniteFloats_AreRejectedBeforeAnyJson()
+    {
+        Assert.That(Written(Schema("F", Field("V", 11)), BitConverter.GetBytes(float.NaN)), Is.Zero);
+        Assert.That(Written(Schema("D", Field("V", 12)), BitConverter.GetBytes(double.PositiveInfinity)), Is.Zero);
+    }
+
+    private static int Written(byte[] schema, byte[] payload)
+    {
+        fixed (byte* schemaPtr = schema)
+        fixed (byte* payloadPtr = payload)
+        {
+            EVENT_HEADER_EXTENDED_DATA_ITEM item = default;
+            item.ExtType = 11;
+            item.DataSize = (ushort)schema.Length;
+            item.DataPtr = (ulong)schemaPtr;
+            EVENT_RECORD record = default;
+            record.ExtendedDataCount = 1;
+            record.ExtendedData = &item;
+            record.UserData = payloadPtr;
+            record.UserContext = payloadPtr;
+            record.UserDataLength = (ushort)payload.Length;
+            using MemoryStream ms = new();
+            using Utf8JsonWriter json = new(ms);
+            bool decoded = TraceLoggingDecoder.TryDecode(&record, new EventRecordReader(&record),
+                new EtwJsonWriter(json), new RuntimeEventMetadata(&record));
+            json.Flush();
+            Assert.That(decoded, Is.False);
+            return (int)ms.Length;
+        }
+    }
+
     private static bool Try(byte[] schema, byte[] payload)
     {
         fixed (byte* schemaPtr = schema)

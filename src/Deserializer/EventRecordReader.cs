@@ -61,6 +61,29 @@ internal readonly struct EventRecordReader
     }
 
     /// <summary>
+    ///     A TraceLogging Unicode string. The payload must contain the terminator.
+    /// </summary>
+    public unsafe string ReadTerminatedUnicodeString()
+    {
+        int length = 0;
+        byte* ptr = (byte*)NativeEventRecord->UserData;
+        int maxLength = RemainingBytes;
+        while (length + 1 < maxLength && (ptr[length] != 0 || ptr[length + 1] != 0))
+        {
+            length += 2;
+        }
+
+        if (length + 1 >= maxLength)
+        {
+            throw new FormatException("Unicode string is not terminated.");
+        }
+
+        string value = new((char*)NativeEventRecord->UserData, 0, length / 2);
+        IncrementBy(ref NativeEventRecord->UserData, length + 2);
+        return value;
+    }
+
+    /// <summary>
     ///     Reader for TDH_INTYPE_UNICODESTRING
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -119,6 +142,34 @@ internal readonly struct EventRecordReader
 
         bool terminated = length < maxLength;
         IncrementBy(ref NativeEventRecord->UserData, length + (terminated ? 1 : 0));
+        return new string(arr);
+    }
+
+    /// <summary>
+    ///     A TraceLogging ANSI string. The payload must contain the terminator.
+    /// </summary>
+    public unsafe string ReadTerminatedAnsiString()
+    {
+        int length = 0;
+        byte* ptr = (byte*)NativeEventRecord->UserData;
+        int maxLength = RemainingBytes;
+        while (length < maxLength && ptr[length] != 0)
+        {
+            length++;
+        }
+
+        if (length >= maxLength)
+        {
+            throw new FormatException("ANSI string is not terminated.");
+        }
+
+        char[] arr = new char[length];
+        for (int i = 0; i < length; i++)
+        {
+            arr[i] = (char)ptr[i];
+        }
+
+        IncrementBy(ref NativeEventRecord->UserData, length + 1);
         return new string(arr);
     }
 
@@ -482,7 +533,7 @@ internal readonly struct EventRecordReader
         }
 
         ushort length = ReadUInt16();
-        if (length > RemainingBytes)
+        if ((length & 1) != 0 || length > RemainingBytes)
         {
             throw new FormatException("Counted string is truncated.");
         }
@@ -519,6 +570,10 @@ internal readonly struct EventRecordReader
         byte low = ReadUInt8();
         byte high = ReadUInt8();
         ushort length = (ushort)(((uint)low & 0xFF) | (((uint)high & 0xFF) << 8));
+        if ((length & 1) != 0 || length > RemainingBytes)
+        {
+            throw new FormatException("Counted string is truncated.");
+        }
 
         return ReadUnicodeStringHelper(length);
     }
@@ -542,7 +597,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe string ReadNonNullTerminatedString()
     {
-        return ReadUnicodeStringHelper(NativeEventRecord->UserDataLength);
+        return ReadUnicodeStringHelper(RemainingBytes);
     }
 
     /// <summary>
@@ -551,7 +606,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe string ReadNonNullTerminatedAnsiString()
     {
-        return ReadAnsiStringHelper(NativeEventRecord->UserDataLength);
+        return ReadAnsiStringHelper(RemainingBytes);
     }
 
     /// <summary>

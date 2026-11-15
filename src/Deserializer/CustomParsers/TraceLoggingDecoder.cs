@@ -408,9 +408,9 @@ internal static unsafe class TraceLoggingDecoder
             case InType.Null:
                 return null;
             case InType.UnicodeString:
-                return reader.ReadUnicodeString();
+                return reader.ReadTerminatedUnicodeString();
             case InType.AnsiString:
-                return utf8 ? reader.ReadUtf8String() : reader.ReadAnsiString();
+                return utf8 ? reader.ReadUtf8String() : reader.ReadTerminatedAnsiString();
             case InType.Int8:
                 Need(reader, sizeof(sbyte));
                 return reader.ReadInt8();
@@ -439,10 +439,22 @@ internal static unsafe class TraceLoggingDecoder
                 return reader.ReadUInt64();
             case InType.Float:
                 Need(reader, sizeof(float));
-                return reader.ReadFloat();
+                float single = reader.ReadFloat();
+                if (!float.IsFinite(single))
+                {
+                    throw new FormatException("TraceLogging float is not finite.");
+                }
+
+                return single;
             case InType.Double:
                 Need(reader, sizeof(double));
-                return reader.ReadDouble();
+                double real = reader.ReadDouble();
+                if (!double.IsFinite(real))
+                {
+                    throw new FormatException("TraceLogging float is not finite.");
+                }
+
+                return real;
             case InType.Bool32:
                 Need(reader, sizeof(int));
                 return reader.ReadInt32() != 0;
