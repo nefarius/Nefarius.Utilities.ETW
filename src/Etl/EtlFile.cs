@@ -87,7 +87,7 @@ internal sealed unsafe class EtlFile : IDisposable
 
     public byte* Pointer => _base;
 
-    public long BufferCount => (Length + BufferSize - 1) / BufferSize;
+    public long BufferCount => BufferSize == 0 ? 0 : (Length + BufferSize - 1) / BufferSize;
 
     public void Dispose()
     {
@@ -203,7 +203,7 @@ internal sealed unsafe class EtlFile : IDisposable
             // Packet.Group is 0 for the EventTrace group, Packet.Type is 0 for the header event.
             if (*(p + 6) == 0 && *(p + 7) == 0)
             {
-                return ParseLogfileHeader(path, p + SystemHeaderSize, size - SystemHeaderSize);
+                return ParseLogfileHeader(path, p + SystemHeaderSize, size - SystemHeaderSize, bufferSize);
             }
 
             p += (size + 7) & ~7;
@@ -213,7 +213,7 @@ internal sealed unsafe class EtlFile : IDisposable
             $"'{path}' does not start with an ETW logfile header event.");
     }
 
-    private static EtlTraceInfo ParseLogfileHeader(string path, byte* h, int size)
+    private static EtlTraceInfo ParseLogfileHeader(string path, byte* h, int size, uint bufferSize)
     {
         // TRACE_LOGFILE_HEADER: 56 bytes of fixed fields, two pointers (LoggerName, LogFileName),
         // TIME_ZONE_INFORMATION (172 bytes), padding to 8, then BootTime, PerfFreq, StartTime, ReservedFlags.
@@ -231,9 +231,16 @@ internal sealed unsafe class EtlFile : IDisposable
                 $"'{path}' has a truncated logfile header.");
         }
 
+        uint headerBufferSize = *(uint*)h;
+        if (headerBufferSize != bufferSize)
+        {
+            throw new EtlFormatException(WIN32_ERROR.ERROR_INVALID_DATA,
+                $"'{path}' has logfile header buffer size {headerBufferSize}, which does not match the buffer header ({bufferSize}).");
+        }
+
         EtlTraceInfo info = new()
         {
-            BufferSize = *(uint*)h,
+            BufferSize = bufferSize,
             Version = *(uint*)(h + 4),
             ProviderVersion = *(uint*)(h + 8),
             NumberOfProcessors = *(uint*)(h + 12),

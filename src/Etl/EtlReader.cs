@@ -156,6 +156,14 @@ internal static unsafe class EtlReader
         Instance
     }
 
+    private enum RecordDisposition
+    {
+        Deliver,
+        Skip,
+        Stop,
+        Unknown
+    }
+
     /// <summary>
     ///     Walks the events of a single logger buffer.
     /// </summary>
@@ -174,6 +182,7 @@ internal static unsafe class EtlReader
         private bool _is64;
         private long _rawTimestamp;
         private long _fileTime;
+        private string? _skipDetail;
 
         private BufferCursor(EtlFile file, int fileIndex, long bufferIndex, byte* buffer, byte* end)
         {
@@ -230,31 +239,58 @@ internal static unsafe class EtlReader
                     return false;
                 }
 
-                if (!TryClassify(marker, out Kind kind, out bool is64, out int size, out long raw, out int headerType))
+                switch (Classify(marker, out Kind kind, out bool is64, out int size, out long raw, out int headerType))
                 {
-                    warn(headerType,
-                        $"Skipping events with unsupported ETL record header type 0x{headerType:X} " +
-                        $"(marker 0x{marker:X8}).");
-                    return false;
+                    case RecordDisposition.Deliver:
+                        _kind = kind;
+                        _is64 = is64;
+                        _size = size;
+                        _rawTimestamp = raw == long.MinValue ? *(long*)(_start + 16) : raw;
+                        _fileTime = _file.Info.ToFileTime(_rawTimestamp);
+                        return true;
+                    case RecordDisposition.Skip:
+                        warn(headerType, _skipDetail ?? SkipWarning(headerType, marker));
+                        _position += (size + 7) & ~7;
+                        continue;
+                    case RecordDisposition.Unknown:
+                        warn(headerType,
+                            $"Skipping events with unsupported ETL record header type 0x{headerType:X} " +
+                            $"(marker 0x{marker:X8}). The remainder of this buffer was dropped.");
+                        return false;
+                    default:
+                        return false;
                 }
-
-                if (size < 8 || _position + size > _end)
-                {
-                    return false;
-                }
-
-                _kind = kind;
-                _is64 = is64;
-                _size = size;
-                _rawTimestamp = raw == long.MinValue ? *(long*)(_start + 16) : raw;
-                _fileTime = _file.Info.ToFileTime(_rawTimestamp);
-                return true;
             }
 
             return false;
         }
 
-        private bool TryClassify(uint marker, out Kind kind, out bool is64, out int size, out long raw,
+        private static string SkipWarning(int headerType, uint marker)
+        {
+            if (headerType is 3 or 4)
+            {
+                return $"Skipping unsupported compact ETL record header type 0x{headerType:X}.";
+            }
+
+            return $"Skipping ETL record header type 0x{headerType:X} (marker 0x{marker:X8}).";
+        }
+
+        /// <summary>
+        ///     Reads a timestamp only after the bytes are known to lie inside the buffer.
+        /// </summary>
+        private bool TryReadTimestamp(byte* record, int offset, int recordSize, int minimumSize, out long raw)
+        {
+            raw = long.MinValue;
+            if (recordSize < minimumSize || record + offset + sizeof(long) > _end || record + recordSize > _end)
+            {
+                return false;
+            }
+
+            raw = *(long*)(record + offset);
+            return true;
+        }
+
+        private RecordDisposition Classify(uint marker, out Kind kind, out bool is64, out int size, out long raw,
             out int headerType)
         {
             byte* p = _position;
@@ -263,6 +299,7 @@ internal static unsafe class EtlReader
             size = 0;
             raw = long.MinValue;
             headerType = (int)(marker >> 24);
+            _skipDetail = null;
 
             if ((marker & 0xC0000000) == 0xC0000000)
             {
@@ -274,38 +311,53 @@ internal static unsafe class EtlReader
                         kind = Kind.System;
                         is64 = headerType == 2;
                         size = *(ushort*)(p + 4);
-                        raw = size >= 32 ? *(long*)(p + 16) : long.MinValue;
-                        return size >= 32;
+                        return TryReadTimestamp(p, 16, size, 32, out raw) ? RecordDisposition.Deliver : Bounded(size);
+                    case 3:
+                    case 4:
+                        // Compact system headers are not decoded. Their size is at the same place as a system header,
+                        // so the record can be skipped without abandoning the rest of the buffer.
+                        size = *(ushort*)(p + 4);
+                        return size >= 8 && p + size <= _end ? RecordDisposition.Skip : RecordDisposition.Stop;
                     case 0x10:
                     case 0x11:
                         kind = Kind.PerfInfo;
                         is64 = headerType == 0x11;
                         size = *(ushort*)(p + 4);
-                        raw = size >= 16 ? *(long*)(p + 8) : long.MinValue;
-                        return size >= 16;
+                        return TryReadTimestamp(p, 8, size, 16, out raw) ? RecordDisposition.Deliver : Bounded(size);
                     case 18:
                     case 19:
                         kind = Kind.EventHeader;
                         is64 = headerType == 19;
                         size = *(ushort*)p;
-                        raw = size >= 80 ? *(long*)(p + 16) : long.MinValue;
-                        return size >= 80;
+                        if (!TryReadTimestamp(p, 16, size, 80, out raw))
+                        {
+                            return Bounded(size);
+                        }
+
+                        // Extended items sit between the header and the payload. Delivering the record would
+                        // present those items as user data, so skip it until they are decoded.
+                        if ((*(ushort*)(p + 4) & EventHeaderFlagExtendedInfo) == 0)
+                        {
+                            return RecordDisposition.Deliver;
+                        }
+
+                        _skipDetail =
+                            "Skipping EVENT_HEADER records that carry extended data; their payload is not decoded yet.";
+                        return RecordDisposition.Skip;
                     case 10:
                     case 20:
                         kind = Kind.FullHeader;
                         is64 = headerType == 20;
                         size = *(ushort*)p;
-                        raw = size >= 48 ? *(long*)(p + 16) : long.MinValue;
-                        return size >= 48;
+                        return TryReadTimestamp(p, 16, size, 48, out raw) ? RecordDisposition.Deliver : Bounded(size);
                     case 11:
                     case 21:
                         kind = Kind.Instance;
                         is64 = headerType == 21;
                         size = *(ushort*)p;
-                        raw = size >= 72 ? *(long*)(p + 16) : long.MinValue;
-                        return size >= 72;
+                        return TryReadTimestamp(p, 16, size, 72, out raw) ? RecordDisposition.Deliver : Bounded(size);
                     default:
-                        return false;
+                        return RecordDisposition.Unknown;
                 }
             }
 
@@ -314,20 +366,41 @@ internal static unsafe class EtlReader
                 kind = Kind.Message;
                 headerType = (byte)(marker >> 24);
                 size = (ushort)marker;
-                if (size < 8)
+                if (size < 8 || p + size > _end)
                 {
-                    return false;
+                    return RecordDisposition.Stop;
                 }
 
                 ushort options = *(ushort*)(p + 6);
                 is64 = (options & MessagePointer32) == 0;
                 MessageLayout layout = MessageLayout.Parse(p, size, options);
-                raw = layout.HasTimestamp ? *(long*)(p + layout.TimestampOffset) : long.MinValue;
-                return layout.Valid;
+                if (!layout.Valid)
+                {
+                    return RecordDisposition.Skip;
+                }
+
+                if (!layout.HasTimestamp)
+                {
+                    return RecordDisposition.Deliver;
+                }
+
+                if (layout.TimestampOffset < 0 || p + layout.TimestampOffset + sizeof(long) > _end)
+                {
+                    return RecordDisposition.Stop;
+                }
+
+                raw = *(long*)(p + layout.TimestampOffset);
+                return RecordDisposition.Deliver;
             }
 
-            return false;
+            return RecordDisposition.Unknown;
         }
+
+        /// <summary>
+        ///     A known header whose declared size runs past the buffer cannot be skipped safely.
+        /// </summary>
+        private RecordDisposition Bounded(int size) =>
+            size >= 8 && _position + size <= _end ? RecordDisposition.Skip : RecordDisposition.Stop;
 
         /// <summary>
         ///     Fills the <see cref="EVENT_RECORD" /> for the current event.
@@ -403,12 +476,6 @@ internal static unsafe class EtlReader
                     headerVersion = *(h + 42);
                     payload = p + 80;
                     payloadLength = _size - 80;
-                    if ((headerFlags & EventHeaderFlagExtendedInfo) != 0)
-                    {
-                        // Extended data is not decoded yet; the user data length cannot be determined reliably.
-                        *(ushort*)(h + 4) = (ushort)(*(ushort*)(h + 4) & ~EventHeaderFlagExtendedInfo);
-                    }
-
                     break;
                 }
                 default:

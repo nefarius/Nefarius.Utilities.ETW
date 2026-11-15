@@ -126,6 +126,30 @@ public unsafe class EtlReaderTests
     }
 
     [Test]
+    public void LogfileHeaderBufferSize_MustMatchBufferHeader()
+    {
+        string path = Path.GetTempFileName();
+        try
+        {
+            byte[] bytes = File.ReadAllBytes("./traces/BthPS3_0.etl");
+            bytes[104] = 0;
+            bytes[105] = 0;
+            bytes[106] = 0;
+            bytes[107] = 0;
+            File.WriteAllBytes(path, bytes);
+
+            TraceOpenFailure? failure = TraceProcessor.ProcessFiles([path], EtwBackend.Managed, false, default, null,
+                (EVENT_RECORD* _, in EtlRecordExtras _) => Assert.Fail("A mismatched buffer size must not be read."));
+
+            Assert.That(failure, Is.Not.Null);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Test]
     public void Cancellation_StopsProcessing()
     {
         using CancellationTokenSource cts = new();

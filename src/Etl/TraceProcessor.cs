@@ -96,6 +96,7 @@ internal static unsafe class TraceProcessor
 
             Etw.ProcessTrace(handles, (uint)handles.Length, IntPtr.Zero, IntPtr.Zero);
             GC.KeepAlive(sessions);
+            cancellationToken.ThrowIfCancellationRequested();
             return null;
         }
         finally
