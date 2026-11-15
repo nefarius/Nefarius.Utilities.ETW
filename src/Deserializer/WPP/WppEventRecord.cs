@@ -26,17 +26,25 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
     /// </summary>
     private ushort GuidTypeNameFormatId => eventRecordReader.NativeEventRecord->EventHeader.EventDescriptor.Id;
 
+    private static readonly HashSet<string> KnownProperties = typeof(WppEventRecord)
+        .GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+        .Select(p => p.Name)
+        .ToHashSet(StringComparer.Ordinal);
+
     private string SubstituteFunctionParameters(TraceMessageFormat format)
     {
         Dictionary<int, (FunctionParameter Parameter, object Value)> indexedParameterValues = [];
 
         foreach (FunctionParameter parameter in format.FunctionParameters)
         {
-            object value = ItemReader.Readers.TryGetValue(parameter.Type, out Func<EventRecordReader, object>? reader)
-                ? reader(eventRecordReader)
-                : throw new NotImplementedException($"Type of item {parameter.Type} not implemented.");
+            // The wire size of an unknown item type is unknown, so reading stops here and the remaining placeholders
+            // stay in the message as they are.
+            if (!ItemReader.Readers.TryGetValue(parameter.Type, out Func<EventRecordReader, object>? reader))
+            {
+                break;
+            }
 
-            indexedParameterValues.Add(parameter.Index, (parameter, value));
+            indexedParameterValues[parameter.Index] = (parameter, reader(eventRecordReader));
         }
 
         // Always go through WppFormatter.Substitute so that context markers (%!FUNC!, %!LEVEL!, etc.)
@@ -281,7 +289,9 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                                 //.Replace("%!FUNC!", format.Function),
                                 nameof(ComponentName) => ReadUnicodeStringProperty(&propertyDescriptor, propSize),
                                 nameof(SubComponentName) => ReadUnicodeStringProperty(&propertyDescriptor, propSize),
-                                _ => throw new NotImplementedException($"Unknown property \"{propertyName}\" encountered.")
+                                // A property this library does not know about is read as text and kept only if it maps
+                                // to a member of this type; it never fails the whole event.
+                                _ => ReadUnicodeStringProperty(&propertyDescriptor, propSize)
                             };
                         }
                         // fallback value to inform the caller that we couldn't decode
@@ -299,7 +309,7 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                             onFormatMissing?.Invoke(TraceGuid, GuidTypeNameFormatId, Version);
                         }
 
-                        if (value is not null)
+                        if (value is not null && KnownProperties.Contains(propertyName))
                         {
                             // set managed property by name
                             self[propertyName] = value;
@@ -351,10 +361,12 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
                                     value = Marshal.PtrToStructure((IntPtr)primitivePropertyBuffer, typeof(FILETIME));
                                     break;
                                 default:
-                                    throw new NotImplementedException($"Property type {propertyType} not implemented.");
+                                    // Unknown primitive types are skipped instead of failing the event.
+                                    value = null;
+                                    break;
                             }
 
-                            if (value is not null)
+                            if (value is not null && KnownProperties.Contains(propertyName))
                             {
                                 // set managed property by name
                                 self[propertyName] = value;

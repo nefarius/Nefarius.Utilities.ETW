@@ -18,6 +18,10 @@
 
 - [TraceEventLevel](./nefarius.utilities.etw.traceeventlevel.md)
 
+## Namespace Nefarius.Utilities.ETW.Deserializer.CustomParsers
+
+- [TraceLoggingCustomDecoders](./nefarius.utilities.etw.deserializer.customparsers.traceloggingcustomdecoders.md)
+
 ## Namespace Nefarius.Utilities.ETW.Deserializer.WPP
 
 - [DecodingContext](./nefarius.utilities.etw.deserializer.wpp.decodingcontext.md)

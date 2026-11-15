@@ -16,9 +16,9 @@ internal unsafe delegate void EtlRecordCallback(EVENT_RECORD* record, in EtlReco
 ///     timestamp order.
 /// </summary>
 /// <remarks>
-///     Supported record header types: SYSTEM_TRACE (32/64), PERFINFO (32/64), TRACE_MESSAGE (WPP), EVENT_HEADER
+///     Supported record header types: SYSTEM_TRACE (32/64, including the compact variants), PERFINFO (32/64), TRACE_MESSAGE (WPP), EVENT_HEADER
 ///     (32/64, without extended data), FULL_HEADER and INSTANCE (32/64). Anything else is skipped and reported once
-///     per header type. Compressed traces are rejected when the file is opened.
+///     per header type. Compressed traces are decompressed buffer by buffer when the file is opened.
 /// </remarks>
 internal static unsafe class EtlReader
 {
@@ -29,6 +29,7 @@ internal static unsafe class EtlReader
     private const ushort Flag64BitHeader = 0x0040;
     private const ushort FlagTraceMessage = 0x0008;
     private const ushort FlagClassicHeader = 0x0100;
+    private const ushort FlagNoCpuTime = 0x0010;
 
     // TRACE_MESSAGE option flags (ntwmi.h)
     private const ushort MessageSequence = 0x01;
@@ -70,9 +71,10 @@ internal static unsafe class EtlReader
         {
             for (int i = 0; i < files.Count; i++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                    opened.Add(EtlFile.Open(files[i]));
+                    opened.Add(EtlFile.Open(files[i], cancellationToken));
                 }
                 catch (EtlFormatException ex)
                 {
@@ -111,16 +113,15 @@ internal static unsafe class EtlReader
         for (int f = 0; f < files.Count; f++)
         {
             EtlFile file = files[f];
-            for (long b = 0; b < file.BufferCount; b++)
+            for (int b = 0; b < file.Buffers.Count; b++)
             {
                 if ((++scanned & 63) == 0)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                 }
 
-                long start = b * file.BufferSize;
-                long length = Math.Min(file.BufferSize, file.Length - start);
-                BufferCursor? cursor = BufferCursor.TryCreate(file, f, b, file.Pointer + start, (int)length);
+                EtlFile.BufferSegment segment = file.Buffers[b];
+                BufferCursor? cursor = BufferCursor.TryCreate(file, f, b, segment.Pointer, segment.Length);
                 if (cursor is not null && cursor.Advance(Warn))
                 {
                     queue.Enqueue(cursor, cursor.Key);
@@ -165,6 +166,7 @@ internal static unsafe class EtlReader
     private enum Kind
     {
         System,
+        CompactSystem,
         PerfInfo,
         Message,
         EventHeader,
@@ -285,7 +287,8 @@ internal static unsafe class EtlReader
                     case RecordDisposition.Unknown:
                         warn(headerType,
                             $"Skipping events with unsupported ETL record header type 0x{headerType:X} " +
-                            $"(marker 0x{marker:X8}). The remainder of this buffer was dropped.");
+                            $"(marker 0x{marker:X8}) in file #{_fileIndex}, buffer {_bufferIndex}, offset {_position - _start}. " +
+                            $"The remaining {_end - _position} bytes of this buffer were dropped.");
                         return false;
                     default:
                         return false;
@@ -297,11 +300,6 @@ internal static unsafe class EtlReader
 
         private static string SkipWarning(int headerType, uint marker)
         {
-            if (headerType is 3 or 4)
-            {
-                return $"Skipping unsupported compact ETL record header type 0x{headerType:X}.";
-            }
-
             return $"Skipping ETL record header type 0x{headerType:X} (marker 0x{marker:X8}).";
         }
 
@@ -349,10 +347,17 @@ internal static unsafe class EtlReader
                         return KnownGroup(p[7]);
                     case 3:
                     case 4:
-                        // Compact system headers are not decoded. Their size is at the same place as a system header,
-                        // so the record can be skipped without abandoning the rest of the buffer.
+                        // A compact system header is a SYSTEM_TRACE header without the trailing kernel/user time
+                        // pair: the payload starts at offset 24 and the event carries no CPU time.
+                        kind = Kind.CompactSystem;
+                        is64 = headerType == 4;
                         size = *(ushort*)(p + 4);
-                        return size >= 8 && p + size <= _end ? RecordDisposition.Skip : RecordDisposition.Stop;
+                        if (!TryReadTimestamp(p, 16, size, 24, out raw))
+                        {
+                            return Bounded(size);
+                        }
+
+                        return KnownGroup(p[7]);
                     case 0x10:
                     case 0x11:
                         kind = Kind.PerfInfo;
@@ -537,12 +542,22 @@ internal static unsafe class EtlReader
                     payloadLength = _size - 32;
                     break;
                 }
+                case Kind.CompactSystem:
+                {
+                    TryGetKernelGroupGuid(p[7], out Guid group);
+                    WriteHeader(h, 24, (ushort)(flags | FlagClassicHeader | FlagNoCpuTime), *(uint*)(p + 8),
+                        *(uint*)(p + 12), stamp, group, 0, (byte)*(ushort*)p, 0, p[6]);
+                    headerVersion = (byte)*(ushort*)p;
+                    payload = p + 24;
+                    payloadLength = _size - 24;
+                    break;
+                }
                 case Kind.PerfInfo:
                 {
                     ushort hook = *(ushort*)(p + 6);
                     TryGetKernelGroupGuid((byte)(hook >> 8), out Guid group);
                     // A PERFINFO header has no thread or process. ProcessTrace reports both as -1.
-                    WriteHeader(h, 16, (ushort)(flags | FlagClassicHeader), uint.MaxValue, uint.MaxValue, stamp,
+                    WriteHeader(h, 16, (ushort)(flags | FlagClassicHeader | FlagNoCpuTime), uint.MaxValue, uint.MaxValue, stamp,
                         group, 0, (byte)*(ushort*)p, 0, (byte)hook);
                     headerVersion = (byte)*(ushort*)p;
                     payload = p + 16;

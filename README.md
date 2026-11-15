@@ -58,7 +58,7 @@ private async IAsyncEnumerable<object> GetEtwStream([EnumeratorCancellation] Can
 }
 ```
 
-- Added a managed, cross-platform `.etl` reader (`EtwBackend`): `EtwUtil.ConvertToJson`, `EnumerateEventsAsync` and `EnumeratePdbReferences` now also run on Linux/macOS, including WPP decoding and TraceLogging events
+- Added a managed, cross-platform `.etl` reader (`EtwBackend`): `EtwUtil.ConvertToJson`, `EnumerateEventsAsync` and `EnumeratePdbReferences` now also run on Linux/macOS, including WPP decoding and TraceLogging events (custom-serialized fields use their base in-type unless a TraceLoggingCustomDecoders decoder is registered; both backends decode TraceLogging from the embedded schema)
 - Added realtime ETW session support via `EtwRealtimeSession` and `EtwUtil.EnumerateRealtimeEventsAsync`:
   - `EtwRealtimeSession.Create(name)` starts a user-mode ETW session (`StartTraceW`)
   - `EnableProvider` / `DisableProvider` toggle providers at runtime via `EnableTraceEx2`
@@ -161,9 +161,9 @@ See [tools/Nefarius.Utilities.ETW.CLI/README.md](tools/Nefarius.Utilities.ETW.CL
 
 ## Known limitations
 
-- Reading `.etl` files works on Windows, Linux and macOS through a managed reader (`EtwBackend.Managed`, the default off Windows; set `EtwJsonConverterOptions.Backend` / `EtwMetadataScanOptions.Backend` to choose). Real-time sessions, session management and manifest value-map resolution remain **Windows-only** and throw `PlatformNotSupportedException` elsewhere
-- The managed reader does not read compressed `.etl` files (it reports a clear error) and covers the record types found in WPP, kernel image-ID and TraceLogging/manifest traces; unsupported record types are skipped with a warning via `ReportError`
-- `%!ItemEnum!`/`%!ItemFlagsEnum!` types display raw numeric values; PDB-based enum name resolution is not yet implemented
+- Reading `.etl` files works on Windows, Linux and macOS through a managed reader (`EtwBackend.Managed`, the default off Windows; set `EtwJsonConverterOptions.Backend` / `EtwMetadataScanOptions.Backend` to choose). Real-time sessions and session management remain **Windows-only**. Manifest-described events decode on every platform, including structs, fixed and variable array counts, fixed and variable lengths, declared out-types and value/bit maps (maps are kept in the property metadata; JSON output keeps the raw values) and throw `PlatformNotSupportedException` elsewhere
+- The managed reader reads compressed (`EVENT_TRACE_COMPRESSED_MODE`, Xpress LZ77) `.etl` files by decompressing every buffer into memory first, and covers the record types found in WPP, kernel and TraceLogging/manifest traces; unsupported record types are skipped with a warning via `ReportError`
+- `%!ItemEnum!`/`%!ItemFlagsEnum!` types are shown with enumerator names when the enum type (named in the TMF as `ItemEnum(Name)`) is found in a PDB type stream; from TMF files, or when the type is missing, the raw value is shown. Without a `WppDecodingContext`, WPP events are still emitted with the "No format information found." message and `OnWppFormatMissing` fires
 - The CLI does not create kernel sessions; use the library API (`SystemLogger` / `NtKernelLoggerName`) or attach to an existing session by name
 
 ## Documentation

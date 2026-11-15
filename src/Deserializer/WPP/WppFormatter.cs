@@ -139,6 +139,80 @@ internal static partial class WppFormatter
     }
 
     /// <summary>
+    ///     Maps a PDB enumerator (signed, 64-bit) to the unsigned 32-bit value the trace payload carries, so that
+    ///     negative enumerators match their two's complement wire representation.
+    /// </summary>
+    private static bool TryToWireValue(long key, out uint value)
+    {
+        if (key >= 0 && key <= uint.MaxValue)
+        {
+            value = (uint)key;
+            return true;
+        }
+
+        if (key < 0 && key >= int.MinValue)
+        {
+            value = (uint)(int)key;
+            return true;
+        }
+
+        value = 0;
+        return false;
+    }
+
+    private static bool TryGetName(IReadOnlyDictionary<long, string> names, uint raw, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out string? name)
+    {
+        if (names.TryGetValue(raw, out name))
+        {
+            return true;
+        }
+
+        return names.TryGetValue((int)raw, out name);
+    }
+
+    private static string FormatFlags(IReadOnlyDictionary<long, string>? names, uint raw)
+    {
+        string hex = $"0x{raw:X8}";
+        if (names is null || names.Count == 0)
+        {
+            return hex;
+        }
+
+        if (TryGetName(names, raw, out string? exact))
+        {
+            return exact;
+        }
+
+        List<string> parts = [];
+        uint remaining = raw;
+        foreach (KeyValuePair<long, string> pair in names.OrderBy(p => TryToWireValue(p.Key, out uint wire) ? wire : uint.MaxValue))
+        {
+            if (!TryToWireValue(pair.Key, out uint flag) || flag == 0)
+            {
+                continue;
+            }
+
+            if ((raw & flag) == flag && (remaining & flag) != 0)
+            {
+                parts.Add(pair.Value);
+                remaining &= ~flag;
+            }
+        }
+
+        if (parts.Count == 0)
+        {
+            return hex;
+        }
+
+        if (remaining != 0)
+        {
+            parts.Add($"0x{remaining:X}");
+        }
+
+        return string.Join(" | ", parts);
+    }
+
+    /// <summary>
     ///     Converts a single parameter value to its string representation, handling enum lists,
     ///     NTSTATUS, WINERROR, HRESULT, timestamps, IP addresses, and all other WPP ItemTypes.
     /// </summary>
@@ -265,14 +339,18 @@ internal static partial class WppFormatter
                 }
                 return sb.ToString();
             }
-            // Enum types: PDB-based lookup is out of scope; emit raw value
+            // Enum types: names come from the PDB type stream when available, otherwise the raw value is shown
             case ItemType.ItemEnum:
             {
-                return Convert.ToUInt32(value).ToString();
+                uint raw = Convert.ToUInt32(value);
+                return parameter.EnumValues is not null && TryGetName(parameter.EnumValues, raw, out string? enumName)
+                    ? enumName
+                    : raw.ToString();
             }
             case ItemType.ItemFlagsEnum:
             {
-                return $"0x{Convert.ToUInt32(value):X8}";
+                uint raw = Convert.ToUInt32(value);
+                return FormatFlags(parameter.EnumValues, raw);
             }
             default:
                 return value.ToString() ?? throw new InvalidOperationException("Unexpected null value.");

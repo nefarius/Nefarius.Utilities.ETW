@@ -45,7 +45,7 @@ etwutils parse <etl-path> [<etl-path> ...]
     [--keep-original-provider]         # keep raw WPP GuidName instead of rewriting to TMC: friendly name
 ```
 
-`<etl-path>` accepts individual `.etl` files, directories (top-level `*.etl` enumeration), and glob patterns (e.g. `C:\Traces\*.etl`). Multiple paths are accepted and deduplicated.
+`<etl-path>` accepts individual `.etl` files, directories (top-level `*.etl` enumeration), and glob patterns (e.g. `C:\Traces\*.etl`). Multiple paths are accepted and deduplicated. Globs allow a filename wildcard and standalone `**` directory segments (zero or more directories); literal directories after `**` are honoured (`C:\Symbols\**\x64\*.pdb` only matches files inside directories named `x64`), and wildcards inside other directory names are rejected.
 
 #### Output modes
 
@@ -581,7 +581,7 @@ All column tokens listed above are available as identifiers directly in the expr
 ## Known limitations
 
 - Currently relies on **Windows-only** APIs so no support for other platforms.
-- `%!ItemEnum!`/`%!ItemFlagsEnum!` types display raw numeric values; PDB-based enum name resolution is not yet implemented.
+- `%!ItemEnum!`/`%!ItemFlagsEnum!` types show enumerator names when the enum type is found in a supplied PDB; otherwise (TMF sources, missing type) the raw value is shown.
 - The CLI does not create kernel sessions (NT Kernel Logger or system logger); attach to an existing session by name, or create one through the library API.
 
 ## Links

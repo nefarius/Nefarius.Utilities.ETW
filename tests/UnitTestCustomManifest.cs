@@ -266,4 +266,175 @@ public unsafe class CustomManifestTests
             deserializer.Deserialize(&record);
         }
     }
+
+    private static readonly Guid SyntheticProvider = new("5a1c0f5e-3b2d-4e7a-9a11-0d2c5b7e9f01");
+
+    private static string SyntheticXml(string templates)
+    {
+        return $$"""
+            <instrumentationManifest xmlns="http://schemas.microsoft.com/win/2004/08/events"
+                                     xmlns:win="http://manifests.microsoft.com/win/2004/08/windows/events"
+                                     xmlns:xs="http://www.w3.org/2001/XMLSchema">
+              <instrumentation>
+                <events>
+                  <provider name="Synthetic" guid="{{{SyntheticProvider}}}" symbol="SYN" resourceFileName="x" messageFileName="x">
+                    <events>
+                      <event value="1" symbol="E1" template="T1" version="0"/>
+                    </events>
+                    <maps>
+                      <valueMap name="ColorMap">
+                        <map value="0x1" message="$(string.Red)"/>
+                        <map value="2" message="$(string.Green)"/>
+                      </valueMap>
+                      <bitMap name="AccessMap">
+                        <map value="0x1" message="$(string.Read)"/>
+                        <map value="0x2" message="$(string.Write)"/>
+                      </bitMap>
+                    </maps>
+                    <templates>
+                      {{templates}}
+                    </templates>
+                  </provider>
+                </events>
+              </instrumentation>
+              <localization>
+                <resources culture="en-US">
+                  <stringTable>
+                    <string id="Red" value="Rouge"/>
+                    <string id="Green" value="Vert"/>
+                    <string id="Read" value="R"/>
+                    <string id="Write" value="W"/>
+                  </stringTable>
+                </resources>
+              </localization>
+            </instrumentationManifest>
+            """;
+    }
+
+    private static instrumentationManifest LoadSynthetic(string templates)
+    {
+        return new EventSourceManifest(SyntheticProvider,
+            new MemoryStream(Encoding.UTF8.GetBytes(SyntheticXml(templates)))).Schema;
+    }
+
+    [Test]
+    public void Manifest_CountsLengthsStructsAndMapsAreDecoded()
+    {
+        instrumentationManifest manifest = LoadSynthetic("""
+            <template tid="T1">
+              <data name="N" inType="win:UInt32"/>
+              <data name="Items" inType="win:UInt16" count="N"/>
+              <data name="Fixed" inType="win:UInt8" count="3"/>
+              <data name="Size" inType="win:UInt32"/>
+              <data name="Blob" inType="win:Binary" length="Size" outType="xs:hexBinary"/>
+              <data name="Color" inType="win:UInt32" map="ColorMap"/>
+              <data name="Access" inType="win:UInt32" map="AccessMap" outType="win:HexInt32"/>
+              <struct name="S" count="1"><data name="Inner" inType="win:UInt32"/></struct>
+            </template>
+            """);
+
+        IEventTraceOperand operand = EventTraceOperandBuilder.Build(manifest, SyntheticProvider, 1, 0, 0)!;
+        IEventTracePropertyOperand[] ops = operand.EventPropertyOperands.ToArray();
+        PropertyMetadata[] flat = operand.Metadata.Properties;
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(flat.Select(p => p.Name),
+                Is.EqualTo(new[] { "N", "Items", "Fixed", "Size", "Blob", "Color", "Access", "S", "Inner" }));
+            Assert.That(ops, Has.Length.EqualTo(8));
+            Assert.That(ops[0].IsReferencedByOtherProperties, Is.True);
+            Assert.That(ops[1].IsVariableArray, Is.True);
+            Assert.That(ops[1].VariableArraySize, Is.SameAs(ops[0]));
+            Assert.That(ops[2].IsFixedArray, Is.True);
+            Assert.That(ops[2].FixedArraySize, Is.EqualTo(3));
+            Assert.That(ops[4].IsVariableLength, Is.True);
+            Assert.That(ops[4].VariableLengthSize, Is.SameAs(ops[3]));
+            Assert.That(ops[5].Metadata.Map!.Name, Is.EqualTo("ColorMap"));
+            Assert.That(ops[5].Metadata.Map![1], Is.EqualTo("Rouge"));
+            Assert.That(ops[5].Metadata.Map![2], Is.EqualTo("Vert"));
+            Assert.That(ops[6].Metadata.Map![2], Is.EqualTo("W"));
+            Assert.That(ops[6].Metadata.OutType, Is.EqualTo(_TDH_OUT_TYPE.TDH_OUTTYPE_HEXINT32));
+            Assert.That(ops[7].Metadata.IsStruct, Is.True);
+            Assert.That(ops[7].Children.Select(c => c.Metadata.Name), Is.EqualTo(new[] { "Inner" }));
+            Assert.That(ops[7].Children[0].PropertyIndex, Is.EqualTo(8));
+        }
+    }
+
+    private static string DecodeSynthetic(string members, byte[] payload)
+    {
+        using MemoryStream ms = new();
+        using (Utf8JsonWriter json = new(ms))
+        {
+            Deserializer<EtwJsonWriter> deserializer = new(new EtwJsonWriter(json),
+                provider => provider == SyntheticProvider
+                    ? new MemoryStream(Encoding.UTF8.GetBytes(SyntheticXml($"""<template tid="T1">{members}</template>""")))
+                    : null);
+
+            json.WriteStartArray();
+            Feed(deserializer, SyntheticProvider, 1, payload);
+            json.WriteEndArray();
+        }
+
+        return Encoding.UTF8.GetString(ms.ToArray());
+    }
+
+    private static uint TailValue(string json)
+    {
+        using JsonDocument doc = JsonDocument.Parse(json);
+        JsonElement props = doc.RootElement[0].GetProperty("Event").GetProperty("Properties");
+        return props.EnumerateArray().Last().GetProperty("Tail").GetUInt32();
+    }
+
+    [Test]
+    public void Manifest_StructCountIsAnArrayCount()
+    {
+        byte[] payload = [.. BitConverter.GetBytes(1u), .. BitConverter.GetBytes(2u), .. BitConverter.GetBytes(0xAABBCCDDu)];
+
+        string json = DecodeSynthetic(
+            """<struct name="S" count="2"><data name="Inner" inType="win:UInt32"/></struct><data name="Tail" inType="win:UInt32"/>""",
+            payload);
+
+        Assert.That(TailValue(json), Is.EqualTo(0xAABBCCDDu));
+    }
+
+    [Test]
+    public void Manifest_ArrayCountLargerThanThePayload_IsRejectedInsteadOfReadingPastIt()
+    {
+        byte[] payload = [.. BitConverter.GetBytes(2u), .. BitConverter.GetBytes(7u)];
+
+        Assert.Throws<FormatException>(() => DecodeSynthetic(
+            """<data name="N" inType="win:UInt32"/><data name="Items" inType="win:UInt32" count="N"/>""", payload));
+    }
+
+    [Test]
+    public void Manifest_UnicodeLengthsCountCharacters()
+    {
+        byte[] name = Encoding.Unicode.GetBytes("abcd");
+        byte[] tail = BitConverter.GetBytes(0x11223344u);
+
+        string fixedLength = DecodeSynthetic(
+            """<data name="Name" inType="win:UnicodeString" length="4"/><data name="Tail" inType="win:UInt32"/>""",
+            [.. name, .. tail]);
+        string referenced = DecodeSynthetic(
+            """<data name="Len" inType="win:UInt16"/><data name="Name" inType="win:UnicodeString" length="Len"/><data name="Tail" inType="win:UInt32"/>""",
+            [.. BitConverter.GetBytes((ushort)4), .. name, .. tail]);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(TailValue(fixedLength), Is.EqualTo(0x11223344u));
+            Assert.That(TailValue(referenced), Is.EqualTo(0x11223344u));
+        }
+    }
+
+    [TestCase("""<data name="Items" inType="win:UInt16" count="Missing"/>""")]
+    [TestCase("""<data name="Items" inType="win:UInt16" count="Later"/><data name="Later" inType="win:UInt32"/>""")]
+    [TestCase("""<struct name="S" count="1"><data name="I" inType="win:UInt32"/></struct><data name="B" inType="win:Binary" length="S"/>""")]
+    [TestCase("""<data name="G" inType="win:GUID"/><data name="B" inType="win:Binary" length="G"/>""")]
+    [TestCase("""<data name="G" inType="win:GUID"/><data name="B" inType="win:UInt16" count="G"/>""")]
+    public void Manifest_UnresolvedOrInvalidReferencesRejectTheEvent(string members)
+    {
+        instrumentationManifest manifest = LoadSynthetic($"""<template tid="T1">{members}</template>""");
+
+        Assert.That(EventTraceOperandBuilder.Build(manifest, SyntheticProvider, 1, 0, 0), Is.Null);
+    }
 }

@@ -64,10 +64,10 @@ internal sealed partial class Deserializer<T>
     {
         _customProviderManifest = customProviderManifest;
 
-        if (decodingContext is not null)
-        {
-            _wppTraceEventParser = new WppTraceEventParser(decodingContext, onWppFormatMissing, rewriteWppProviderName);
-        }
+        // Without a context WPP events are still emitted, with the "No format information found." placeholder, and
+        // onWppFormatMissing fires, instead of the events silently disappearing.
+        _wppTraceEventParser = new WppTraceEventParser(decodingContext ?? new DecodingContext(), onWppFormatMissing,
+            rewriteWppProviderName);
     }
 
     public void ResetWriter(T writer)
@@ -111,7 +111,7 @@ internal sealed partial class Deserializer<T>
             return;
         }
 
-        if (_currentExtras.IsManaged && eventRecord->ExtendedDataCount > 0 &&
+        if (eventRecord->ExtendedDataCount > 0 &&
             TraceLoggingDecoder.TryDecode(eventRecord, eventRecordReader, _writer, runtimeMetadata))
         {
             return;
