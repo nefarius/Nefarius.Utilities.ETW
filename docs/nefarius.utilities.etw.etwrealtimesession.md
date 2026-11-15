@@ -53,7 +53,7 @@ public static EtwRealtimeSession Create(string sessionName, Action<EtwRealtimeSe
 `sessionName` [String](https://learn.microsoft.com/dotnet/api/system.string)<br>
 A unique name for the session (case-insensitive). If a session with this name
  already exists, an [EtwStartTraceException](./nefarius.utilities.etw.exceptions.etwstarttraceexception.md) is thrown with
- ERROR_ALREADY_EXISTS; call
+ [WIN32_ERROR.ERROR_ALREADY_EXISTS](./windows.win32.foundation.win32_error.md#error_already_exists); call
  [EtwUtil.StopOrphanSession(String)](./nefarius.utilities.etw.etwutil.md#stoporphansessionstring) first to remove the orphan.
 
 `configure` [Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[EtwRealtimeSessionOptions](./nefarius.utilities.etw.etwrealtimesessionoptions.md)><br>
@@ -73,8 +73,8 @@ A running [EtwRealtimeSession](./nefarius.utilities.etw.etwrealtimesession.md) i
 
 [EtwStartTraceException](./nefarius.utilities.etw.exceptions.etwstarttraceexception.md)<br>
 `StartTrace` failed — inspect [Win32Exception.NativeErrorCode](https://learn.microsoft.com/dotnet/api/system.componentmodel.win32exception.nativeerrorcode).
- Common causes: ERROR_ACCESS_DENIED (run as administrator),
- ERROR_ALREADY_EXISTS (orphan session still running).
+ Common causes: [WIN32_ERROR.ERROR_ACCESS_DENIED](./windows.win32.foundation.win32_error.md#error_access_denied) (run as administrator),
+ [WIN32_ERROR.ERROR_ALREADY_EXISTS](./windows.win32.foundation.win32_error.md#error_already_exists) (orphan session still running).
 
 ### <a id="methods-disableprovider"/>**DisableProvider(Guid)**
 
