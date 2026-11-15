@@ -10,7 +10,7 @@ namespace Nefarius.Utilities.ETW.Tests;
 [Category("EndToEnd")]
 public unsafe class EtlReaderTests
 {
-    private const ushort TraceMessageFlag = 0x0100;
+    private const ushort TraceMessageFlag = 0x0008;
 
     private sealed record Stats(long Total, long Wpp, bool Ordered, long First, long Last);
 

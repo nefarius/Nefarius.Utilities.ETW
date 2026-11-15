@@ -25,8 +25,8 @@ internal static unsafe class EtlReader
     private const uint EventHeaderFlagExtendedInfo = 0x0001;
     private const ushort Flag32BitHeader = 0x0020;
     private const ushort Flag64BitHeader = 0x0040;
-    private const ushort FlagTraceMessage = 0x0100;
-    private const ushort FlagClassicHeader = 0x0200;
+    private const ushort FlagTraceMessage = 0x0008;
+    private const ushort FlagClassicHeader = 0x0100;
 
     // TRACE_MESSAGE option flags (ntwmi.h)
     private const ushort MessageSequence = 0x01;

@@ -360,6 +360,13 @@ internal sealed partial class Deserializer<T>
     {
         if (CustomParserLookup(eventRecord, ref key))
         {
+            // The parsers registered for the EventTrace group are not covered by the TDH path that dispatches the
+            // first record of a kind, so dispatch it here.
+            if (_currentExtras.IsManaged && eventRecord->EventHeader.ProviderId == CustomParserGuids.EventTraceGuid)
+            {
+                _actionTable[key](eventRecordReader, _writer, _eventMetadataTable, runtimeMetadata);
+            }
+
             return;
         }
 

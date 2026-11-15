@@ -207,7 +207,7 @@ public class Tests
 
         IReadOnlyCollection<PdbMetaData> refs = EtwUtil.EnumeratePdbReferences([etwFilePath]);
 
-        IList<string> pdbNames = refs.Select(r => Path.GetFileName(r.PdbName).ToLowerInvariant()).ToList();
+        IList<string> pdbNames = refs.Select(r => PathHelper.GetFileName(r.PdbName).ToLowerInvariant()).ToList();
 
         using (Assert.EnterMultipleScope())
         {

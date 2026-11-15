@@ -4,6 +4,7 @@ using Windows.Win32.Foundation;
 
 using Nefarius.Utilities.ETW.Deserializer.CustomParsers;
 using Nefarius.Utilities.ETW.Deserializer.WPP;
+using Nefarius.Utilities.ETW.Etl;
 using Nefarius.Utilities.ETW.Events;
 
 // ReSharper disable InconsistentNaming
@@ -31,6 +32,11 @@ internal sealed class MetadataScanner
 
     internal IReadOnlyCollection<PdbMetaData> Scan(List<string> inputFiles)
     {
+        if (TraceProcessor.Resolve(_options.Backend) == EtwBackend.Managed)
+        {
+            return ScanManaged(inputFiles);
+        }
+
         int count = inputFiles.Count;
         EVENT_TRACE_LOGFILEW[] fileSessions = new EVENT_TRACE_LOGFILEW[count];
         ulong[] handles = new ulong[count];
@@ -107,7 +113,32 @@ internal sealed class MetadataScanner
         return _discovered;
     }
 
+    private unsafe IReadOnlyCollection<PdbMetaData> ScanManaged(List<string> inputFiles)
+    {
+        try
+        {
+            TraceOpenFailure? failure = TraceProcessor.ProcessFiles(inputFiles, EtwBackend.Managed, false, default,
+                _options.ReportError, (EVENT_RECORD* record, in EtlRecordExtras _) => Callback(record, true));
+
+            if (failure is { } f)
+            {
+                _options.ReportError?.Invoke($"ERROR: For file: {inputFiles[f.Index]} {f.Message}");
+            }
+        }
+        catch (EtlFormatException ex)
+        {
+            _options.ReportError?.Invoke($"ERROR: {ex.Message}");
+        }
+
+        return _discovered;
+    }
+
     private unsafe void Callback(EVENT_RECORD* eventRecord)
+    {
+        Callback(eventRecord, false);
+    }
+
+    private unsafe void Callback(EVENT_RECORD* eventRecord, bool isManaged)
     {
         Guid providerId = eventRecord->EventHeader.ProviderId;
         byte opcode = eventRecord->EventHeader.EventDescriptor.Opcode;
@@ -135,6 +166,17 @@ internal sealed class MetadataScanner
             }
             else if (providerId == PInvoke.EventTraceGuid)
             {
+                if (isManaged)
+                {
+                    // No TDH to name the opcode; DbgIdRSDS is opcode 64 of the EventTrace group.
+                    if (opcode == EventTraceParsers.DbgIdRsdsOpcode)
+                    {
+                        HandleKernelDbgIdRsds(reader, eventRecord);
+                    }
+
+                    return;
+                }
+
                 // The MSNT_SystemTrace/EventTrace/DbgIdRSDS event has no stable numeric opcode that
                 // works across OS versions.  Replicate the original #if FIXME approach: ask TDH for
                 // the opcode name and match on "DbgIdRSDS" (case-insensitive), exactly as the
