@@ -197,6 +197,35 @@ public class GatewayTests
                 .All(r => (r.Body.StringValue ?? string.Empty).StartsWith("GUID=")), Is.True);
     }
 
+    [Test]
+    public async Task Spans_GroupASessionIntoOneTraceWithStableIds()
+    {
+        await using TestGateway gateway = await TestGateway.StartAsync();
+        await gateway.PostAsync(Frames.Request(Session, Frames.Hello(Session), Frames.Event(1, 5), Frames.Event(2, 6)));
+        await gateway.Sink.WaitForRecordsAsync(2);
+
+        ExportLogsServiceRequest decoded = new();
+        ResourceLogs resource = new()
+        {
+            Resource = RelayLogRecords.CreateRequest(Session, []).ResourceLogs.Single().Resource
+        };
+        ScopeLogs scope = new();
+        scope.LogRecords.AddRange(gateway.Sink.Records);
+        resource.ScopeLogs.Add(scope);
+        decoded.ResourceLogs.Add(resource);
+
+        var first = EtwSpanMapper.ToTraceRequest(decoded).ResourceSpans.Single().ScopeSpans.Single().Spans;
+        var second = EtwSpanMapper.ToTraceRequest(decoded).ResourceSpans.Single().ScopeSpans.Single().Spans;
+
+        Assert.That(first, Has.Count.EqualTo(2));
+        Assert.That(first[0].TraceId, Is.EqualTo(first[1].TraceId));
+        Assert.That(first[0].TraceId.ToByteArray(), Is.EqualTo(Session.ToByteArray(true)));
+        Assert.That(first[0].SpanId, Is.Not.EqualTo(first[1].SpanId));
+        Assert.That(first.Select(s => s.SpanId), Is.EqualTo(second.Select(s => s.SpanId)));
+        Assert.That(first[0].Name, Is.EqualTo("MyEvent"));
+        Assert.That(first[0].Attributes.Single(a => a.Key == "etw.property.Count").Value.IntValue, Is.EqualTo(5));
+    }
+
     // ---------------------------------------------------------------------------------------------------------------
     // Sequencing
     // ---------------------------------------------------------------------------------------------------------------

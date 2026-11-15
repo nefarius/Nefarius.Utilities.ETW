@@ -31,6 +31,13 @@ public sealed class GatewayOptions
         /// </summary>
         public string Endpoint { get; set; } = string.Empty;
 
+        /// <summary>
+        ///     Base URL of an OTLP/HTTP receiver for <b>traces</b>, e.g. <c>http://jaeger:4318</c>. When set, every decoded
+        ///     event is also exported as a span (one trace per relay session), so trace-only backends such as Jaeger can
+        ///     show it.
+        /// </summary>
+        public string TracesEndpoint { get; set; } = string.Empty;
+
         /// <summary>Extra HTTP headers for the downstream receiver, e.g. an API key.</summary>
         public Dictionary<string, string> Headers { get; set; } = [];
 

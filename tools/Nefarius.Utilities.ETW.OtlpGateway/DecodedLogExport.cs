@@ -4,18 +4,20 @@ using Google.Protobuf;
 
 using Microsoft.Extensions.Options;
 
+using Nefarius.Utilities.ETW.OpenTelemetry;
+
 using OpenTelemetry.Proto.Collector.Logs.V1;
 
 namespace Nefarius.Utilities.ETW.OtlpGateway;
 
 /// <summary>
-///     Delivers decoded log records to their destination.
+///     Delivers decoded log records to one destination.
 /// </summary>
 public interface IDecodedLogSink
 {
     /// <summary>
     ///     Sends one batch. Throw <see cref="SinkRetryableException" /> for failures worth retrying; any other
-    ///     exception drops the batch.
+    ///     exception drops the batch for this sink.
     /// </summary>
     Task SendAsync(ExportLogsServiceRequest batch, CancellationToken cancellationToken);
 }
@@ -26,20 +28,35 @@ public interface IDecodedLogSink
 public sealed class SinkRetryableException(string message, Exception? inner = null) : Exception(message, inner);
 
 /// <summary>
-///     Posts batches to a downstream OTLP/HTTP receiver as <c>application/x-protobuf</c>.
+///     Posts a payload derived from each batch to a downstream OTLP/HTTP receiver as <c>application/x-protobuf</c>.
 /// </summary>
-public sealed class OtlpHttpSink(HttpClient client, IOptions<GatewayOptions> options) : IDecodedLogSink
+/// <param name="client">The HTTP client.</param>
+/// <param name="baseUrl">Base URL of the receiver, e.g. <c>http://collector:4318</c>.</param>
+/// <param name="path">Signal path, e.g. <c>v1/logs</c> or <c>v1/traces</c>.</param>
+/// <param name="headers">Extra request headers.</param>
+/// <param name="convert">Turns a decoded batch into the protobuf message to send, or <see langword="null" /> to skip.</param>
+public sealed class OtlpHttpSink(
+    HttpClient client,
+    string baseUrl,
+    string path,
+    IReadOnlyDictionary<string, string> headers,
+    Func<ExportLogsServiceRequest, IMessage?> convert) : IDecodedLogSink
 {
+    private readonly Uri _uri = new(new Uri(baseUrl.TrimEnd('/') + "/"), path);
+
     public async Task SendAsync(ExportLogsServiceRequest batch, CancellationToken cancellationToken)
     {
-        GatewayOptions.ExportOptions export = options.Value.Export;
-        Uri uri = new(new Uri(export.Endpoint.TrimEnd('/') + "/"), "v1/logs");
+        IMessage? message = convert(batch);
+        if (message is null)
+        {
+            return;
+        }
 
-        using ByteArrayContent content = new(batch.ToByteArray());
+        using ByteArrayContent content = new(message.ToByteArray());
         content.Headers.ContentType = new("application/x-protobuf");
 
-        using HttpRequestMessage request = new(HttpMethod.Post, uri) { Content = content };
-        foreach (KeyValuePair<string, string> header in export.Headers)
+        using HttpRequestMessage request = new(HttpMethod.Post, _uri) { Content = content };
+        foreach (KeyValuePair<string, string> header in headers)
         {
             request.Headers.TryAddWithoutValidation(header.Key, header.Value);
         }
@@ -77,11 +94,29 @@ public sealed class OtlpHttpSink(HttpClient client, IOptions<GatewayOptions> opt
 }
 
 /// <summary>
-///     Discards batches. Used when no downstream endpoint is configured.
+///     Creates the sinks configured in <see cref="GatewayOptions.ExportOptions" />.
 /// </summary>
-public sealed class DiscardSink : IDecodedLogSink
+public static class ConfiguredSinks
 {
-    public Task SendAsync(ExportLogsServiceRequest batch, CancellationToken cancellationToken) => Task.CompletedTask;
+    public const string HttpClientName = "etw-otlp-export";
+
+    public static int Count(GatewayOptions.ExportOptions export) =>
+        (string.IsNullOrWhiteSpace(export.Endpoint) ? 0 : 1) + (string.IsNullOrWhiteSpace(export.TracesEndpoint) ? 0 : 1);
+
+    public static IEnumerable<IDecodedLogSink> Create(GatewayOptions.ExportOptions export, HttpClient client)
+    {
+        if (!string.IsNullOrWhiteSpace(export.Endpoint))
+        {
+            yield return new OtlpHttpSink(client, export.Endpoint, "v1/logs", export.Headers, batch => batch);
+        }
+
+        // Trace backends such as Jaeger cannot store logs; this renders each decoded event as a span instead.
+        if (!string.IsNullOrWhiteSpace(export.TracesEndpoint))
+        {
+            yield return new OtlpHttpSink(client, export.TracesEndpoint, "v1/traces", export.Headers,
+                batch => EtwSpanMapper.ToTraceRequest(batch) is { ResourceSpans.Count: > 0 } traces ? traces : null);
+        }
+    }
 }
 
 /// <summary>
@@ -115,20 +150,29 @@ public sealed class DecodedLogQueue
 }
 
 /// <summary>
-///     Drains <see cref="DecodedLogQueue" /> into the configured <see cref="IDecodedLogSink" /> with bounded retries.
+///     Drains <see cref="DecodedLogQueue" /> into every configured <see cref="IDecodedLogSink" />, each with its own
+///     bounded retries, so one failing destination neither repeats nor blocks delivery to the others.
 /// </summary>
 public sealed class DecodedLogExporter(
     DecodedLogQueue queue,
-    IDecodedLogSink sink,
+    IEnumerable<IDecodedLogSink> sinks,
     IOptions<GatewayOptions> options,
     GatewayMetrics metrics,
     ILogger<DecodedLogExporter> logger) : BackgroundService
 {
+    private readonly IDecodedLogSink[] _sinks = sinks.ToArray();
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (_sinks.Length == 0)
+        {
+            logger.LogWarning(
+                "No Gateway:Export:Endpoint or Gateway:Export:TracesEndpoint is configured; decoded records are discarded.");
+        }
+
         await foreach (ExportLogsServiceRequest batch in queue.Reader.ReadAllAsync(stoppingToken).ConfigureAwait(false))
         {
-            await DeliverAsync(batch, stoppingToken).ConfigureAwait(false);
+            await Task.WhenAll(_sinks.Select(sink => DeliverAsync(sink, batch, stoppingToken))).ConfigureAwait(false);
         }
     }
 
@@ -140,20 +184,23 @@ public sealed class DecodedLogExporter(
         // Give batches that are still queued one last attempt each, within the shutdown budget.
         while (queue.Reader.TryRead(out ExportLogsServiceRequest? batch) && !cancellationToken.IsCancellationRequested)
         {
-            try
+            foreach (IDecodedLogSink sink in _sinks)
             {
-                await sink.SendAsync(batch, cancellationToken).ConfigureAwait(false);
-                metrics.BatchesExported.Add(1);
-            }
-            catch (Exception ex)
-            {
-                metrics.BatchesDropped.Add(1);
-                logger.LogWarning(ex, "A decoded batch was dropped during shutdown.");
+                try
+                {
+                    await sink.SendAsync(batch, cancellationToken).ConfigureAwait(false);
+                    metrics.BatchesExported.Add(1);
+                }
+                catch (Exception ex)
+                {
+                    metrics.BatchesDropped.Add(1);
+                    logger.LogWarning(ex, "A decoded batch was dropped during shutdown.");
+                }
             }
         }
     }
 
-    private async Task DeliverAsync(ExportLogsServiceRequest batch, CancellationToken token)
+    private async Task DeliverAsync(IDecodedLogSink sink, ExportLogsServiceRequest batch, CancellationToken token)
     {
         GatewayOptions.ExportOptions export = options.Value.Export;
         TimeSpan delay = export.InitialRetryDelay;

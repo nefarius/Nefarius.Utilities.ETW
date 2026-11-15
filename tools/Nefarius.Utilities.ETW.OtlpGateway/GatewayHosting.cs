@@ -143,21 +143,21 @@ public static class GatewayExtensions
             });
         });
 
-        services.AddHttpClient<OtlpHttpSink>((provider, client) =>
+        services.AddHttpClient(ConfiguredSinks.HttpClientName, (provider, client) =>
             client.Timeout = provider.GetRequiredService<IOptions<GatewayOptions>>().Value.Export.RequestTimeout);
 
-        services.AddSingleton<IDecodedLogSink>(provider =>
+        // Each configured destination is its own sink; the exporter retries them independently.
+        GatewayOptions.ExportOptions configured =
+            configuration.GetSection(GatewayOptions.SectionName).Get<GatewayOptions>()?.Export ?? new();
+        int sinkCount = ConfiguredSinks.Count(configured);
+        for (int i = 0; i < sinkCount; i++)
         {
-            GatewayOptions options = provider.GetRequiredService<IOptions<GatewayOptions>>().Value;
-            if (string.IsNullOrWhiteSpace(options.Export.Endpoint))
-            {
-                provider.GetRequiredService<ILoggerFactory>().CreateLogger("Gateway")
-                    .LogWarning("No Gateway:Export:Endpoint is configured; decoded records are discarded.");
-                return new DiscardSink();
-            }
-
-            return provider.GetRequiredService<OtlpHttpSink>();
-        });
+            int index = i;
+            services.AddSingleton<IDecodedLogSink>(provider => ConfiguredSinks.Create(
+                provider.GetRequiredService<IOptions<GatewayOptions>>().Value.Export,
+                provider.GetRequiredService<IHttpClientFactory>().CreateClient(ConfiguredSinks.HttpClientName))
+                .ElementAt(index));
+        }
 
         services.AddHostedService<DecodedLogExporter>();
         services.AddGrpc();

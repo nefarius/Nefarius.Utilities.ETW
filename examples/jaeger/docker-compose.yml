@@ -1,0 +1,41 @@
+# Example stack: capture client -> decoding gateway -> Jaeger
+#
+#   docker compose -f examples/jaeger/docker-compose.yml up --build
+#
+# then open http://localhost:16686 and search service "relay-sample-sender".
+
+services:
+  jaeger:
+    # Jaeger v2 all-in-one: OTLP receiver (4317/4318), in-memory storage, UI on 16686.
+    # Pin a specific version for anything beyond a demo.
+    image: jaegertracing/jaeger:latest
+    ports:
+      - "16686:16686"
+
+  gateway:
+    build:
+      context: ../..
+      dockerfile: examples/jaeger/gateway.Dockerfile
+    environment:
+      # Jaeger stores traces only, so the gateway also exports every decoded event as a span.
+      Gateway__Export__TracesEndpoint: http://jaeger:4318
+      # Server-only WPP assets: put .pdb/.tmf files in ./wpp and uncomment the mount.
+      Gateway__Wpp__PdbDirectories__0: /wpp
+      Gateway__Wpp__TmfDirectories__0: /wpp
+    # volumes:
+    #   - ./wpp:/wpp:ro
+    ports:
+      - "4318:4318"
+    depends_on:
+      - jaeger
+
+  sender:
+    # Stand-in for a native capture client: sends raw relay frames, holds no symbols.
+    build:
+      context: ../..
+      dockerfile: examples/jaeger/sender.Dockerfile
+    environment:
+      GATEWAY_URL: http://gateway:4318
+      INTERVAL_MS: "1000"
+    depends_on:
+      - gateway
