@@ -114,7 +114,55 @@ public sealed class DecodingContext
 
     private static bool IsSameFormat(TraceMessageFormat a, TraceMessageFormat b) =>
         a.MessageFormat == b.MessageFormat && a.Provider == b.Provider && a.Function == b.Function &&
-        a.Opcode == b.Opcode && a.Level == b.Level && a.Flags == b.Flags;
+        a.Opcode == b.Opcode && a.Level == b.Level && a.Flags == b.Flags &&
+        SameParameters(a.FunctionParameters, b.FunctionParameters);
+
+    /// <summary>Parameter order is part of the schema: a different type at the same position reads the payload differently.</summary>
+    private static bool SameParameters(IReadOnlyList<FunctionParameter> a, IReadOnlyList<FunctionParameter> b)
+    {
+        if (a.Count != b.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < a.Count; i++)
+        {
+            FunctionParameter left = a[i];
+            FunctionParameter right = b[i];
+            if (left.Expression != right.Expression || left.Type != right.Type || left.Index != right.Index ||
+                left.EnumTypeName != right.EnumTypeName ||
+                !SameMap(left.ListItems, right.ListItems) || !SameMap(left.EnumValues, right.EnumValues))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool SameMap<TKey, TValue>(IReadOnlyDictionary<TKey, TValue>? a, IReadOnlyDictionary<TKey, TValue>? b)
+        where TKey : notnull
+    {
+        if (ReferenceEquals(a, b))
+        {
+            return true;
+        }
+
+        if (a is null || b is null || a.Count != b.Count)
+        {
+            return false;
+        }
+
+        foreach (KeyValuePair<TKey, TValue> pair in a)
+        {
+            if (!b.TryGetValue(pair.Key, out TValue? value) || !EqualityComparer<TValue>.Default.Equals(value, pair.Value))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private sealed class State
     {

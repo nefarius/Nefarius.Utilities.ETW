@@ -160,6 +160,28 @@ public class RawRsdsExtractorTests
 
     [Test]
     [Category("Unit")]
+    public void TryExtend_DifferentParameterSchema_IsAConflict()
+    {
+        Guid guid = Guid.NewGuid();
+        TraceMessageFormat original = Format(guid, 1, "%1");
+        original.FunctionParameters =
+        [
+            new FunctionParameter { Expression = "n", Type = ItemType.ItemLong, Index = 1 }
+        ];
+        TraceMessageFormat incoming = Format(guid, 1, "%1");
+        incoming.FunctionParameters =
+        [
+            new FunctionParameter { Expression = "n", Type = ItemType.ItemString, Index = 1 }
+        ];
+        DecodingContext context = new(new StubSource(original));
+
+        Assert.That(context.TryExtend(new StubSource(incoming)), Is.False);
+        Assert.That(context.GetTraceMessageFormatFor(guid, 1)!.FunctionParameters.Single().Type,
+            Is.EqualTo(ItemType.ItemLong));
+    }
+
+    [Test]
+    [Category("Unit")]
     public void TryExtend_IsSafeUnderConcurrentLookups()
     {
         DecodingContext context = new(new StubSource());

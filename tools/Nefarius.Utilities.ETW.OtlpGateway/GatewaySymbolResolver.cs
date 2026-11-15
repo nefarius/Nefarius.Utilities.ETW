@@ -42,6 +42,7 @@ public sealed class GatewaySymbolResolver : IDisposable
     private readonly RawEtwRelayLimits _limits;
     private int _maxAttempts = 1;
     private int _maxQueued;
+    private TimeSpan _requestTimeout = TimeSpan.FromSeconds(30);
     private int _queued;
     private TimeSpan _waitTimeout;
     private readonly TimeProvider _time;
@@ -83,6 +84,9 @@ public sealed class GatewaySymbolResolver : IDisposable
         _maxAttempts = Math.Max(1, options.SymbolMaxAttempts);
         _maxQueued = Math.Max(0, options.SymbolMaxQueuedRequests);
         _waitTimeout = options.SymbolWaitTimeout;
+        _requestTimeout = options.SymbolRequestTimeout > TimeSpan.Zero
+            ? options.SymbolRequestTimeout
+            : TimeSpan.FromSeconds(30);
         _httpClient = httpClient;
         _configuration = new SymbolStoreConfiguration(cache, server.ToString());
         _logger.LogInformation("Symbol discovery enabled: server {Server}, cache {Cache}.", server, cache);
@@ -203,12 +207,18 @@ public sealed class GatewaySymbolResolver : IDisposable
                 return existing.Completion.IsCompleted ? null : existing;
             }
 
-            if (!_identities.TryUpdate(identity, new Entry(), existing))
+            // The replacement itself is what gets installed, so its task is the one callers wait on.
+            Entry retry = new();
+            if (!_identities.TryUpdate(identity, retry, existing))
             {
                 return null;
             }
+
+            _ = ResolveAsync(identity, retry);
+            return retry;
         }
-        else if (_identities.Count >= MaxTrackedIdentities)
+
+        if (_identities.Count >= MaxTrackedIdentities && !TryReclaimFailed())
         {
             _logger.LogWarning("Symbol identity tracking limit of {Limit} reached; ignoring new identities.",
                 MaxTrackedIdentities);
@@ -234,12 +244,33 @@ public sealed class GatewaySymbolResolver : IDisposable
         string name = identity.PdbName;
         try
         {
-            ResolvedPdb result;
+            ResolvedPdb result = null!;
             for (int attempt = 1; ; attempt++)
             {
-                IReadOnlyList<ResolvedPdb> results = await SymbolStore
-                    .ResolveAsync([identity], _configuration!, _httpClient, _disposed.Token).ConfigureAwait(false);
-                result = results[0];
+                // The deadline covers the request and the body copy. Disposal cancels it too; a deadline on its
+                // own is one failed attempt, not the end of resolution.
+                using CancellationTokenSource attemptTimeout =
+                    CancellationTokenSource.CreateLinkedTokenSource(_disposed.Token);
+                attemptTimeout.CancelAfter(_requestTimeout);
+                try
+                {
+                    IReadOnlyList<ResolvedPdb> results = await SymbolStore
+                        .ResolveAsync([identity], _configuration!, _httpClient, attemptTimeout.Token)
+                        .ConfigureAwait(false);
+                    result = results[0];
+                }
+                catch (OperationCanceledException) when (!_disposed.IsCancellationRequested)
+                {
+                    if (attempt >= _maxAttempts)
+                    {
+                        _logger.LogWarning("Symbols for {Pdb} timed out after {Attempts} attempt(s).", name, attempt);
+                        entry.MarkFailed(_time.GetUtcNow() + FailureRetryDelay);
+                        return;
+                    }
+
+                    await Task.Delay(TimeSpan.FromMilliseconds(250 * attempt), _disposed.Token).ConfigureAwait(false);
+                    continue;
+                }
 
                 if (result.LocalPath is not null || IsPermanent(result) || attempt >= _maxAttempts)
                 {
@@ -271,6 +302,7 @@ public sealed class GatewaySymbolResolver : IDisposable
                 return;
             }
 
+            entry.MarkSucceeded();
             _logger.LogInformation("Loaded symbols for {Pdb} ({Origin}).", name, result.Origin);
         }
         catch (OperationCanceledException)
@@ -297,6 +329,24 @@ public sealed class GatewaySymbolResolver : IDisposable
         (result.Failure == PdbResolutionFailure.DownloadFailed &&
          result.Detail?.StartsWith("Downloaded PDB identity", StringComparison.Ordinal) == true);
 
+    /// <summary>
+    ///     Drops one finished failure so a new identity can be tracked. Loaded symbols and downloads still running stay.
+    /// </summary>
+    private bool TryReclaimFailed()
+    {
+        foreach (KeyValuePair<PdbMetaData, Entry> pair in _identities)
+        {
+            Entry candidate = pair.Value;
+            if (candidate.Completion.IsCompleted && !candidate.Succeeded &&
+                _identities.TryRemove(new KeyValuePair<PdbMetaData, Entry>(pair.Key, candidate)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static void EnsureWritable(string directory)
     {
         try
@@ -318,6 +368,13 @@ public sealed class GatewaySymbolResolver : IDisposable
         private long _retryAfterTicks = long.MaxValue;
 
         public Task Completion => _completion.Task;
+
+        /// <summary>Set once the PDB was loaded. Failures stay reclaimable; this does not.</summary>
+        public bool Succeeded => Volatile.Read(ref _succeeded) == 1;
+
+        private int _succeeded;
+
+        public void MarkSucceeded() => Volatile.Write(ref _succeeded, 1);
 
         public void MarkFailed(DateTimeOffset retryAfter) =>
             Volatile.Write(ref _retryAfterTicks, retryAfter.UtcTicks);
