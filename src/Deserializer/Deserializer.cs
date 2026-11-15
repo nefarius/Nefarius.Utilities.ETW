@@ -111,7 +111,7 @@ internal sealed partial class Deserializer<T>
             return;
         }
 
-        if (_currentExtras.IsManaged && eventRecord->ExtendedDataCount > 0 &&
+        if (eventRecord->ExtendedDataCount > 0 &&
             TraceLoggingDecoder.TryDecode(eventRecord, eventRecordReader, _writer, runtimeMetadata))
         {
             return;

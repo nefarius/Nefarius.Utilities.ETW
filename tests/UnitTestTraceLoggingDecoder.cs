@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 
 using Nefarius.Utilities.ETW.Deserializer;
+using Nefarius.Utilities.ETW.Deserializer.CustomParsers;
 
 using Windows.Win32.System.Diagnostics.Etw;
 
@@ -268,13 +269,86 @@ public unsafe class TraceLoggingDecoderTests
     }
 
     [Test]
-    public void CustomSerialization_IsRejected()
+    public void CustomSerialization_DecodesAsBaseTypeAndKeepsTheStreamAligned()
     {
-        byte[] schema = Schema("C", Field("Blob", 0x66, 3, 0, 0x5A, 0, 0));
+        // UInt16 with custom serialization (3 type-info bytes), followed by a UInt8 that must still line up
+        byte[] schema = Schema("C", Field("Value", 0x66, 3, 0, 0x5A, 0, 0), Field("After", 4));
 
-        Assert.That(Try(schema, [4, 0, 1, 2, 3, 4]), Is.False);
+        using JsonDocument doc = JsonDocument.Parse(Decode(schema, [4, 0, 9]));
+        JsonElement props = doc.RootElement[0].GetProperty("Event").GetProperty("Properties")[0];
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(props.GetProperty("Value").GetUInt16(), Is.EqualTo(4));
+            Assert.That(props.GetProperty("After").GetByte(), Is.EqualTo(9));
+        }
     }
 
+    [Test]
+    public void CustomSerialization_UsesARegisteredDecoder()
+    {
+        byte[] typeInfo = [0xC1, 0xC2];
+        byte[] schema = Schema("C", Field("Blob", 14 | 0x60, 2, 0, 0xC1, 0xC2));
+        TraceLoggingCustomDecoders.Register(typeInfo,
+            (info, value) => $"{Convert.ToHexString(info)}:{Convert.ToHexString((byte[])value!)}");
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(Decode(schema, [2, 0, 0xAB, 0xCD]));
+            JsonElement props = doc.RootElement[0].GetProperty("Event").GetProperty("Properties")[0];
+
+            Assert.That(props.GetProperty("Blob").GetString(), Is.EqualTo("C1C2:ABCD"));
+        }
+        finally
+        {
+            TraceLoggingCustomDecoders.Unregister(typeInfo);
+        }
+    }
+
+    [Test]
+    public void CustomSerialization_UnsupportedDecoderResultIsRejected()
+    {
+        byte[] typeInfo = [0xD1];
+        byte[] schema = Schema("C", Field("Blob", 14 | 0x60, 1, 0, 0xD1));
+        TraceLoggingCustomDecoders.Register(typeInfo, (_, _) => new object());
+        try
+        {
+            Assert.That(Try(schema, [0, 0]), Is.False);
+        }
+        finally
+        {
+            TraceLoggingCustomDecoders.Unregister(typeInfo);
+        }
+    }
+
+    [TestCase(double.NaN)]
+    [TestCase(double.PositiveInfinity)]
+    [TestCase(double.NegativeInfinity)]
+    public void CustomSerialization_NonFiniteDecoderResultsAreRejectedBeforeAnyJson(double result)
+    {
+        byte[] typeInfo = [0xE1];
+        byte[] schema = Schema("C", Field("Blob", 14 | 0x60, 1, 0, 0xE1));
+
+        foreach (object boxed in new object[] { result, (float)result })
+        {
+            TraceLoggingCustomDecoders.Register(typeInfo, (_, _) => boxed);
+            try
+            {
+                Assert.That(Written(schema, [0, 0]), Is.Zero);
+            }
+            finally
+            {
+                TraceLoggingCustomDecoders.Unregister(typeInfo);
+            }
+        }
+    }
+
+    [Test]
+    public void CustomSerialization_TruncatedTypeInfoIsRejected()
+    {
+        byte[] schema = Schema("C", Field("Blob", 14 | 0x60, 5, 0, 0xC1));
+
+        Assert.That(Try(schema, [0, 0]), Is.False);
+    }
     [Test]
     public void UnterminatedStrings_AreRejected()
     {
