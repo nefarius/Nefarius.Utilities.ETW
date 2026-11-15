@@ -1,4 +1,4 @@
-﻿namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
+namespace Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
 
 public readonly struct FunctionParameter
 {
@@ -22,4 +22,15 @@ public readonly struct FunctionParameter
     /// </summary>
     /// <remarks>Only populated if <see cref="Type" /> is <see cref="ItemType.ItemListByte" />.</remarks>
     public IReadOnlyDictionary<int, string>? ListItems { get; init; }
+
+    /// <summary>
+    ///     The C type name of the enum, as written in the TMF (ItemEnum(Name)).
+    /// </summary>
+    /// <remarks>Only populated for <see cref="ItemType.ItemEnum" /> and <see cref="ItemType.ItemFlagsEnum" />.</remarks>
+    public string? EnumTypeName { get; init; }
+
+    /// <summary>
+    ///     Enumerator values and names resolved from PDB type information, when available.
+    /// </summary>
+    public IReadOnlyDictionary<long, string>? EnumValues { get; init; }
 }

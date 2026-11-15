@@ -163,7 +163,7 @@ See [tools/Nefarius.Utilities.ETW.CLI/README.md](tools/Nefarius.Utilities.ETW.CL
 
 - Reading `.etl` files works on Windows, Linux and macOS through a managed reader (`EtwBackend.Managed`, the default off Windows; set `EtwJsonConverterOptions.Backend` / `EtwMetadataScanOptions.Backend` to choose). Real-time sessions and session management remain **Windows-only**. Manifest-described events decode on every platform, including structs, fixed and variable array counts, fixed and variable lengths, declared out-types and value/bit maps (maps are kept in the property metadata; JSON output keeps the raw values) and throw `PlatformNotSupportedException` elsewhere
 - The managed reader reads compressed (`EVENT_TRACE_COMPRESSED_MODE`, Xpress LZ77) `.etl` files by decompressing every buffer into memory first, and covers the record types found in WPP, kernel and TraceLogging/manifest traces; unsupported record types are skipped with a warning via `ReportError`
-- `%!ItemEnum!`/`%!ItemFlagsEnum!` types display raw numeric values; PDB-based enum name resolution is not yet implemented
+- `%!ItemEnum!`/`%!ItemFlagsEnum!` types are shown with enumerator names when the enum type (named in the TMF as `ItemEnum(Name)`) is found in a PDB type stream; from TMF files, or when the type is missing, the raw value is shown. Without a `WppDecodingContext`, WPP events are still emitted with the "No format information found." message and `OnWppFormatMissing` fires
 - Kernel-mode ETW providers and the NT Kernel Logger session are not yet supported for realtime mode
 
 ## Documentation
