@@ -109,6 +109,12 @@ internal sealed partial class Deserializer<T>
             return;
         }
 
+        if (_currentExtras.IsManaged && eventRecord->ExtendedDataCount > 0 &&
+            TraceLoggingDecoder.TryDecode(eventRecord, eventRecordReader, _writer, runtimeMetadata))
+        {
+            return;
+        }
+
         TraceEventKey key = new(
             eventRecord->EventHeader.ProviderId,
             (eventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_CLASSIC_HEADER) != 0

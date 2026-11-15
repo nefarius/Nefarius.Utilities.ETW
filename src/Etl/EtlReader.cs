@@ -23,6 +23,8 @@ internal unsafe delegate void EtlRecordCallback(EVENT_RECORD* record, in EtlReco
 internal static unsafe class EtlReader
 {
     private const uint EventHeaderFlagExtendedInfo = 0x0001;
+    private const int MaxExtendedItems = 32;
+    private const int ExtendedItemSize = 16;
     private const ushort Flag32BitHeader = 0x0020;
     private const ushort Flag64BitHeader = 0x0040;
     private const ushort FlagTraceMessage = 0x0008;
@@ -128,6 +130,7 @@ internal static unsafe class EtlReader
 
         // The record and extended data scratch space are reused for every event.
         EVENT_RECORD* record = (EVENT_RECORD*)NativeMemory.AllocZeroed((nuint)sizeof(EVENT_RECORD));
+        byte* extendedData = (byte*)NativeMemory.AllocZeroed(ExtendedItemSize * MaxExtendedItems);
         try
         {
             long counter = 0;
@@ -138,8 +141,11 @@ internal static unsafe class EtlReader
                     cancellationToken.ThrowIfCancellationRequested();
                 }
 
-                EtlRecordExtras extras = cursor.Fill(record, preserveRaw);
-                callback(record, extras);
+                EtlRecordExtras extras = cursor.Fill(record, extendedData, preserveRaw);
+                if (cursor.DeliverRecord)
+                {
+                    callback(record, extras);
+                }
 
                 if (cursor.Advance(Warn))
                 {
@@ -152,6 +158,7 @@ internal static unsafe class EtlReader
         finally
         {
             NativeMemory.Free(record);
+            NativeMemory.Free(extendedData);
         }
     }
 
@@ -192,6 +199,12 @@ internal static unsafe class EtlReader
         private long _rawTimestamp;
         private long _fileTime;
         private string? _skipDetail;
+        private bool _deliver = true;
+
+        /// <summary>
+        ///     False when the current record was recognized but must not be handed to the callback.
+        /// </summary>
+        public bool DeliverRecord => _deliver;
 
         private BufferCursor(EtlFile file, int fileIndex, long bufferIndex, byte* buffer, byte* end)
         {
@@ -361,16 +374,8 @@ internal static unsafe class EtlReader
                             return Bounded(size);
                         }
 
-                        // Extended items sit between the header and the payload. Delivering the record would
-                        // present those items as user data, so skip it until they are decoded.
-                        if ((*(ushort*)(p + 4) & EventHeaderFlagExtendedInfo) == 0)
-                        {
-                            return RecordDisposition.Deliver;
-                        }
-
-                        _skipDetail =
-                            "Skipping EVENT_HEADER records that carry extended data; their payload is not decoded yet.";
-                        return RecordDisposition.Skip;
+                        // Fill walks the extended-data chain before the payload is exposed.
+                        return RecordDisposition.Deliver;
                     case 10:
                     case 20:
                         kind = Kind.FullHeader;
@@ -430,10 +435,60 @@ internal static unsafe class EtlReader
             size >= 8 && _position + size <= _end ? RecordDisposition.Skip : RecordDisposition.Stop;
 
         /// <summary>
+        ///     Decodes the chain of extended data items that follows an EVENT_HEADER in the file: an 8 byte item
+        ///     header (reserved, type, linkage, size), the data padded to 8 bytes, repeated while the linkage bit
+        ///     is set. Fills <paramref name="items" /> in the layout of <c>EVENT_HEADER_EXTENDED_DATA_ITEM</c>.
+        /// </summary>
+        /// <returns>Bytes consumed, or -1 when the chain does not fit into the record.</returns>
+        private static int ReadExtendedData(byte* data, int length, byte* items, EVENT_RECORD* record)
+        {
+            int offset = 0;
+            int count = 0;
+            bool more = true;
+
+            while (more)
+            {
+                if (count == MaxExtendedItems || offset + 8 > length)
+                {
+                    return -1;
+                }
+
+                ushort type = *(ushort*)(data + offset + 2);
+                ushort linkage = *(ushort*)(data + offset + 4);
+                ushort size = *(ushort*)(data + offset + 6);
+                int dataOffset = offset + 8;
+                if (dataOffset + size > length)
+                {
+                    return -1;
+                }
+
+                byte* item = items + count * ExtendedItemSize;
+                *(ulong*)item = 0;
+                *(ushort*)(item + 2) = type;
+                *(ushort*)(item + 4) = linkage;
+                *(ushort*)(item + 6) = size;
+                *(byte**)(item + 8) = data + dataOffset;
+
+                count++;
+                more = (linkage & 1) != 0;
+                offset = (dataOffset + size + 7) & ~7;
+                if (offset > length)
+                {
+                    return -1;
+                }
+            }
+
+            record->ExtendedDataCount = (ushort)count;
+            record->ExtendedData = (EVENT_HEADER_EXTENDED_DATA_ITEM*)items;
+            return offset;
+        }
+
+        /// <summary>
         ///     Fills the <see cref="EVENT_RECORD" /> for the current event.
         /// </summary>
-        public EtlRecordExtras Fill(EVENT_RECORD* record, bool preserveRaw)
+        public EtlRecordExtras Fill(EVENT_RECORD* record, byte* extendedData, bool preserveRaw)
         {
+            _deliver = true;
             byte* p = _position;
             byte* h = (byte*)&record->EventHeader;
             new Span<byte>(h, sizeof(EVENT_HEADER)).Clear();
@@ -498,6 +553,21 @@ internal static unsafe class EtlReader
                     headerVersion = *(h + 42);
                     payload = p + 80;
                     payloadLength = _size - 80;
+                    if ((headerFlags & EventHeaderFlagExtendedInfo) != 0)
+                    {
+                        int consumed = ReadExtendedData(payload, payloadLength, extendedData, record);
+                        if (consumed < 0)
+                        {
+                            // The chain is malformed. Leave the flag set and do not deliver a guessed payload.
+                            _deliver = false;
+                        }
+                        else
+                        {
+                            payload += consumed;
+                            payloadLength -= consumed;
+                        }
+                    }
+
                     break;
                 }
                 default:
