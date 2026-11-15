@@ -98,3 +98,26 @@ internal string GetWppProviderNameOverride(TraceMessageFormat format)
 #### Returns
 
 [String](https://learn.microsoft.com/dotnet/api/system.string)
+
+### <a id="methods-tryextend"/>**TryExtend(IList&lt;DecodingContextType&gt;)**
+
+Atomically adds decoding sources to this instance, so decoders sharing it see them on later lookups.
+
+```csharp
+public bool TryExtend(IList<DecodingContextType> additionalDecodingTypes)
+```
+
+#### Parameters
+
+`additionalDecodingTypes` [IList](https://learn.microsoft.com/dotnet/api/system.collections.generic.ilist-1)<[DecodingContextType](./nefarius.utilities.etw.deserializer.wpp.decodingcontexttype.md)><br>
+The sources to add.
+
+#### Returns
+
+`true` when the sources were added; `false` when rejected.
+
+**Remarks:**
+
+Safe to call concurrently with lookups. The update is all-or-nothing: when the new sources declare a
+ message that conflicts with an already loaded, different format, nothing is added and the current
+ contents stay intact.

@@ -66,6 +66,8 @@
 
 - [KernelDbgIdRsdsEventInfo](./nefarius.utilities.etw.events.kerneldbgidrsdseventinfo.md)
 
+- [RawRsdsExtractor](./nefarius.utilities.etw.events.rawrsdsextractor.md)
+
 ## Namespace Nefarius.Utilities.ETW.Exceptions
 
 - [EtwEnableTraceException](./nefarius.utilities.etw.exceptions.etwenabletraceexception.md)
