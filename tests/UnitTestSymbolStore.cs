@@ -172,22 +172,52 @@ public class SymbolStoreTests
             Assert.That(resolved[0].Detail, Does.Contain("does not match"));
             Assert.That(File.Exists(CachePath(root, reference)), Is.False);
             Assert.That(Directory.EnumerateFiles(root, "*.tmp", SearchOption.AllDirectories), Is.Empty);
+            Assert.That(Directory.EnumerateDirectories(root), Is.Empty);
+        }
+    }
+
+    [Test]
+    public async Task ResolveAsync_RemovesTemporaryFileWhenCacheHoldsAnotherIdentity()
+    {
+        string root = CreateTempDirectory();
+        PdbMetaData reference = MismatchedFixtureReference();
+        string cacheFile = CachePath(root, reference);
+        Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)!);
+        File.Copy(FixturePdb(), cacheFile);
+        byte[] payload = await File.ReadAllBytesAsync(FixturePdb());
+        using HttpClient client = new(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(payload)
+        }));
+
+        IReadOnlyList<ResolvedPdb> resolved = await SymbolStore.ResolveAsync(
+            [reference],
+            new SymbolStoreConfiguration(root, "https://symbols.example/download/symbols"),
+            client);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(resolved[0].Failure, Is.EqualTo(PdbResolutionFailure.DownloadFailed));
+            Assert.That(File.Exists(cacheFile), Is.True);
+            Assert.That(Directory.EnumerateFiles(root, "*.tmp", SearchOption.AllDirectories), Is.Empty);
         }
     }
 
     [Test]
     public async Task ResolveAsync_ReportsServerNotFound()
     {
+        string root = CreateTempDirectory();
         using HttpClient client = new(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.NotFound)));
         IReadOnlyList<ResolvedPdb> resolved = await SymbolStore.ResolveAsync(
             [SampleReference()],
-            new SymbolStoreConfiguration(CreateTempDirectory(), "https://symbols.example/download/symbols"),
+            new SymbolStoreConfiguration(root, "https://symbols.example/download/symbols"),
             client);
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(resolved[0].Origin, Is.EqualTo(PdbResolutionOrigin.Unresolved));
             Assert.That(resolved[0].Failure, Is.EqualTo(PdbResolutionFailure.NotFoundOnServer));
+            Assert.That(Directory.EnumerateDirectories(root), Is.Empty);
         }
     }
 

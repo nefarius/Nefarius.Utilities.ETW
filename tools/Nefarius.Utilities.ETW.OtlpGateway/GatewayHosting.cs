@@ -53,6 +53,7 @@ public readonly record struct GatewayOutcome(bool Retry, ExportLogsServiceRespon
 /// </summary>
 public sealed class GatewayPipeline(
     RelayLogProcessor processor,
+    GatewaySymbolResolver symbols,
     DecodedLogQueue queue,
     GatewayMetrics metrics)
 {
@@ -70,6 +71,9 @@ public sealed class GatewayPipeline(
         bool queued = false;
         try
         {
+            // Best effort: symbol problems never fail the request, and later requests see what loads now.
+            await symbols.DiscoverAsync(request, cancellationToken).ConfigureAwait(false);
+
             RelayLogResult result = processor.Process(tenant, request);
 
             metrics.FramesAccepted.Add(result.Accepted);
@@ -140,8 +144,36 @@ public static class GatewayExtensions
         services.AddSingleton(provider =>
         {
             GatewayOptions options = provider.GetRequiredService<IOptions<GatewayOptions>>().Value;
-            DecodingContext? wpp = WppAssets.Load(options.Wpp, provider.GetRequiredService<ILoggerFactory>()
-                .CreateLogger("WppAssets"));
+            ILoggerFactory loggers = provider.GetRequiredService<ILoggerFactory>();
+            DecodingContext? wpp = WppAssets.Load(options.Wpp, loggers.CreateLogger("WppAssets"));
+            bool discovery = !string.IsNullOrWhiteSpace(options.Wpp.SymbolServer);
+
+            // Discovery needs a context to extend, even when no local assets exist.
+            wpp ??= discovery ? new DecodingContext(new List<DecodingContextType>()) : null;
+
+            return new GatewayWppAssets(wpp);
+        });
+        services.AddSingleton(provider =>
+        {
+            GatewayOptions options = provider.GetRequiredService<IOptions<GatewayOptions>>().Value;
+            return new GatewaySymbolResolver(
+                options.Wpp,
+                provider.GetRequiredService<GatewayWppAssets>().Context,
+                string.IsNullOrWhiteSpace(options.Wpp.SymbolServer)
+                    ? null
+                    : provider.GetRequiredService<IHttpClientFactory>()
+                        .CreateClient(GatewaySymbolResolver.HttpClientName),
+                new RawEtwRelayLimits { MaxFrameLength = options.Limits.MaxFrameBytes },
+                provider.GetRequiredService<ILoggerFactory>().CreateLogger("SymbolDiscovery"));
+        });
+        services.AddHttpClient(GatewaySymbolResolver.HttpClientName, (provider, client) =>
+                client.Timeout = provider.GetRequiredService<IOptions<GatewayOptions>>().Value.Wpp.SymbolRequestTimeout)
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
+
+        services.AddSingleton(provider =>
+        {
+            GatewayOptions options = provider.GetRequiredService<IOptions<GatewayOptions>>().Value;
+            DecodingContext? wpp = provider.GetRequiredService<GatewayWppAssets>().Context;
 
             return new RelayLogProcessor(new RelayLogProcessorOptions
             {
@@ -172,6 +204,7 @@ public static class GatewayExtensions
             return new ConfiguredExportSinks(ConfiguredSinks.Create(export, client).ToArray());
         });
 
+        services.AddHostedService<SymbolResolverStartup>();
         services.AddHostedService<DecodedLogExporter>();
         services.AddGrpc();
         services.AddHealthChecks();
@@ -287,6 +320,9 @@ public static class GatewayExtensions
         }
     }
 }
+
+/// <summary>The shared server-side WPP context, or <see langword="null" /> when no assets are configured.</summary>
+public sealed record GatewayWppAssets(DecodingContext? Context);
 
 /// <summary>
 ///     Builds the server-side WPP <see cref="DecodingContext" /> from the configured PDB and TMF assets.

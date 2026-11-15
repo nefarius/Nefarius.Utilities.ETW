@@ -24,6 +24,18 @@ The gateway is also reachable from the host on `http://localhost:4318/v1/logs` i
 
 Put `.pdb` or `.tmf` files in `examples/jaeger/wpp`, uncomment the `volumes` mount of the `gateway` service and send raw WPP records. The sample sender only emits TraceLogging events; a real client copies `EVENT_RECORD`s as described in [the relay protocol](../../docs/guides/raw-etw-relay.md).
 
+## Downloading symbols from a symbol server
+
+Set `SYMBOL_SERVER_URL` to let the gateway fetch PDBs by itself, then start the stack:
+
+```text
+SYMBOL_SERVER_URL=https://msdl.microsoft.com/download/symbols docker compose -f examples/jaeger/docker-compose.yml up --build
+```
+
+(PowerShell: `$env:SYMBOL_SERVER_URL = "..."` first.) Downloads land in the `symbols` volume and survive restarts; leave the variable empty to disable discovery. The gateway discovers what to download from the `DbgID_RSDS` image events in the relayed capture, so send a real capture: `etwutils` can relay a trace or a live session including those events, see [the CLI guide](../../docs/guides/opentelemetry-gateway.md#testing-the-gateway-from-the-command-line). The synthetic TraceLogging sender needs no symbols.
+
+Discovery is best effort: events that arrive before their symbols are loaded keep their placeholder text and are not replayed. See [Symbol server discovery](../../docs/guides/opentelemetry-gateway.md#symbol-server-discovery) for the security boundaries.
+
 ## Notes
 
 * The Jaeger image is not pinned; pin a version for anything beyond a demo.
