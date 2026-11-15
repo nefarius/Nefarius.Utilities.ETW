@@ -137,6 +137,299 @@ internal static unsafe class EventTraceOperandBuilder
             _eventVersion = eventVersion;
         }
 
+        private Dictionary<string, string>? _strings;
+
+        /// <summary>
+        ///     Flattens the template's members (pre-order, as TDH does) into operands. <c>count</c> and <c>length</c>
+        ///     attributes become fixed sizes when numeric and references to an earlier member when they name one.
+        ///     A reference that names no earlier member, or names a struct, makes the schema undecodable (false).
+        ///     A struct's <c>count</c> is its member count, not an array size.
+        /// </summary>
+        private bool TryBuildProperties(ProviderType provider, string? template,
+            out List<IEventTracePropertyOperand> topLevel, out PropertyMetadata[] flat)
+        {
+            topLevel = new List<IEventTracePropertyOperand>();
+            flat = Array.Empty<PropertyMetadata>();
+            if (string.IsNullOrEmpty(template))
+            {
+                return true;
+            }
+
+            Dictionary<string, MapInformation> maps = BuildMaps(provider);
+            List<PropertyMetadata> flatList = new();
+            List<Dictionary<string, EventTracePropertyOperand>> scopes = new();
+
+            foreach (object? item in provider.Items)
+            {
+                if (item is not TemplateListType templateList)
+                {
+                    continue;
+                }
+
+                foreach (TemplateItemType templateItem in templateList.template)
+                {
+                    if (!string.Equals(templateItem.tid, template))
+                    {
+                        continue;
+                    }
+
+                    scopes.Clear();
+                    if (!Walk(templateItem.Items ?? Array.Empty<object>(), topLevel))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            flat = flatList.ToArray();
+            return true;
+
+            bool Walk(IEnumerable<object> items, List<IEventTracePropertyOperand> target)
+            {
+                Dictionary<string, EventTracePropertyOperand> scope = new(StringComparer.Ordinal);
+                scopes.Add(scope);
+                try
+                {
+                    foreach (object member in items)
+                    {
+                        EventTracePropertyOperand operand;
+                        if (member is DataDefinitionType data)
+                        {
+                            if (data.inType is null)
+                            {
+                                return false;
+                            }
+
+                            maps.TryGetValue(data.map ?? string.Empty, out MapInformation? map);
+                            PropertyMetadata metadata = new(Extensions.ToTdhInType(data.inType.Name),
+                                Extensions.ToTdhOutType(data.outType?.Name), data.name, map is not null, false, 0,
+                                map);
+                            if (!TryCreate(metadata, data.count, data.length, allowArray: true, out operand))
+                            {
+                                return false;
+                            }
+
+                            scope[data.name ?? string.Empty] = operand;
+                            target.Add(operand);
+                        }
+                        else if (member is StructDefinitionType structure)
+                        {
+                            PropertyMetadata metadata = new(_TDH_IN_TYPE.TDH_INTYPE_NULL,
+                                _TDH_OUT_TYPE.TDH_OUTTYPE_NULL, structure.name, false, true,
+                                structure.data?.Length ?? 0, null);
+                            if (!TryCreate(metadata, null, null, allowArray: false, out operand))
+                            {
+                                return false;
+                            }
+
+                            scope[structure.name ?? string.Empty] = operand;
+                            target.Add(operand);
+                            if (!Walk(structure.data ?? Array.Empty<DataDefinitionType>(), operand.Children))
+                            {
+                                return false;
+                            }
+                        }
+                    }
+
+                    return true;
+                }
+                finally
+                {
+                    scopes.RemoveAt(scopes.Count - 1);
+                }
+            }
+
+            bool TryCreate(PropertyMetadata metadata, string? count, string? length, bool allowArray,
+                out EventTracePropertyOperand operand)
+            {
+                operand = null!;
+                if (!TryParseSize(count, out int fixedCount, out EventTracePropertyOperand? countRef) ||
+                    !TryParseSize(length, out int fixedLength, out EventTracePropertyOperand? lengthRef))
+                {
+                    return false;
+                }
+
+                bool hasCount = allowArray && !string.IsNullOrWhiteSpace(count);
+                bool hasLength = !string.IsNullOrWhiteSpace(length);
+                operand = new EventTracePropertyOperand(metadata, flatList.Count,
+                    hasCount && countRef is not null, hasCount && countRef is null,
+                    hasLength && lengthRef is not null, hasLength && lengthRef is null, false);
+                flatList.Add(metadata);
+                if (hasCount)
+                {
+                    if (countRef is not null)
+                    {
+                        operand.SetVariableArraySize(countRef);
+                    }
+                    else
+                    {
+                        operand.SetFixedArraySize(fixedCount);
+                    }
+                }
+
+                if (hasLength)
+                {
+                    if (lengthRef is not null)
+                    {
+                        operand.SetVariableLengthSize(lengthRef);
+                    }
+                    else
+                    {
+                        operand.SetFixedLengthSize(fixedLength);
+                    }
+                }
+
+                return true;
+            }
+
+            bool TryParseSize(string? text, out int value, out EventTracePropertyOperand? reference)
+            {
+                value = 0;
+                reference = null;
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    return true;
+                }
+
+                text = text!.Trim();
+                if (int.TryParse(text, System.Globalization.NumberStyles.None,
+                        System.Globalization.CultureInfo.InvariantCulture, out value))
+                {
+                    return true;
+                }
+
+                for (int i = scopes.Count - 1; i >= 0; i--)
+                {
+                    if (scopes[i].TryGetValue(text, out EventTracePropertyOperand? found))
+                    {
+                        if (found.Metadata.IsStruct || found.IsVariableArray || found.IsFixedArray)
+                        {
+                            return false;
+                        }
+
+                        found.IsReferencedByOtherProperties = true;
+                        reference = found;
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
+        private Dictionary<string, MapInformation> BuildMaps(ProviderType provider)
+        {
+            Dictionary<string, MapInformation> maps = new(StringComparer.Ordinal);
+            foreach (object? item in provider.Items)
+            {
+                if (item is not MapType mapType)
+                {
+                    continue;
+                }
+
+                foreach (object? map in mapType.Items ?? Array.Empty<object>())
+                {
+                    string? name;
+                    List<(string? Value, string? Message, string? Symbol)> entries = new();
+                    switch (map)
+                    {
+                        case ValueMapType valueMap:
+                            name = valueMap.name;
+                            entries.AddRange((valueMap.map ?? Array.Empty<ValueMapValueType>()).Select(e =>
+                                ((string?)e.value, (string?)e.message, (string?)e.symbol)));
+                            break;
+                        case BitMapType bitMap:
+                            name = bitMap.name;
+                            entries.AddRange((bitMap.map ?? Array.Empty<BitMapValueType>()).Select(e =>
+                                ((string?)e.value, (string?)e.message, (string?)e.symbol)));
+                            break;
+                        default:
+                            continue;
+                    }
+
+                    if (string.IsNullOrEmpty(name))
+                    {
+                        continue;
+                    }
+
+                    Dictionary<uint, string> values = new();
+                    foreach ((string? value, string? message, string? symbol) in entries)
+                    {
+                        if (value is null || !TryParseMapValue(value, out uint key))
+                        {
+                            continue;
+                        }
+
+                        string text = ResolveString(message) ?? symbol ?? value;
+                        values.TryAdd(key, text);
+                    }
+
+                    maps.TryAdd(name!, new MapInformation(name!, values));
+                }
+            }
+
+            return maps;
+        }
+
+        private static bool TryParseMapValue(string value, out uint key)
+        {
+            value = value.Trim();
+            return value.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+                ? uint.TryParse(value.Substring(2), System.Globalization.NumberStyles.AllowHexSpecifier,
+                    System.Globalization.CultureInfo.InvariantCulture, out key)
+                : uint.TryParse(value, System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture, out key);
+        }
+
+        /// <summary>Resolves <c>$(string.id)</c> against the manifest string tables; other text is returned as is.</summary>
+        private string? ResolveString(string? message)
+        {
+            if (string.IsNullOrEmpty(message))
+            {
+                return null;
+            }
+
+            const string prefix = "$(string.";
+            if (!message!.StartsWith(prefix, StringComparison.Ordinal) || !message.EndsWith(")", StringComparison.Ordinal))
+            {
+                return message;
+            }
+
+            if (_strings is null)
+            {
+                _strings = new Dictionary<string, string>(StringComparer.Ordinal);
+                foreach (object? top in _manifest.Items)
+                {
+                    if (top is not LocalizationType localization)
+                    {
+                        continue;
+                    }
+
+                    foreach (object? resource in localization.Items ?? Array.Empty<object>())
+                    {
+                        if (resource is not LocalizationTypeResources resources)
+                        {
+                            continue;
+                        }
+
+                        foreach (StringTableType table in resources.Items ?? Array.Empty<StringTableType>())
+                        {
+                            foreach (StringTableTypeString entry in table.Items ?? Array.Empty<StringTableTypeString>())
+                            {
+                                if (entry.id is not null && entry.value is not null)
+                                {
+                                    _strings.TryAdd(entry.id, entry.value);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            string id = message.Substring(prefix.Length, message.Length - prefix.Length - 1);
+            return _strings.TryGetValue(id, out string? resolved) ? resolved : null;
+        }
+
         public IEventTraceOperand? Build(int eventMetadataTableIndex)
         {
             foreach (object? instrumentationManifestTypeItem in _manifest.Items)
@@ -202,42 +495,18 @@ internal static unsafe class EventTraceOperandBuilder
                                               (opcode == string.Empty
                                                   ? string.Empty
                                                   : "/" + opcode);
-                                List<IEventTracePropertyOperand> properties = new();
-
-                                foreach (object? item in providerType.Items)
+                                if (!TryBuildProperties(providerType, template, out List<IEventTracePropertyOperand> properties,
+                                        out PropertyMetadata[] flat))
                                 {
-                                    if (item is not TemplateListType templateList)
-                                    {
-                                        continue;
-                                    }
-
-                                    foreach (TemplateItemType? templateTid in templateList
-                                                 .template)
-                                    {
-                                        if (!string.Equals(templateTid.tid, template))
-                                        {
-                                            continue;
-                                        }
-
-                                        int i = 0;
-                                        properties.AddRange((from DataDefinitionType propertyItem in templateTid.Items
-                                            let inType = Extensions.ToTdhInType(propertyItem.inType.Name)
-                                            let outType = _TDH_OUT_TYPE.TDH_OUTTYPE_NOPRINT
-                                            select new PropertyMetadata(inType, outType, propertyItem.name, false,
-                                                false, 0, null)
-                                            into metadata
-                                            select new EventTracePropertyOperand(metadata, i++, false, false, false,
-                                                false, false)));
-                                    }
+                                    return null;
                                 }
-
                                 EventTraceOperand operand = new(
                                     new EventMetadata(
                                         providerGuid,
                                         _eventId,
                                         byte.Parse(version),
                                         name,
-                                        properties.Select(t => t.Metadata).ToArray()),
+                                        flat),
                                     eventMetadataTableIndex,
                                     properties);
                                 return operand;

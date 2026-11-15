@@ -72,6 +72,53 @@ internal static class Extensions
         }
     }
 
+    /// <summary>
+    ///     Maps a manifest <c>outType</c> local name (for example <c>HexInt32</c> or <c>unsignedInt</c>) to the TDH
+    ///     out-type. A missing or unknown name yields <see cref="_TDH_OUT_TYPE.TDH_OUTTYPE_NULL" />, the "default
+    ///     presentation" value, because the out-type is a hint and never changes how bytes are consumed.
+    /// </summary>
+    public static _TDH_OUT_TYPE ToTdhOutType(string? value)
+    {
+        return (value ?? string.Empty).ToLowerInvariant() switch
+        {
+            "string" => _TDH_OUT_TYPE.TDH_OUTTYPE_STRING,
+            "datetime" => _TDH_OUT_TYPE.TDH_OUTTYPE_DATETIME,
+            "byte" => _TDH_OUT_TYPE.TDH_OUTTYPE_BYTE,
+            "unsignedbyte" => _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDBYTE,
+            "short" => _TDH_OUT_TYPE.TDH_OUTTYPE_SHORT,
+            "unsignedshort" => _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDSHORT,
+            "int" => _TDH_OUT_TYPE.TDH_OUTTYPE_INT,
+            "unsignedint" => _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT,
+            "long" => _TDH_OUT_TYPE.TDH_OUTTYPE_LONG,
+            "unsignedlong" => _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDLONG,
+            "float" => _TDH_OUT_TYPE.TDH_OUTTYPE_FLOAT,
+            "double" => _TDH_OUT_TYPE.TDH_OUTTYPE_DOUBLE,
+            "boolean" => _TDH_OUT_TYPE.TDH_OUTTYPE_BOOLEAN,
+            "guid" => _TDH_OUT_TYPE.TDH_OUTTYPE_GUID,
+            "hexbinary" => _TDH_OUT_TYPE.TDH_OUTTYPE_HEXBINARY,
+            "hexint8" => _TDH_OUT_TYPE.TDH_OUTTYPE_HEXINT8,
+            "hexint16" => _TDH_OUT_TYPE.TDH_OUTTYPE_HEXINT16,
+            "hexint32" => _TDH_OUT_TYPE.TDH_OUTTYPE_HEXINT32,
+            "hexint64" => _TDH_OUT_TYPE.TDH_OUTTYPE_HEXINT64,
+            "pid" => _TDH_OUT_TYPE.TDH_OUTTYPE_PID,
+            "tid" => _TDH_OUT_TYPE.TDH_OUTTYPE_TID,
+            "port" => _TDH_OUT_TYPE.TDH_OUTTYPE_PORT,
+            "ipv4" => _TDH_OUT_TYPE.TDH_OUTTYPE_IPV4,
+            "ipv6" => _TDH_OUT_TYPE.TDH_OUTTYPE_IPV6,
+            "socketaddress" => _TDH_OUT_TYPE.TDH_OUTTYPE_SOCKETADDRESS,
+            "cimdatetime" => _TDH_OUT_TYPE.TDH_OUTTYPE_CIMDATETIME,
+            "etwtime" => _TDH_OUT_TYPE.TDH_OUTTYPE_ETWTIME,
+            "xml" => _TDH_OUT_TYPE.TDH_OUTTYPE_XML,
+            "errorcode" => _TDH_OUT_TYPE.TDH_OUTTYPE_ERRORCODE,
+            "win32error" => _TDH_OUT_TYPE.TDH_OUTTYPE_WIN32ERROR,
+            "ntstatus" => _TDH_OUT_TYPE.TDH_OUTTYPE_NTSTATUS,
+            "hresult" => _TDH_OUT_TYPE.TDH_OUTTYPE_HRESULT,
+            "json" => _TDH_OUT_TYPE.TDH_OUTTYPE_JSON,
+            "utf8" => _TDH_OUT_TYPE.TDH_OUTTYPE_UTF8,
+            _ => _TDH_OUT_TYPE.TDH_OUTTYPE_NULL
+        };
+    }
+
     public static Expression SizeOf(this _TDH_IN_TYPE tdhType)
     {
         switch (tdhType)
