@@ -15,6 +15,7 @@ public unsafe class CustomManifestTests
 {
     private static readonly Guid BthPs3Provider = new("37dcd579-e844-4c80-9c8b-a10850b6fac6");
     private static readonly Guid BthPs3PsmProvider = new("586aa8b1-53a6-404f-9b3e-14483e514a2c");
+    private static readonly Guid DsHidMiniProvider = new("ba65b162-c05c-4bd7-b75d-db8d030daf7f");
     private static readonly Guid HidHideLogProvider = new("6DA3FFA4-AB7D-40E2-B50C-C4B41BBA36E3");
     private static readonly Guid HidHideTraceProvider = new("D9F22586-7514-4164-BB9B-5C67D5BD2BC7");
 
@@ -60,6 +61,48 @@ public unsafe class CustomManifestTests
         {
             "OriginalPsm", "EffectivePsm", "Patched", "Channel", "InstanceId", "TransportType"
         }));
+    }
+
+    [Test]
+    public void DsHidMini_EventsResolveWithTheirTemplates()
+    {
+        instrumentationManifest manifest = Load("DsHidMini.man", DsHidMiniProvider);
+
+        EventMetadata hresult = Build(manifest, DsHidMiniProvider, 3);
+        EventMetadata powerUp = Build(manifest, DsHidMiniProvider, 28);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(hresult.Properties.Select(p => p.Name),
+                Is.EqualTo(new[] { "ScopeName", "FunctionName", "HResult" }));
+            Assert.That(powerUp.Properties.Select(p => p.Name),
+                Is.EqualTo(new[] { "Address", "PreviousState", "ConnectionType", "Status" }));
+        }
+    }
+
+    [TestCase("BthPS3.man", "37dcd579-e844-4c80-9c8b-a10850b6fac6")]
+    [TestCase("BthPS3PSM.man", "586aa8b1-53a6-404f-9b3e-14483e514a2c")]
+    [TestCase("DsHidMini.man", "ba65b162-c05c-4bd7-b75d-db8d030daf7f")]
+    [TestCase("HidHide.man", "6DA3FFA4-AB7D-40E2-B50C-C4B41BBA36E3")]
+    [TestCase("HidHide.man", "D9F22586-7514-4164-BB9B-5C67D5BD2BC7")]
+    public void EveryDefinedEventBuildsAnOperand(string file, string providerGuid)
+    {
+        Guid provider = Guid.Parse(providerGuid);
+        instrumentationManifest manifest = Load(file, provider);
+
+        int resolved = 0;
+        for (ushort id = 0; id < 100; id++)
+        {
+            Assert.DoesNotThrow(() =>
+            {
+                if (EventTraceOperandBuilder.Build(manifest, provider, id, 0, 0) is not null)
+                {
+                    resolved++;
+                }
+            });
+        }
+
+        Assert.That(resolved, Is.GreaterThan(0));
     }
 
     [Test]
