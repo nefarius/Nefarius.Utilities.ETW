@@ -87,7 +87,7 @@ void WINAPI OnEvent(PEVENT_RECORD r)
 }
 ```
 
-Report events you had to drop with a `loss` frame so the server can account for them. A retried frame with the same sequence number and content is acknowledged without being decoded twice; a different frame for an already used sequence number or a gap is refused.
+Report events you had to drop with a `loss` frame so the server can account for them. An identical retry is acknowledged without being decoded twice only while its hash is still in the receiver's retry window of 64 frames; a retry older than that window is rejected as a conflicting replay, as is a different frame for an already used sequence number. A gap is refused.
 
 ## Limits and trust model
 

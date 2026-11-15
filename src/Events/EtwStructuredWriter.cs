@@ -115,7 +115,10 @@ internal sealed class EtwStructuredWriter : IEtwWriter
 
     public void WriteFileTime(DateTime value) => Add(EtwValue.FromDateTime(value));
 
-    public void WriteSystemTime(DateTime value) => Add(EtwValue.FromDateTime(value));
+    public void WriteSystemTime(DateTime value) =>
+        // SYSTEMTIME fields are absolute UTC components. Mark them UTC without shifting the ticks, or a decoder
+        // running outside UTC treats the unspecified kind as local time.
+        Add(EtwValue.FromDateTime(DateTime.SpecifyKind(value, DateTimeKind.Utc)));
 
     public void WriteSid(string value) => Add(EtwValue.FromString(value));
 

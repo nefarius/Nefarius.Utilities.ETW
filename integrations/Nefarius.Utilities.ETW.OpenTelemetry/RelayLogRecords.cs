@@ -47,8 +47,22 @@ public static class RelayLogRecords
         resource.Attributes.Add(OtlpValues.String(EtwOtlpAttributes.RelaySessionId, sessionId.ToString("D")));
         if (resourceAttributes is not null)
         {
+            HashSet<string> seen = new(StringComparer.Ordinal) { EtwOtlpAttributes.RelaySessionId };
             foreach (KeyValuePair<string, string> attribute in resourceAttributes)
             {
+                if (attribute.Key == EtwOtlpAttributes.RelaySessionId)
+                {
+                    throw new ArgumentException(
+                        $"'{EtwOtlpAttributes.RelaySessionId}' is set from the session id and cannot be supplied again.",
+                        nameof(resourceAttributes));
+                }
+
+                if (!seen.Add(attribute.Key))
+                {
+                    throw new ArgumentException($"Resource attribute '{attribute.Key}' is repeated.",
+                        nameof(resourceAttributes));
+                }
+
                 resource.Attributes.Add(OtlpValues.String(attribute.Key, attribute.Value));
             }
         }

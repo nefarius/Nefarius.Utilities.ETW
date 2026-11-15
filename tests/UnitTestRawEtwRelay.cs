@@ -354,7 +354,9 @@ public class RawEtwRelayTests
     public void Fuzz_DecodeNeverThrowsAnythingButProtocolExceptions()
     {
         Random random = new(1234);
-        byte[] seed = RawEtwFrameCodec.Encode(Event(1, SampleRecord()));
+        // No CRC on this corpus: a checksum failure rejects the frame before the event body is read.
+        // Checksum mismatches are covered by Decode_EnforcesChecksum.
+        byte[] seed = RawEtwFrameCodec.Encode(Event(1, SampleRecord()), false);
 
         for (int i = 0; i < 5000; i++)
         {
@@ -363,6 +365,11 @@ public class RawEtwRelayTests
             for (int e = 0; e < edits; e++)
             {
                 mutated[random.Next(mutated.Length)] = (byte)random.Next(256);
+            }
+
+            if (mutated.Length >= RawEtwFrameCodec.PrefixLength)
+            {
+                mutated.AsSpan(28, 4).Clear();
             }
 
             if (random.Next(4) == 0)
@@ -746,6 +753,80 @@ public class RawEtwRelayTests
                 Assert.That(item.DataPtr, Is.EqualTo((ulong)dataPtr), "The item must not be advanced.");
             }
         }
+    }
+
+    [Test]
+    public void SystemTime_KeepsTheUtcWallClockWhenTheHostIsNotUtc()
+    {
+        DateTime wall = new(2025, 5, 28, 10, 35, 15, 726, DateTimeKind.Unspecified);
+        byte[] payload = new byte[16];
+        BinaryPrimitives.WriteInt16LittleEndian(payload.AsSpan(0), (short)wall.Year);
+        BinaryPrimitives.WriteInt16LittleEndian(payload.AsSpan(2), (short)wall.Month);
+        BinaryPrimitives.WriteInt16LittleEndian(payload.AsSpan(6), (short)wall.Day);
+        BinaryPrimitives.WriteInt16LittleEndian(payload.AsSpan(8), (short)wall.Hour);
+        BinaryPrimitives.WriteInt16LittleEndian(payload.AsSpan(10), (short)wall.Minute);
+        BinaryPrimitives.WriteInt16LittleEndian(payload.AsSpan(12), (short)wall.Second);
+        BinaryPrimitives.WriteInt16LittleEndian(payload.AsSpan(14), (short)wall.Millisecond);
+
+        RawEtwRecord record = new()
+        {
+            Flags = 0x40,
+            TimeStamp = 133_500_000_000_000_000,
+            ProviderId = Provider,
+            Payload = payload
+        };
+        record.ExtendedData.Add(new RawEtwExtendedData
+        {
+            ExtType = 11,
+            Data = TraceLoggingSchema("Clock", TraceLoggingField("When", 18))
+        });
+
+        List<EtwEvent> events = [];
+        using RawEtwRelayDecoder decoder = new();
+        decoder.Process(RawEtwFrameCodec.Encode(Hello()), _ => { });
+        decoder.Process(RawEtwFrameCodec.Encode(Event(1, record)), events.Add);
+
+        DateTime decoded = events.Single().Properties.Members.Single(m => m.Key == "When").Value.AsDateTime;
+        Assert.That(decoded.Kind, Is.EqualTo(DateTimeKind.Utc));
+        Assert.That(decoded.Ticks, Is.EqualTo(wall.Ticks));
+        if (TimeZoneInfo.Local.GetUtcOffset(wall) != TimeSpan.Zero)
+        {
+            DateTime shifted = DateTime.SpecifyKind(wall, DateTimeKind.Unspecified).ToUniversalTime();
+            Assert.That(decoded.Ticks, Is.Not.EqualTo(shifted.Ticks));
+        }
+    }
+
+    [Test]
+    public unsafe void RebuiltRecord_UsesPointerSizeForTheArchitectureFlag()
+    {
+        RawEtwRecord record = SampleRecord();
+        record.PointerSize = 4;
+        record.Flags = 0x40;
+        using RelayRecordBuffer buffer = new();
+        EVENT_RECORD* native = buffer.Fill(record, out _);
+        Assert.That(native->EventHeader.Flags & 0x0020, Is.EqualTo((ushort)0x0020));
+
+        record.PointerSize = 8;
+        record.Flags = 0x40 | 0x0020;
+        native = buffer.Fill(record, out _);
+        Assert.That(native->EventHeader.Flags & 0x0020, Is.Zero);
+    }
+
+    [Test]
+    public void Session_RejectsEventKeysBeyondTheCacheLimit()
+    {
+        using RawEtwRelayDecoder decoder = new(null, new RawEtwRelayOptions
+        {
+            Limits = new RawEtwRelayLimits { MaxCachedEventKeys = 1 }
+        });
+        decoder.Process(RawEtwFrameCodec.Encode(Hello()), _ => { });
+        decoder.Process(RawEtwFrameCodec.Encode(Event(1, SampleRecord())), _ => { });
+
+        RawEtwRecord other = SampleRecord();
+        other.ProviderId = Guid.NewGuid();
+        RawEtwProtocolException ex = Assert.Throws<RawEtwProtocolException>(() =>
+            decoder.Process(RawEtwFrameCodec.Encode(Event(2, other)), _ => { }));
+        Assert.That(ex!.Error, Is.EqualTo(RawEtwProtocolError.InvalidLength));
     }
 
     [Test]

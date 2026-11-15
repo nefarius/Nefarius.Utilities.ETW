@@ -58,30 +58,44 @@ public sealed class GatewayPipeline(
     public async ValueTask<GatewayOutcome> HandleAsync(string tenant, ExportLogsServiceRequest request,
         CancellationToken cancellationToken)
     {
-        // Refuse before consuming any frame: a consumed frame cannot be replayed, a refused request can be retried.
-        if (!queue.HasCapacity)
+        // The reservation is exclusive, so concurrent requests cannot consume frames against one free slot.
+        // It is released when the request produces no batch; otherwise it stays with the queued batch.
+        if (!queue.TryReserve())
         {
             metrics.RequestsRefused.Add(1);
             return new GatewayOutcome(true, new ExportLogsServiceResponse());
         }
 
-        RelayLogResult result = processor.Process(tenant, request);
-
-        metrics.FramesAccepted.Add(result.Accepted);
-        metrics.FramesRejected.Add(result.Rejected);
-        if (result.LostEvents > 0)
+        bool queued = false;
+        try
         {
-            metrics.EventsLost.Add((long)Math.Min(result.LostEvents, long.MaxValue));
-        }
+            RelayLogResult result = processor.Process(tenant, request);
 
-        if (result.Decoded.ResourceLogs.Count > 0)
+            metrics.FramesAccepted.Add(result.Accepted);
+            metrics.FramesRejected.Add(result.Rejected);
+            if (result.LostEvents > 0)
+            {
+                metrics.EventsLost.Add((long)Math.Min(result.LostEvents, long.MaxValue));
+            }
+
+            if (result.Decoded.ResourceLogs.Count > 0)
+            {
+                long events = result.Decoded.ResourceLogs.Sum(r => r.ScopeLogs.Sum(s => (long)s.LogRecords.Count));
+                metrics.EventsDecoded.Add(events);
+                // Ignore the caller's cancellation: the frames are already consumed, and the slot was reserved.
+                queue.EnqueueReserved(result.Decoded);
+                queued = true;
+            }
+
+            return new GatewayOutcome(false, result.ToResponse());
+        }
+        finally
         {
-            long events = result.Decoded.ResourceLogs.Sum(r => r.ScopeLogs.Sum(s => (long)s.LogRecords.Count));
-            metrics.EventsDecoded.Add(events);
-            await queue.EnqueueAsync(result.Decoded, cancellationToken).ConfigureAwait(false);
+            if (!queued)
+            {
+                queue.Release();
+            }
         }
-
-        return new GatewayOutcome(false, result.ToResponse());
     }
 }
 
@@ -144,7 +158,8 @@ public static class GatewayExtensions
         });
 
         services.AddHttpClient(ConfiguredSinks.HttpClientName, (provider, client) =>
-            client.Timeout = provider.GetRequiredService<IOptions<GatewayOptions>>().Value.Export.RequestTimeout);
+            client.Timeout = provider.GetRequiredService<IOptions<GatewayOptions>>().Value.Export.RequestTimeout)
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 
         // Each configured destination is its own sink; the exporter retries them independently.
         GatewayOptions.ExportOptions configured =

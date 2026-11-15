@@ -17,6 +17,7 @@ internal sealed unsafe class RelaySessionCore<TWriter> : IDisposable where TWrit
     private const int HashLength = 32;
 
     private readonly Deserializer<TWriter> _deserializer;
+    private readonly HashSet<EventKey> _eventKeys = [];
     private readonly byte[] _hashes = new byte[DuplicateWindow * HashLength];
     private readonly ulong[] _hashedSequence = new ulong[DuplicateWindow];
     private readonly RawEtwRelayLimits _limits;
@@ -36,7 +37,8 @@ internal sealed unsafe class RelaySessionCore<TWriter> : IDisposable where TWrit
             converterOptions.CustomProviderManifest,
             converterOptions.WppDecodingContext,
             converterOptions.OnWppFormatMissing,
-            converterOptions.RewriteWppProviderName);
+            converterOptions.RewriteWppProviderName,
+            _limits.MaxManifestBytes);
     }
 
     /// <summary>The session identifier from the hello frame, or <see langword="null" /> before it.</summary>
@@ -126,6 +128,7 @@ internal sealed unsafe class RelaySessionCore<TWriter> : IDisposable where TWrit
                 return RawEtwFrameDisposition.Hello;
 
             case RawEtwFrameType.Event:
+                ReserveEventKey(frame.Record!);
                 EventFrames++;
                 EVENT_RECORD* record = _recordBuffer.Fill(frame.Record!, out Etl.EtlRecordExtras extras);
                 try
@@ -164,4 +167,27 @@ internal sealed unsafe class RelaySessionCore<TWriter> : IDisposable where TWrit
         int slot = (int)(sequence % DuplicateWindow);
         return _hashedSequence[slot] == sequence && _hashes.AsSpan(slot * HashLength, HashLength).SequenceEqual(hash);
     }
+
+    /// <summary>
+    ///     Counts a new (provider, id, version, opcode) key against <see cref="RawEtwRelayLimits.MaxCachedEventKeys" />.
+    ///     The deserializer caches a parser per key for the life of the session; this stops that cache growing without a bound.
+    /// </summary>
+    private void ReserveEventKey(RawEtwRecord record)
+    {
+        EventKey key = new(record.ProviderId, record.Id, record.Version, record.Opcode);
+        if (_eventKeys.Contains(key))
+        {
+            return;
+        }
+
+        if (_eventKeys.Count >= _limits.MaxCachedEventKeys)
+        {
+            throw new RawEtwProtocolException(RawEtwProtocolError.InvalidLength,
+                $"The session already caches {_limits.MaxCachedEventKeys} event keys.");
+        }
+
+        _eventKeys.Add(key);
+    }
+
+    private readonly record struct EventKey(Guid Provider, ushort Id, byte Version, byte Opcode);
 }

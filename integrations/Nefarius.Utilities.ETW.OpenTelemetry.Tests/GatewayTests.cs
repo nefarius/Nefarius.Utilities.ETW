@@ -6,6 +6,8 @@ using Grpc.Core;
 using Grpc.Net.Client;
 
 using Nefarius.Utilities.ETW.OpenTelemetry;
+using Nefarius.Utilities.ETW.OtlpGateway;
+using Nefarius.Utilities.ETW.Relay;
 
 using NUnit.Framework;
 
@@ -165,7 +167,7 @@ public class GatewayTests
             Assert.That(body!.PartialSuccess, Is.Null);
         }
 
-        await gateway.Sink.WaitForRecordsAsync(1);
+        await gateway.Sink.WaitForRecordsAsync(DecodedEventCount(frames));
         string?[] bodies = gateway.Sink.Records.Where(r => r.EventName == "WPP").Select(r => r.Body.StringValue)
             .ToArray();
 
@@ -192,9 +194,10 @@ public class GatewayTests
             await gateway.PostAsync(Frames.Request(Session, batch));
         }
 
-        await gateway.Sink.WaitForRecordsAsync(1);
-        Assert.That(gateway.Sink.Records.Where(r => r.EventName == "WPP")
-                .All(r => (r.Body.StringValue ?? string.Empty).StartsWith("GUID=")), Is.True);
+        await gateway.Sink.WaitForRecordsAsync(DecodedEventCount(frames));
+        LogRecord[] wpp = gateway.Sink.Records.Where(r => r.EventName == "WPP").ToArray();
+        Assert.That(wpp, Is.Not.Empty);
+        Assert.That(wpp.Select(r => r.Body.StringValue ?? string.Empty), Has.All.StartsWith("GUID="));
     }
 
     [Test]
@@ -421,5 +424,118 @@ public class GatewayTests
         await gateway.Sink.WaitForRecordsAsync(3);
         Assert.That(gateway.Sink.Records.Select(r => BodyMember(r, "Count")!.IntValue),
             Is.EquivalentTo(new long[] { 1, 2, 3 }));
+    }
+
+    [Test]
+    public void ResourceAttributes_RejectTheReservedSessionKeyAndDuplicates()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            RelayLogRecords.CreateRequest(Session, [], [new(EtwOtlpAttributes.RelaySessionId, "other")]));
+        Assert.Throws<ArgumentException>(() =>
+            RelayLogRecords.CreateRequest(Session, [], [new("service.name", "a"), new("service.name", "b")]));
+
+        ExportLogsServiceRequest request = RelayLogRecords.CreateRequest(Session, [], [new("service.name", "relay")]);
+        Assert.That(RelayLogRecords.TryGetSessionId(request.ResourceLogs.Single().Resource, out Guid id), Is.True);
+        Assert.That(id, Is.EqualTo(Session));
+        Assert.That(request.ResourceLogs.Single().Resource.Attributes.Count(a => a.Key == "service.name"), Is.EqualTo(1));
+    }
+
+    [Test]
+    public void EndedSession_StillRecognizesRetriesInsideTheWindow()
+    {
+        using RelayLogProcessor processor = new();
+        byte[] hello = Frames.Hello(Session);
+        byte[] first = Frames.Event(1, 1);
+        byte[] end = Frames.End(2);
+        processor.Process("tenant", Frames.Request(Session, hello, first, end));
+
+        RelayLogResult retry = processor.Process("tenant", Frames.Request(Session, first));
+        Assert.That(retry.Rejected, Is.Zero);
+        Assert.That(retry.Accepted, Is.EqualTo(1));
+        Assert.That(retry.Decoded.ResourceLogs, Is.Empty);
+
+        RelayLogResult after = processor.Process("tenant", Frames.Request(Session, Frames.Event(3, 9)));
+        Assert.That(after.Rejected, Is.EqualTo(1));
+        Assert.That(processor.ActiveSessions, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void SessionAdmission_NeverExceedsEitherLimit()
+    {
+        using RelayLogProcessor processor = new(new RelayLogProcessorOptions
+        {
+            MaxSessions = 4,
+            MaxSessionsPerTenant = 2
+        });
+
+        List<Task<RelayLogResult>> tasks = [];
+        foreach (string tenant in new[] { "a", "b" })
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                Guid id = Guid.NewGuid();
+                string captured = tenant;
+                tasks.Add(Task.Run(() => processor.Process(captured, Frames.Request(id, Frames.Hello(id)))));
+            }
+        }
+
+        RelayLogResult[] results = Task.WhenAll(tasks).GetAwaiter().GetResult();
+        Assert.That(processor.ActiveSessions, Is.LessThanOrEqualTo(4));
+        Assert.That(results.Sum(r => r.Accepted), Is.EqualTo(processor.ActiveSessions));
+        Assert.That(results.Count(r => r.Accepted > 0 && r.Error is null), Is.LessThanOrEqualTo(4));
+    }
+
+    [Test]
+    public void ExpiredSession_ReleasesItsSlot()
+    {
+        ManualTime clock = new();
+        using RelayLogProcessor processor = new(new RelayLogProcessorOptions
+        {
+            MaxSessions = 1,
+            SessionIdleTimeout = TimeSpan.FromMinutes(1),
+            TimeProvider = clock
+        });
+
+        processor.Process("tenant", Frames.Request(Session, Frames.Hello(Session)));
+        clock.UtcNow += TimeSpan.FromMinutes(2);
+
+        Guid next = Guid.NewGuid();
+        RelayLogResult opened = processor.Process("tenant", Frames.Request(next, Frames.Hello(next)));
+        Assert.That(opened.Rejected, Is.Zero);
+        Assert.That(processor.ActiveSessions, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void ExportEndpoint_RejectsCredentialsOnPlainHttp()
+    {
+        Assert.Throws<InvalidOperationException>(() => new OtlpHttpSink(new HttpClient(), "http://collector:4318",
+            "v1/logs", new Dictionary<string, string> { ["Authorization"] = "secret" }, static batch => batch));
+
+        OtlpHttpSink plaintext = new(new HttpClient(), "http://jaeger:4318", "v1/traces",
+            new Dictionary<string, string>(), static batch => batch);
+        Assert.That(plaintext, Is.Not.Null);
+    }
+
+    private static int DecodedEventCount(IEnumerable<byte[]> frames)
+    {
+        int count = 0;
+        using RawEtwRelayDecoder decoder = new();
+        foreach (byte[] frame in frames)
+        {
+            decoder.Process(frame, _ => count++);
+        }
+
+        return count;
+    }
+
+    private sealed class ManualTime : TimeProvider
+    {
+        public DateTimeOffset UtcNow { get; set; } = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+        public override DateTimeOffset GetUtcNow() => UtcNow;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp() => UtcNow.UtcTicks;
     }
 }

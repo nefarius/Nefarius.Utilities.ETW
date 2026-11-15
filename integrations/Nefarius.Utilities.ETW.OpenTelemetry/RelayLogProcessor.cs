@@ -104,6 +104,7 @@ public sealed class RelayLogProcessor : IDisposable
 {
     private readonly RelayLogProcessorOptions _options;
     private readonly ConcurrentDictionary<SessionKey, Session> _sessions = new();
+    private readonly object _admission = new();
     private readonly object _sweepGate = new();
     private long _lastSweepTicks;
 
@@ -221,21 +222,26 @@ public sealed class RelayLogProcessor : IDisposable
         List<LogRecord> events = [];
         try
         {
-            RawEtwFrameDisposition disposition;
             lock (session)
             {
+                // The sweep removes a session under this same lock, so a refresh of LastActivity cannot lose the race
+                // to disposal, and a session removed before we entered is not decoded.
+                if (!_sessions.TryGetValue(key, out Session? current) || !ReferenceEquals(current, session))
+                {
+                    Reject(result, "The session is unknown (expired or never started); start a new session with a hello frame.");
+                    return false;
+                }
+
                 session.LastActivity = _options.TimeProvider.GetTimestamp();
-                disposition = session.Decoder.Process(frame.Span, e => events.Add(EtwLogRecordMapper.ToLogRecord(e, session.CurrentSequence)));
+                session.Decoder.Process(frame.Span, e => events.Add(EtwLogRecordMapper.ToLogRecord(e, session.CurrentSequence)));
                 ulong lost = session.Decoder.LostEvents;
                 result.LostEvents += lost - session.ReportedLoss;
                 session.ReportedLoss = lost;
             }
 
             result.Accepted++;
-            if (disposition == RawEtwFrameDisposition.End)
-            {
-                RemoveSession(key);
-            }
+            // An ended session stays until it expires, so an exact retry of a frame still in the decoder's retry
+            // window is recognized instead of looking like an unknown session. Idle sweeping bounds the retention.
         }
         catch (RawEtwProtocolException ex)
         {
@@ -256,40 +262,48 @@ public sealed class RelayLogProcessor : IDisposable
 
     private Session? TryCreateSession(SessionKey key, RelayLogResult result)
     {
-        int perTenant = 0;
-        foreach (SessionKey existing in _sessions.Keys)
+        // Admission and insertion are one critical section, shared with removal, so concurrent hellos cannot pass
+        // the limit check against the same free slot.
+        lock (_admission)
         {
-            if (existing.Tenant == key.Tenant)
+            int perTenant = 0;
+            foreach (SessionKey existing in _sessions.Keys)
             {
-                perTenant++;
+                if (existing.Tenant == key.Tenant)
+                {
+                    perTenant++;
+                }
             }
+
+            if (_sessions.Count >= _options.MaxSessions || perTenant >= _options.MaxSessionsPerTenant)
+            {
+                Reject(result, "Too many active sessions.");
+                return null;
+            }
+
+            Session created = new(new RawEtwRelayDecoder(_options.DecodingOptions, new RawEtwRelayOptions { Limits = _options.Limits }),
+                _options.TimeProvider.GetTimestamp());
+
+            if (!_sessions.TryAdd(key, created))
+            {
+                created.Decoder.Dispose();
+                return _sessions[key];
+            }
+
+            return created;
         }
-
-        if (_sessions.Count >= _options.MaxSessions || perTenant >= _options.MaxSessionsPerTenant)
-        {
-            Reject(result, "Too many active sessions.");
-            return null;
-        }
-
-        Session created = new(new RawEtwRelayDecoder(_options.DecodingOptions, new RawEtwRelayOptions { Limits = _options.Limits }),
-            _options.TimeProvider.GetTimestamp());
-
-        Session session = _sessions.GetOrAdd(key, created);
-        if (!ReferenceEquals(session, created))
-        {
-            created.Decoder.Dispose();
-        }
-
-        return session;
     }
 
     private void RemoveSession(SessionKey key)
     {
-        if (_sessions.TryRemove(key, out Session? session))
+        lock (_admission)
         {
-            lock (session)
+            if (_sessions.TryRemove(key, out Session? session))
             {
-                session.Decoder.Dispose();
+                lock (session)
+                {
+                    session.Decoder.Dispose();
+                }
             }
         }
     }
@@ -312,9 +326,34 @@ public sealed class RelayLogProcessor : IDisposable
 
         foreach (KeyValuePair<SessionKey, Session> entry in _sessions)
         {
-            if (time.GetElapsedTime(entry.Value.LastActivity, now) > _options.SessionIdleTimeout)
+            RemoveIfStillExpired(entry.Key, entry.Value, time, now);
+        }
+    }
+
+    /// <summary>
+    ///     Removes <paramref name="session" /> only when it is still the current value and still idle. The activity
+    ///     timestamp is read under the session lock, which is the lock that refreshes it.
+    /// </summary>
+    private void RemoveIfStillExpired(SessionKey key, Session session, TimeProvider time, long now)
+    {
+        lock (_admission)
+        {
+            if (!_sessions.TryGetValue(key, out Session? current) || !ReferenceEquals(current, session))
             {
-                RemoveSession(entry.Key);
+                return;
+            }
+
+            lock (session)
+            {
+                if (time.GetElapsedTime(session.LastActivity, now) <= _options.SessionIdleTimeout)
+                {
+                    return;
+                }
+
+                if (_sessions.TryRemove(key, out _))
+                {
+                    session.Decoder.Dispose();
+                }
             }
         }
     }

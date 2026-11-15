@@ -48,6 +48,10 @@ internal sealed partial class Deserializer<T>
 
     private readonly WppTraceEventParser? _wppTraceEventParser;
 
+    private readonly int _manifestByteLimit;
+
+    private int _manifestBytes;
+
     private T _writer;
 
     private EtlRecordExtras _currentExtras;
@@ -60,9 +64,11 @@ internal sealed partial class Deserializer<T>
     public Deserializer(T writer, Func<Guid, Stream?>? customProviderManifest,
         DecodingContext? decodingContext = null,
         Action<Guid, ushort, uint>? onWppFormatMissing = null,
-        bool rewriteWppProviderName = false) : this(writer)
+        bool rewriteWppProviderName = false,
+        int manifestByteLimit = int.MaxValue) : this(writer)
     {
         _customProviderManifest = customProviderManifest;
+        _manifestByteLimit = manifestByteLimit;
 
         // Without a context WPP events are still emitted, with the "No format information found." placeholder, and
         // onWppFormatMissing fires, instead of the events silently disappearing.
@@ -138,12 +144,14 @@ internal sealed partial class Deserializer<T>
     }
 
     private static unsafe IEventTraceOperand? BuildOperandFromXml(EVENT_RECORD* eventRecord,
-        Dictionary<Guid, EventSourceManifest> cache, EventRecordReader eventRecordReader, int metadataTableIndex)
+        Dictionary<Guid, EventSourceManifest> cache, EventRecordReader eventRecordReader, int metadataTableIndex,
+        ref int manifestBytes, int manifestByteLimit)
     {
         Guid providerGuid = eventRecord->EventHeader.ProviderId;
         if (!cache.TryGetValue(providerGuid, out EventSourceManifest? manifest))
         {
-            manifest = CreateEventSourceManifest(providerGuid, cache, eventRecord, eventRecordReader);
+            manifest = CreateEventSourceManifest(providerGuid, cache, eventRecord, eventRecordReader, ref manifestBytes,
+                manifestByteLimit);
         }
 
         if (manifest == null)
@@ -206,7 +214,8 @@ internal sealed partial class Deserializer<T>
     }
 
     private static unsafe EventSourceManifest? CreateEventSourceManifest(Guid providerGuid,
-        Dictionary<Guid, EventSourceManifest> cache, EVENT_RECORD* eventRecord, EventRecordReader eventRecordReader)
+        Dictionary<Guid, EventSourceManifest> cache, EVENT_RECORD* eventRecord, EventRecordReader eventRecordReader,
+        ref int manifestBytes, int manifestByteLimit)
     {
         // EventSource Schema events have the following signature:
         // { byte Format, byte MajorVersion, byte MinorVersion, byte Magic, ushort TotalChunks, ushort ChunkNumber } == 8 bytes, followed by the XML schema
@@ -227,6 +236,12 @@ internal sealed partial class Deserializer<T>
             return null;
         }
 
+        string schemaChunk = eventRecordReader.ReadAnsiString();
+        if ((long)manifestBytes + schemaChunk.Length > manifestByteLimit)
+        {
+            throw new InvalidOperationException("The session manifest cache is full.");
+        }
+
         if (!cache.TryGetValue(providerGuid, out EventSourceManifest? manifest))
         {
             manifest = new EventSourceManifest(eventRecord->EventHeader.ProviderId, format, majorVersion, minorVersion,
@@ -242,7 +257,7 @@ internal sealed partial class Deserializer<T>
             cache[providerGuid] = manifest;
         }
 
-        string schemaChunk = eventRecordReader.ReadAnsiString();
+        manifestBytes += schemaChunk.Length;
         manifest.AddChunk(schemaChunk);
 
         return manifest;
@@ -268,7 +283,7 @@ internal sealed partial class Deserializer<T>
         if (_customProviderManifest is not null && _eventSourceManifestCache.ContainsKey(providerId))
         {
             operand = BuildOperandFromXml(eventRecord, _eventSourceManifestCache, eventRecordReader,
-                metadataTableIndex);
+                metadataTableIndex, ref _manifestBytes, _manifestByteLimit);
 
             if (operand is not null)
             {
@@ -296,7 +311,7 @@ internal sealed partial class Deserializer<T>
         if (operand == null)
         {
             operand = BuildOperandFromXml(eventRecord, _eventSourceManifestCache, eventRecordReader,
-                metadataTableIndex);
+                metadataTableIndex, ref _manifestBytes, _manifestByteLimit);
         }
 
         if (operand == null && eventRecord->EventHeader.EventDescriptor.Id != 65534) // don't show manifest events

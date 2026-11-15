@@ -20,6 +20,16 @@ public sealed class RawEtwRelayLimits
     public const int AbsoluteMaxExtendedItems = 256;
 
     /// <summary>
+    ///     Largest number of distinct event keys one session may cache parsers for.
+    /// </summary>
+    public const int AbsoluteMaxCachedEventKeys = 65536;
+
+    /// <summary>
+    ///     Largest assembled manifest a session may retain.
+    /// </summary>
+    public const int AbsoluteMaxManifestBytes = 16 * 1024 * 1024;
+
+    /// <summary>
     ///     The limits applied when none are supplied.
     /// </summary>
     public static RawEtwRelayLimits Default { get; } = new();
@@ -61,6 +71,18 @@ public sealed class RawEtwRelayLimits
     /// </summary>
     public bool RequireCrc { get; init; }
 
+    /// <summary>
+    ///     Maximum distinct (provider, id, version, opcode) keys whose parsers one session retains. Further new keys are
+    ///     rejected. Default: 8192.
+    /// </summary>
+    public int MaxCachedEventKeys { get; init; } = 8192;
+
+    /// <summary>
+    ///     Maximum total EventSource manifest text one session retains. Further manifest bytes are rejected.
+    ///     Default: 1 MiB.
+    /// </summary>
+    public int MaxManifestBytes { get; init; } = 1024 * 1024;
+
     internal void Validate()
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(MaxFrameLength, RawEtwFrameCodec.PrefixLength + 1);
@@ -73,5 +95,9 @@ public sealed class RawEtwRelayLimits
         ArgumentOutOfRangeException.ThrowIfNegative(MaxProducerStringBytes);
         ArgumentOutOfRangeException.ThrowIfNegative(MaxPayloadLength);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(MaxPayloadLength, ushort.MaxValue);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(MaxCachedEventKeys);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(MaxCachedEventKeys, AbsoluteMaxCachedEventKeys);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(MaxManifestBytes);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(MaxManifestBytes, AbsoluteMaxManifestBytes);
     }
 }

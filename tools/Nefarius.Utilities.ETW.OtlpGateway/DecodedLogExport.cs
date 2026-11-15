@@ -42,7 +42,36 @@ public sealed class OtlpHttpSink(
     IReadOnlyDictionary<string, string> headers,
     Func<ExportLogsServiceRequest, IMessage?> convert) : IDecodedLogSink
 {
-    private readonly Uri _uri = new(new Uri(baseUrl.TrimEnd('/') + "/"), path);
+    private readonly Uri _uri = EndpointAddress(baseUrl, path, headers);
+
+    /// <summary>
+    ///     Checks the export URL. An <c>http</c> URL is accepted only when the headers carry no credentials, which is
+    ///     how the plaintext development stack (no auth headers) stays usable. Credentialed exports require <c>https</c>.
+    /// </summary>
+    internal static Uri EndpointAddress(string baseUrl, string path, IReadOnlyDictionary<string, string> headers)
+    {
+        if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out Uri? baseUri) || baseUri.Scheme is not ("http" or "https"))
+        {
+            throw new InvalidOperationException($"Export endpoint '{baseUrl}' is not an absolute http(s) URL.");
+        }
+
+        if (baseUri.Scheme == "http" && headers.Keys.Any(IsCredentialHeader))
+        {
+            throw new InvalidOperationException(
+                "Export credentials cannot be sent to an http:// endpoint. Use https://.");
+        }
+
+        return new Uri(new Uri(baseUrl.TrimEnd('/') + "/"), path);
+    }
+
+    private static bool IsCredentialHeader(string name) =>
+        name.Equals("Authorization", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("Proxy-Authorization", StringComparison.OrdinalIgnoreCase) ||
+        name.Contains("api-key", StringComparison.OrdinalIgnoreCase) ||
+        name.Contains("apikey", StringComparison.OrdinalIgnoreCase) ||
+        name.Contains("token", StringComparison.OrdinalIgnoreCase) ||
+        name.Contains("secret", StringComparison.OrdinalIgnoreCase) ||
+        name.Contains("password", StringComparison.OrdinalIgnoreCase);
 
     public async Task SendAsync(ExportLogsServiceRequest batch, CancellationToken cancellationToken)
     {
@@ -125,28 +154,35 @@ public static class ConfiguredSinks
 /// </summary>
 public sealed class DecodedLogQueue
 {
-    private readonly Channel<ExportLogsServiceRequest> _channel;
-    private readonly int _capacity;
+    private readonly Channel<ExportLogsServiceRequest> _channel = Channel.CreateUnbounded<ExportLogsServiceRequest>(
+        new UnboundedChannelOptions { SingleReader = true });
+
+    private readonly SemaphoreSlim _slots;
 
     public DecodedLogQueue(IOptions<GatewayOptions> options)
     {
-        _capacity = Math.Max(1, options.Value.Export.QueueCapacity);
-        _channel = Channel.CreateBounded<ExportLogsServiceRequest>(new BoundedChannelOptions(_capacity)
-        {
-            FullMode = BoundedChannelFullMode.Wait,
-            SingleReader = true
-        });
+        int capacity = Math.Max(1, options.Value.Export.QueueCapacity);
+        _slots = new SemaphoreSlim(capacity, capacity);
     }
 
     public int Count => _channel.Reader.Count;
 
-    /// <summary>True when at least one more batch fits.</summary>
-    public bool HasCapacity => Count < _capacity;
-
     public ChannelReader<ExportLogsServiceRequest> Reader => _channel.Reader;
 
-    public ValueTask EnqueueAsync(ExportLogsServiceRequest batch, CancellationToken cancellationToken) =>
-        _channel.Writer.WriteAsync(batch, cancellationToken);
+    /// <summary>
+    ///     Takes one queue slot. The slot covers the request until the batch is dequeued, so two requests cannot pass
+    ///     the capacity check against the same free slot.
+    /// </summary>
+    public bool TryReserve() => _slots.Wait(0);
+
+    /// <summary>Gives back a slot that will not become a queued batch, or one whose batch was dequeued.</summary>
+    public void Release() => _slots.Release();
+
+    /// <summary>
+    ///     Queues a batch whose slot was reserved. The write cannot be cancelled: the frames are already consumed, so
+    ///     dropping the batch here would lose them. The reserved slot stays held until <see cref="Release" />.
+    /// </summary>
+    public void EnqueueReserved(ExportLogsServiceRequest batch) => _channel.Writer.TryWrite(batch);
 }
 
 /// <summary>
@@ -161,6 +197,8 @@ public sealed class DecodedLogExporter(
     ILogger<DecodedLogExporter> logger) : BackgroundService
 {
     private readonly IDecodedLogSink[] _sinks = sinks.ToArray();
+    private readonly object _interruptedGate = new();
+    private readonly List<(IDecodedLogSink Sink, ExportLogsServiceRequest Batch)> _interrupted = [];
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -172,6 +210,7 @@ public sealed class DecodedLogExporter(
 
         await foreach (ExportLogsServiceRequest batch in queue.Reader.ReadAllAsync(stoppingToken).ConfigureAwait(false))
         {
+            queue.Release();
             await Task.WhenAll(_sinks.Select(sink => DeliverAsync(sink, batch, stoppingToken))).ConfigureAwait(false);
         }
     }
@@ -181,22 +220,60 @@ public sealed class DecodedLogExporter(
     {
         await base.StopAsync(cancellationToken).ConfigureAwait(false);
 
-        // Give batches that are still queued one last attempt each, within the shutdown budget.
-        while (queue.Reader.TryRead(out ExportLogsServiceRequest? batch) && !cancellationToken.IsCancellationRequested)
+        // A delivery cancelled by shutdown kept its batch. Send it, then whatever is still queued, until the
+        // shutdown budget runs out. A batch already confirmed delivered is not in this list, so it is not sent twice.
+        List<(IDecodedLogSink Sink, ExportLogsServiceRequest Batch)> pending;
+        lock (_interruptedGate)
         {
+            pending = _interrupted.ToList();
+            _interrupted.Clear();
+        }
+
+        foreach ((IDecodedLogSink sink, ExportLogsServiceRequest batch) in pending)
+        {
+            if (!await DrainOneAsync(sink, batch, cancellationToken).ConfigureAwait(false))
+            {
+                return;
+            }
+        }
+
+        while (queue.Reader.TryRead(out ExportLogsServiceRequest? batch))
+        {
+            queue.Release();
             foreach (IDecodedLogSink sink in _sinks)
             {
-                try
+                if (!await DrainOneAsync(sink, batch, cancellationToken).ConfigureAwait(false))
                 {
-                    await sink.SendAsync(batch, cancellationToken).ConfigureAwait(false);
-                    metrics.BatchesExported.Add(1);
-                }
-                catch (Exception ex)
-                {
-                    metrics.BatchesDropped.Add(1);
-                    logger.LogWarning(ex, "A decoded batch was dropped during shutdown.");
+                    return;
                 }
             }
+        }
+    }
+
+    /// <summary>One last attempt. Returns false when the shutdown budget has expired.</summary>
+    private async Task<bool> DrainOneAsync(IDecodedLogSink sink, ExportLogsServiceRequest batch,
+        CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+
+        try
+        {
+            await sink.SendAsync(batch, cancellationToken).ConfigureAwait(false);
+            metrics.BatchesExported.Add(1);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            metrics.BatchesDropped.Add(1);
+            logger.LogWarning(ex, "A decoded batch was dropped during shutdown.");
+            return true;
         }
     }
 
@@ -215,6 +292,12 @@ public sealed class DecodedLogExporter(
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
+                // Confirmed deliveries return before this point, so retaining the batch does not send it twice.
+                lock (_interruptedGate)
+                {
+                    _interrupted.Add((sink, batch));
+                }
+
                 return;
             }
             catch (SinkRetryableException ex) when (attempt < export.MaxAttempts)

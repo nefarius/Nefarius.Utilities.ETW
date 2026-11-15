@@ -61,7 +61,8 @@ internal sealed unsafe class RelayRecordBuffer : IDisposable
         // EVENT_HEADER layout: see EtlReader. Offsets are fixed by the Windows ABI.
         *(ushort*)header = record.Size;
         *(ushort*)(header + 2) = record.HeaderType;
-        *(ushort*)(header + 4) = record.Flags;
+        // TraceLogging and the event reader select 4- or 8-byte pointers from this flag, not from PointerSize.
+        *(ushort*)(header + 4) = ArchitectureFlags(record);
         *(ushort*)(header + 6) = record.EventProperty;
         *(uint*)(header + 8) = record.ThreadId;
         *(uint*)(header + 12) = record.ProcessId;
@@ -185,13 +186,35 @@ internal sealed unsafe class RelayRecordBuffer : IDisposable
             return;
         }
 
+        // Allocate first. If it throws, the buffer already in use stays valid.
+        nuint capacity = Math.Max(needed, MinimumCapacity);
+        byte* memory = (byte*)NativeMemory.AllocZeroed(capacity);
         if (_memory != null)
         {
             NativeMemory.Free(_memory);
         }
 
-        _capacity = Math.Max(needed, MinimumCapacity);
-        _memory = (byte*)NativeMemory.AllocZeroed(_capacity);
+        _memory = memory;
+        _capacity = capacity;
+    }
+
+    /// <summary>
+    ///     Header flags with the 32-bit-header bit forced to agree with <see cref="RawEtwRecord.PointerSize" />.
+    /// </summary>
+    private static ushort ArchitectureFlags(RawEtwRecord record)
+    {
+        const ushort flag32BitHeader = 0x0020;
+        ushort flags = record.Flags;
+        if (record.PointerSize == 4)
+        {
+            flags |= flag32BitHeader;
+        }
+        else if (record.PointerSize == 8)
+        {
+            flags &= unchecked((ushort)~flag32BitHeader);
+        }
+
+        return flags;
     }
 
     private static int Align8(int value) => (value + 7) & ~7;
