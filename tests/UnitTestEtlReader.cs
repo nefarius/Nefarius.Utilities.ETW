@@ -150,6 +150,54 @@ public unsafe class EtlReaderTests
     }
 
     [Test]
+    public void LogfileHeader_ExtendingPastTheBuffer_IsRejected()
+    {
+        string path = Path.GetTempFileName();
+        try
+        {
+            byte[] bytes = File.ReadAllBytes("./traces/BthPS3_0.etl");
+            File.WriteAllBytes(path, bytes.AsSpan(0, 200).ToArray());
+
+            TraceOpenFailure? failure = TraceProcessor.ProcessFiles([path], EtwBackend.Managed, false, default, null,
+                (EVENT_RECORD* _, in EtlRecordExtras _) => Assert.Fail("A truncated header must not be read."));
+
+            Assert.That(failure, Is.Not.Null);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Test]
+    public void Cancellation_BeforeStart_ThrowsWithoutDelivering()
+    {
+        using CancellationTokenSource cts = new();
+        cts.Cancel();
+        long total = 0;
+
+        Assert.Throws<OperationCanceledException>(() => TraceProcessor.ProcessFiles(["./traces/BthPS3_0.etl"],
+            EtwBackend.Managed, false, cts.Token, null, (EVENT_RECORD* _, in EtlRecordExtras _) => total++));
+        Assert.That(total, Is.Zero);
+    }
+
+    [Test]
+    public void Cancellation_BeforeThePeriodicCheck_Throws()
+    {
+        using CancellationTokenSource cts = new();
+        long total = 0;
+
+        Assert.Throws<OperationCanceledException>(() => TraceProcessor.ProcessFiles(["./traces/BthPS3_0.etl"],
+            EtwBackend.Managed, false, cts.Token, null, (EVENT_RECORD* _, in EtlRecordExtras _) =>
+            {
+                if (++total == 10)
+                {
+                    cts.Cancel();
+                }
+            }));
+    }
+
+    [Test]
     public void Cancellation_StopsProcessing()
     {
         using CancellationTokenSource cts = new();

@@ -27,6 +27,11 @@ internal sealed class EtlTraceInfo
     public long StartTime { get; init; }
 
     /// <summary>
+    ///     Raw timestamp of the logfile-header event. Used to calibrate QPC time when <see cref="BootTime" /> is zero.
+    /// </summary>
+    public long HeaderRawTimestamp { get; init; }
+
+    /// <summary>
     ///     1 = performance counter, 2 = system time (FILETIME), 3 = CPU cycle counter.
     /// </summary>
     public uint ClockType { get; init; }
@@ -50,7 +55,12 @@ internal sealed class EtlTraceInfo
                     return raw;
                 }
 
-                return BootTime + (long)((Int128)raw * 10_000_000 / PerfFreq);
+                // BootTime is the QPC origin native ETW uses when it is present. A zero BootTime is not an
+                // origin, so calibrate from the header event's raw timestamp and the session StartTime.
+                long origin = BootTime != 0
+                    ? BootTime
+                    : StartTime - (long)((Int128)HeaderRawTimestamp * 10_000_000 / PerfFreq);
+                return origin + (long)((Int128)raw * 10_000_000 / PerfFreq);
         }
     }
 }
@@ -203,7 +213,14 @@ internal sealed unsafe class EtlFile : IDisposable
             // Packet.Group is 0 for the EventTrace group, Packet.Type is 0 for the header event.
             if (*(p + 6) == 0 && *(p + 7) == 0)
             {
-                return ParseLogfileHeader(path, p + SystemHeaderSize, size - SystemHeaderSize, bufferSize);
+                if (p + size > end)
+                {
+                    throw new EtlFormatException(WIN32_ERROR.ERROR_INVALID_DATA,
+                        $"'{path}' has a logfile header event that extends past the buffer.");
+                }
+
+                return ParseLogfileHeader(path, p + SystemHeaderSize, size - SystemHeaderSize, bufferSize,
+                    *(long*)(p + 16));
             }
 
             p += (size + 7) & ~7;
@@ -213,10 +230,17 @@ internal sealed unsafe class EtlFile : IDisposable
             $"'{path}' does not start with an ETW logfile header event.");
     }
 
-    private static EtlTraceInfo ParseLogfileHeader(string path, byte* h, int size, uint bufferSize)
+    private static EtlTraceInfo ParseLogfileHeader(string path, byte* h, int size, uint bufferSize, long headerRaw)
     {
         // TRACE_LOGFILE_HEADER: 56 bytes of fixed fields, two pointers (LoggerName, LogFileName),
         // TIME_ZONE_INFORMATION (172 bytes), padding to 8, then BootTime, PerfFreq, StartTime, ReservedFlags.
+        // The pointer size is at offset 44, so a shorter payload must not be read.
+        if (size < 48)
+        {
+            throw new EtlFormatException(WIN32_ERROR.ERROR_INVALID_DATA,
+                $"'{path}' has a truncated logfile header.");
+        }
+
         uint pointerSize = *(uint*)(h + 44);
         if (pointerSize is not (4 or 8))
         {
@@ -252,6 +276,7 @@ internal sealed unsafe class EtlFile : IDisposable
             BootTime = *(long*)(h + boot),
             PerfFreq = *(long*)(h + boot + 8),
             StartTime = *(long*)(h + boot + 16),
+            HeaderRawTimestamp = headerRaw,
             ClockType = *(uint*)(h + boot + 24)
         };
 

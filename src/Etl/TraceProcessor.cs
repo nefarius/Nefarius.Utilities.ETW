@@ -55,6 +55,12 @@ internal static unsafe class TraceProcessor
         CancellationToken cancellationToken, EtlRecordCallback callback)
     {
         int count = files.Count;
+        if (count > 64)
+        {
+            return new TraceOpenFailure(64, WIN32_ERROR.ERROR_BAD_LENGTH,
+                "ERROR: ProcessTrace accepts at most 64 files.");
+        }
+
         EVENT_TRACE_LOGFILEW[] sessions = new EVENT_TRACE_LOGFILEW[count];
         ulong[] handles = new ulong[count];
         int[] errors = new int[count];
@@ -94,9 +100,15 @@ internal static unsafe class TraceProcessor
                 return new TraceOpenFailure(i, error, DescribeNativeOpenError(files[i], error));
             }
 
-            Etw.ProcessTrace(handles, (uint)handles.Length, IntPtr.Zero, IntPtr.Zero);
+            int status = Etw.ProcessTrace(handles, (uint)handles.Length, IntPtr.Zero, IntPtr.Zero);
             GC.KeepAlive(sessions);
             cancellationToken.ThrowIfCancellationRequested();
+            if (status != 0)
+            {
+                WIN32_ERROR error = (WIN32_ERROR)status;
+                return new TraceOpenFailure(0, error, $"ERROR: ProcessTrace returned 0x{status:X8} ({error}).");
+            }
+
             return null;
         }
         finally

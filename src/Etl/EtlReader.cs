@@ -104,11 +104,18 @@ internal static unsafe class EtlReader
             }
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
+        long scanned = 0;
         for (int f = 0; f < files.Count; f++)
         {
             EtlFile file = files[f];
             for (long b = 0; b < file.BufferCount; b++)
             {
+                if ((++scanned & 63) == 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+
                 long start = b * file.BufferSize;
                 long length = Math.Min(file.BufferSize, file.Length - start);
                 BufferCursor? cursor = BufferCursor.TryCreate(file, f, b, file.Pointer + start, (int)length);
@@ -139,6 +146,8 @@ internal static unsafe class EtlReader
                     queue.Enqueue(cursor, cursor.Key);
                 }
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
         }
         finally
         {
@@ -242,10 +251,18 @@ internal static unsafe class EtlReader
                 switch (Classify(marker, out Kind kind, out bool is64, out int size, out long raw, out int headerType))
                 {
                     case RecordDisposition.Deliver:
+                        if (raw == long.MinValue)
+                        {
+                            warn(0xE100,
+                                "Skipping an ETL record that has no timestamp; its order across buffers cannot be established.");
+                            _position += (size + 7) & ~7;
+                            continue;
+                        }
+
                         _kind = kind;
                         _is64 = is64;
                         _size = size;
-                        _rawTimestamp = raw == long.MinValue ? *(long*)(_start + 16) : raw;
+                        _rawTimestamp = raw;
                         _fileTime = _file.Info.ToFileTime(_rawTimestamp);
                         return true;
                     case RecordDisposition.Skip:
@@ -311,7 +328,12 @@ internal static unsafe class EtlReader
                         kind = Kind.System;
                         is64 = headerType == 2;
                         size = *(ushort*)(p + 4);
-                        return TryReadTimestamp(p, 16, size, 32, out raw) ? RecordDisposition.Deliver : Bounded(size);
+                        if (!TryReadTimestamp(p, 16, size, 32, out raw))
+                        {
+                            return Bounded(size);
+                        }
+
+                        return KnownGroup(p[7]);
                     case 3:
                     case 4:
                         // Compact system headers are not decoded. Their size is at the same place as a system header,
@@ -323,7 +345,12 @@ internal static unsafe class EtlReader
                         kind = Kind.PerfInfo;
                         is64 = headerType == 0x11;
                         size = *(ushort*)(p + 4);
-                        return TryReadTimestamp(p, 8, size, 16, out raw) ? RecordDisposition.Deliver : Bounded(size);
+                        if (!TryReadTimestamp(p, 8, size, 16, out raw))
+                        {
+                            return Bounded(size);
+                        }
+
+                        return KnownGroup((byte)(*(ushort*)(p + 6) >> 8));
                     case 18:
                     case 19:
                         kind = Kind.EventHeader;
@@ -426,7 +453,7 @@ internal static unsafe class EtlReader
             {
                 case Kind.System:
                 {
-                    Guid group = GroupGuid(p[7]);
+                    TryGetKernelGroupGuid(p[7], out Guid group);
                     byte opcode = p[6];
                     WriteHeader(h, 32, (ushort)(flags | FlagClassicHeader), *(uint*)(p + 8), *(uint*)(p + 12), stamp,
                         group, 0, (byte)*(ushort*)p, 0, opcode);
@@ -439,7 +466,7 @@ internal static unsafe class EtlReader
                 case Kind.PerfInfo:
                 {
                     ushort hook = *(ushort*)(p + 6);
-                    Guid group = GroupGuid((byte)(hook >> 8));
+                    TryGetKernelGroupGuid((byte)(hook >> 8), out Guid group);
                     WriteHeader(h, 16, (ushort)(flags | FlagClassicHeader), 0, 0, stamp, group, 0,
                         (byte)*(ushort*)p, 0, (byte)hook);
                     headerVersion = (byte)*(ushort*)p;
@@ -455,11 +482,6 @@ internal static unsafe class EtlReader
                     sequence = layout.HasSequence ? *(uint*)(p + 8) : 0;
                     uint thread = layout.HasSystemInfo ? *(uint*)(p + layout.SystemInfoOffset) : 0;
                     uint process = layout.HasSystemInfo ? *(uint*)(p + layout.SystemInfoOffset + 4) : 0;
-                    if (!layout.HasTimestamp)
-                    {
-                        stamp = preserveRaw ? *(long*)(_start + 16) : _file.Info.ToFileTime(*(long*)(_start + 16));
-                    }
-
                     headerVersion = p[3];
                     WriteHeader(h, (ushort)_size, (ushort)(flags | FlagTraceMessage), thread, process, stamp, guid,
                         *(ushort*)(p + 4), 0, 0, 0);
@@ -527,7 +549,59 @@ internal static unsafe class EtlReader
             *(h + 45) = opcode;
         }
 
-        private static Guid GroupGuid(byte group) => group == 0 ? EventTraceGuid : Guid.Empty;
+        private RecordDisposition KnownGroup(byte group)
+        {
+            if (TryGetKernelGroupGuid(group, out _))
+            {
+                return RecordDisposition.Deliver;
+            }
+
+            _skipDetail = $"Skipping kernel trace group 0x{group:X2}; its provider GUID is not known.";
+            return RecordDisposition.Skip;
+        }
+
+        /// <summary>
+        ///     Provider ids that <c>ProcessTrace</c> substitutes for the high byte of a kernel hook id.
+        /// </summary>
+        private static bool TryGetKernelGroupGuid(byte group, out Guid guid)
+        {
+            guid = group switch
+            {
+                0x00 => EventTraceGuid,
+                0x01 => new Guid("3d6fa8d4-fe05-11d0-9dda-00c04fd7ba7c"),
+                0x02 => new Guid("3d6fa8d3-fe05-11d0-9dda-00c04fd7ba7c"),
+                0x03 => new Guid("3d6fa8d0-fe05-11d0-9dda-00c04fd7ba7c"),
+                0x04 => new Guid("90cbdc39-4a3e-11d1-84f4-0000f80464e3"),
+                0x05 => new Guid("3d6fa8d1-fe05-11d0-9dda-00c04fd7ba7c"),
+                0x06 => new Guid("9a280ac0-c8e0-11d1-84e2-00c04fb998a2"),
+                0x07 => new Guid("3282fc76-feed-498e-8aa7-e70f459d430e"),
+                0x08 => new Guid("bf3a50c5-a9c9-4988-a005-2df0b7c80f80"),
+                0x09 => new Guid("ae53722e-c863-11d2-8659-00c04fa321a1"),
+                0x0A => new Guid("13976d09-a327-438c-950b-7f03192815c7"),
+                0x0B => new Guid("01853a65-418f-4f36-aefc-dc0f1d2fd235"),
+                0x0C => new Guid("99134383-5248-43fc-834b-529454e75df3"),
+                0x0D => new Guid("42695762-ea50-497a-9068-5cbbb35e0b95"),
+                0x0E => new Guid("0268a8b6-74fd-4302-9dd0-6e8f1795c0cf"),
+                0x0F => new Guid("ce1dbfb4-137e-4da6-87b0-3f59aa102cbc"),
+                0x10 => new Guid("222962ab-6180-4b88-a825-346b75f2a24a"),
+                0x11 => new Guid("89497f50-effe-4440-8cf2-ce6b1cdcaca7"),
+                0x12 => new Guid("e43445e0-0903-48c3-b878-ff0fccebdd04"),
+                0x13 => new Guid("a9152f00-3f58-4bee-92a1-70c7d079d5dd"),
+                0x14 => new Guid("2cb15d1d-5fc1-11d2-abe1-00a0c911f518"),
+                0x15 => new Guid("b2d14872-7c5b-463d-8419-ee9bf7d23e04"),
+                0x16 => new Guid("7687a439-f752-45b8-b741-321aec0f8df9"),
+                0x17 => new Guid("3ac66736-cc59-4cff-8115-8df50e39816b"),
+                0x18 => new Guid("def2fe46-7bd6-4b80-bd94-f57fe20d0ce3"),
+                0x19 => new Guid("9aec974b-5b8e-4118-9b92-3186d8002ce5"),
+                0x1A => new Guid("45d8cccd-539f-4b72-a8b7-5c683142609a"),
+                0x1B => new Guid("d837ca92-12b9-44a5-ad6a-3a65b3578aa8"),
+                0x1C => new Guid("c861d0e2-a2c1-4d36-9f9c-970bab943a12"),
+                0x1D => new Guid("7f2a405c-69b5-4bf9-a1f5-30e8f1afab5e"),
+                0x1E => new Guid("2ce9a149-effe-42f0-a635-a1d39e26c8f2"),
+                _ => Guid.Empty
+            };
+            return guid != Guid.Empty || group == 0;
+        }
     }
 
     /// <summary>
