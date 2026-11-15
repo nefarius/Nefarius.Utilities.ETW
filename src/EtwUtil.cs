@@ -521,6 +521,38 @@ public static class EtwUtil
     }
 
     /// <summary>
+    ///     Queries the <c>LogFileMode</c> and <c>EnableFlags</c> of a running session without changing it.
+    /// </summary>
+    /// <returns>The mode and flags, or <see langword="null" /> when the session cannot be queried.</returns>
+    [SupportedOSPlatform("windows")]
+    internal static unsafe (uint LogFileMode, uint EnableFlags)? QuerySessionSettings(string sessionName)
+    {
+        PlatformGuard.ThrowIfNotWindows();
+
+        // Room for the logger and log file names, each up to 1024 characters.
+        int propsSize = Marshal.SizeOf<EVENT_TRACE_PROPERTIES>();
+        int totalSize = propsSize + 2 * 1024 * sizeof(char);
+
+        EVENT_TRACE_PROPERTIES* props = (EVENT_TRACE_PROPERTIES*)NativeMemory.AllocZeroed((nuint)totalSize);
+        try
+        {
+            props->Wnode.BufferSize = (uint)totalSize;
+            props->LoggerNameOffset = (uint)propsSize;
+            props->LogFileNameOffset = (uint)(propsSize + 1024 * sizeof(char));
+
+            ref EVENT_TRACE_PROPERTIES propsRef = ref Unsafe.AsRef<EVENT_TRACE_PROPERTIES>(props);
+            WIN32_ERROR error = PInvoke.ControlTrace(default, sessionName, ref propsRef,
+                (EVENT_TRACE_CONTROL)Etw.EVENT_TRACE_CONTROL_QUERY);
+
+            return error == WIN32_ERROR.ERROR_SUCCESS ? (props->LogFileMode, (uint)props->EnableFlags) : null;
+        }
+        finally
+        {
+            NativeMemory.Free(props);
+        }
+    }
+
+    /// <summary>
     ///     Returns the names of all currently running ETW trace sessions.
     /// </summary>
     /// <returns>

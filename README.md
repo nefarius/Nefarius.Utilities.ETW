@@ -126,7 +126,7 @@ await foreach (ReadOnlyMemory<byte> eventJson in EtwUtil.EnumerateRealtimeEvents
 - **Admin required** to start a session. `EtwRealtimeSession.Create` throws `EtwStartTraceException` with `ERROR_ACCESS_DENIED` when the process is not elevated.
 - **Sessions persist after process exit.** Always dispose `EtwRealtimeSession`, and call `EtwUtil.StopOrphanSession("name")` at startup as a safety net.
 - **WPP decoding** in realtime mode requires a pre-built `DecodingContext`. The file-based `EnumeratePdbReferences` pre-scan only works on `.etl` files, not on live sessions. Build the `DecodingContext` from known `.pdb` or `.tmf` paths before starting the session.
-- **Kernel providers**: `EnumerateRealtimeEventsAsync` attaches by name to an existing `NT Kernel Logger` session (verified against an externally created one). `EtwRealtimeSession.Create` can also create kernel sessions: set `EtwRealtimeSessionOptions.SystemLogger` and enable `EtwSystemProviders` GUIDs (Windows 8+), or create a session named `EtwRealtimeSession.NtKernelLoggerName` with `EnableFlags` (the single system-wide classic logger).
+- **Kernel providers**: `EnumerateRealtimeEventsAsync` attaches by name to an existing `NT Kernel Logger` session (verified against an externally created one). `EtwRealtimeSession.Create` can also create kernel sessions: set `EtwRealtimeSessionOptions.SystemLogger` and enable `EtwSystemProviders` GUIDs (system logger mode is available from Windows 8, enabling the system provider GUIDs requires Windows 11+), or create a session named `EtwRealtimeSession.NtKernelLoggerName` with `EnableFlags` (the single system-wide classic logger).
 
 ## Symbol resolution
 

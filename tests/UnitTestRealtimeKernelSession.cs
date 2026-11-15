@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Security.Principal;
@@ -19,7 +20,8 @@ public class RealtimeKernelSessionTests
 {
     private const string SystemLoggerName = "Nefarius.ETW.Tests.SystemLogger";
     private const uint ProcessFlag = 0x00000001; // EVENT_TRACE_FLAG_PROCESS
-    private const ulong ProcessKeyword = 0x10;
+    private const uint RealTimeMode = 0x00000100; // EVENT_TRACE_REAL_TIME_MODE
+    private const ulong ProcessKeyword = 0x1; // SYSTEM_PROCESS_KW_GENERAL
 
     [OneTimeSetUp]
     public void EnsureElevated()
@@ -39,10 +41,41 @@ public class RealtimeKernelSessionTests
         EtwUtil.StopOrphanSession(SystemLoggerName);
     }
 
+    private static bool HasSpawnedProcessId(JsonElement root, ConcurrentBag<int> spawned)
+    {
+        if (!root.TryGetProperty("Event", out JsonElement evt) ||
+            !evt.TryGetProperty("Properties", out JsonElement properties) ||
+            properties.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        foreach (JsonElement property in properties.EnumerateArray())
+        {
+            if (property.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            foreach (JsonProperty member in property.EnumerateObject())
+            {
+                if (string.Equals(member.Name, "ProcessId", StringComparison.OrdinalIgnoreCase) &&
+                    member.Value.ValueKind == JsonValueKind.Number &&
+                    member.Value.TryGetInt32(out int pid) && spawned.Contains(pid))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     private static async Task<int> CountEventsWhileSpawningProcessesAsync(string sessionName)
     {
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(30));
         using CancellationTokenSource spawnerStop = new();
+        ConcurrentBag<int> spawned = [];
         Task spawner = Task.Run(async () =>
         {
             while (!spawnerStop.IsCancellationRequested)
@@ -51,7 +84,12 @@ public class RealtimeKernelSessionTests
                 {
                     CreateNoWindow = true, UseShellExecute = false
                 });
-                process?.WaitForExit();
+                if (process is not null)
+                {
+                    spawned.Add(process.Id);
+                    process.WaitForExit();
+                }
+
                 await Task.Delay(250);
             }
         });
@@ -64,7 +102,10 @@ public class RealtimeKernelSessionTests
             {
                 using JsonDocument doc = JsonDocument.Parse(eventBytes);
                 Assert.That(doc.RootElement.TryGetProperty("Event", out _), Is.True);
-                if (++received >= 3)
+
+                // Count only process events whose subject ProcessId is a process this test spawned, not synthetic
+                // or unrelated events.
+                if (HasSpawnedProcessId(doc.RootElement, spawned) && ++received >= 3)
                 {
                     break;
                 }
@@ -82,6 +123,11 @@ public class RealtimeKernelSessionTests
     [Test]
     public async Task SystemLoggerSession_ReceivesProcessEvents()
     {
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
+        {
+            Assert.Ignore("Enabling EtwSystemProviders GUIDs requires Windows 11 or later.");
+        }
+
         using EtwRealtimeSession session = EtwRealtimeSession.Create(SystemLoggerName, o => o.SystemLogger = true);
         session.EnableProvider(EtwSystemProviders.Process, TraceEventLevel.Information, ProcessKeyword);
 
@@ -101,6 +147,20 @@ public class RealtimeKernelSessionTests
         {
             // Another tool already owns the NT Kernel Logger: attaching to it is exactly the external-session case.
             TestContext.Out.WriteLine("Attaching to the NT Kernel Logger session that already exists.");
+
+            // A file-only session delivers nothing to a real-time consumer. It is owned by someone else, so it is
+            // left untouched and the test is skipped.
+            (uint LogFileMode, uint EnableFlags)? settings =
+                EtwUtil.QuerySessionSettings(EtwRealtimeSession.NtKernelLoggerName);
+            if (settings is null || (settings.Value.LogFileMode & RealTimeMode) == 0)
+            {
+                Assert.Ignore("The existing NT Kernel Logger session is not in real-time mode.");
+            }
+
+            if ((settings.Value.EnableFlags & ProcessFlag) == 0)
+            {
+                Assert.Ignore("The existing NT Kernel Logger session does not collect process events.");
+            }
         }
 
         try

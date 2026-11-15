@@ -44,9 +44,10 @@ public sealed class EtwRealtimeSessionOptions
     public EtwClockResolution ClockResolution { get; set; } = EtwClockResolution.QueryPerformanceCounter;
 
     /// <summary>
-    ///     Creates a system logger session (<c>EVENT_TRACE_SYSTEM_LOGGER_MODE</c>, Windows 8 and later) that can receive
-    ///     the kernel providers listed in <see cref="EtwSystemProviders" /> through
-    ///     <see cref="EtwRealtimeSession.EnableProvider" />. Any session name is accepted, so it does not collide
+    ///     Creates a system logger session (<c>EVENT_TRACE_SYSTEM_LOGGER_MODE</c>, available from Windows 8) that can
+    ///     receive the kernel providers listed in <see cref="EtwSystemProviders" /> through
+    ///     <see cref="EtwRealtimeSession.EnableProvider" />. Enabling those system provider GUIDs requires Windows 11
+    ///     or later; on older versions the session starts but no events are documented to arrive. Any session name is accepted, so it does not collide
     ///     with the single, system-wide <see cref="EtwRealtimeSession.NtKernelLoggerName" /> session.
     ///     Defaults to <see langword="false" />.
     /// </summary>
@@ -66,7 +67,7 @@ public sealed class EtwRealtimeSessionOptions
 /// </summary>
 public static class EtwSystemProviders
 {
-    /// <summary>The system process provider (<c>SystemProcessProvider</c>); keyword <c>0x10</c> enables process events.</summary>
+    /// <summary>The system process provider (<c>SystemProcessProvider</c>); keyword <c>0x1</c> (<c>SYSTEM_PROCESS_KW_GENERAL</c>) enables process lifetime events.</summary>
     public static readonly Guid Process = new("151f55dc-467d-471f-83b5-5f889d46ff66");
 }
 
