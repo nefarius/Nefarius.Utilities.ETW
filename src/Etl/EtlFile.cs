@@ -124,21 +124,22 @@ internal sealed unsafe class EtlFile : IDisposable
             }
 
             file = MemoryMappedFile.CreateFromFile(path, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
-            view = file.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read);
+            MemoryMappedViewAccessor mappedView = file.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read);
+            view = mappedView;
 
             byte* pointer = null;
-            view.SafeMemoryMappedViewHandle.AcquirePointer(ref pointer);
+            mappedView.SafeMemoryMappedViewHandle.AcquirePointer(ref pointer);
             try
             {
                 EtlTraceInfo info = ReadTraceInfo(path, pointer, length);
-                EtlFile result = new(file, view, pointer, length, info);
+                EtlFile result = new(file, mappedView, pointer, length, info);
                 file = null;
                 view = null;
                 return result;
             }
             catch
             {
-                view.SafeMemoryMappedViewHandle.ReleasePointer();
+                mappedView.SafeMemoryMappedViewHandle.ReleasePointer();
                 throw;
             }
         }

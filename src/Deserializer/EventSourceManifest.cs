@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 
 using Microsoft.Xml.Serialization.GeneratedAssembly;
 
@@ -22,7 +22,7 @@ namespace Nefarius.Utilities.ETW.Deserializer
 
         private ushort chunksReceived;
 
-        private instrumentationManifest manifest;
+        private instrumentationManifest? manifest;
 
         public EventSourceManifest(Guid providerGuid, byte format, byte majorVersion, byte minorVersion, byte magic, ushort totalChunks)
         {
@@ -37,8 +37,9 @@ namespace Nefarius.Utilities.ETW.Deserializer
         public EventSourceManifest(Guid providerGuid, Stream source)
         {
             this.providerGuid = providerGuid;
-            var serializer = new instrumentationManifestSerializer();
-            this.manifest = (instrumentationManifest)serializer.Deserialize(source);
+            instrumentationManifestSerializer serializer = new();
+            this.manifest = serializer.Deserialize(source) as instrumentationManifest
+                ?? throw new InvalidDataException("The manifest stream is not an instrumentation manifest.");
             source.Dispose();
         }
 
@@ -50,21 +51,22 @@ namespace Nefarius.Utilities.ETW.Deserializer
             {
                 if (this.chunksReceived != this.totalChunks)
                 {
-                    throw new Exception("Schema is incomplete as not all chunks have been received");
+                    throw new InvalidOperationException("Schema is incomplete as not all chunks have been received");
                 }
 
-                if (this.manifest == null)
+                if (this.manifest is instrumentationManifest existing)
                 {
-                    string value = this.chunkBuilder.ToString();
-                    var bytes = Encoding.ASCII.GetBytes(value);
-                    using (var ms = new MemoryStream(bytes))
-                    {
-                        var serializer = new Microsoft.Xml.Serialization.GeneratedAssembly.instrumentationManifestSerializer();
-                        this.manifest = (instrumentationManifest)serializer.Deserialize(ms);
-                    }
+                    return existing;
                 }
 
-                return this.manifest;
+                string value = this.chunkBuilder.ToString();
+                byte[] bytes = Encoding.ASCII.GetBytes(value);
+                using MemoryStream ms = new(bytes);
+                instrumentationManifestSerializer serializer = new();
+                instrumentationManifest schema = serializer.Deserialize(ms) as instrumentationManifest
+                    ?? throw new InvalidDataException("The manifest stream is not an instrumentation manifest.");
+                this.manifest = schema;
+                return schema;
             }
         }
 

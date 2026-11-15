@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
@@ -379,8 +379,8 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
 
     public uint Version { get; private set; }
     public Guid TraceGuid { get; private set; }
-    public string GuidName { get; private set; }
-    public string GuidTypeName { get; private set; }
+    public string? GuidName { get; private set; }
+    public string? GuidTypeName { get; private set; }
     public uint ThreadId { get; private set; }
     public SYSTEMTIME SystemTime { get; private set; }
     public uint UserTime { get; private set; }
@@ -389,12 +389,19 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
     public uint ProcessId { get; private set; }
     public uint CpuNumber { get; private set; }
     public uint Indent { get; private set; }
-    public string FlagsName { get; private set; }
-    public string LevelName { get; private set; }
-    public string FunctionName { get; private set; }
-    public string ComponentName { get; private set; }
-    public string SubComponentName { get; private set; }
-    public string FormattedString { get; private set; }
+    public string? FlagsName { get; private set; }
+    public string? LevelName { get; private set; }
+    public string? FunctionName { get; private set; }
+    public string? ComponentName { get; private set; }
+    public string? SubComponentName { get; private set; }
+
+    private string? _formattedString;
+
+    public string FormattedString
+    {
+        get => _formattedString ?? throw new InvalidOperationException("The WPP event has not been decoded.");
+        private set => _formattedString = value ?? throw new ArgumentNullException(nameof(value));
+    }
     public FILETIME RawSystemTime { get; private set; }
     public Guid ProviderGuid { get; private set; }
 

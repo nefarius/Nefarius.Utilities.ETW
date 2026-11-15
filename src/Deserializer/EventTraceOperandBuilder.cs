@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 
 using Windows.Win32.Foundation;
 
@@ -111,7 +111,7 @@ internal static unsafe class EventTraceOperandBuilder
         return null;
     }
 
-    public static IEventTraceOperand Build(instrumentationManifest manifest, ushort eventId, int metadataIndex)
+    public static IEventTraceOperand? Build(instrumentationManifest manifest, ushort eventId, int metadataIndex)
     {
         return new TraceEventOperandBuilderFromXml(manifest, eventId).Build(metadataIndex);
     }
@@ -127,7 +127,7 @@ internal static unsafe class EventTraceOperandBuilder
             _eventId = eventId;
         }
 
-        public IEventTraceOperand Build(int eventMetadataTableIndex)
+        public IEventTraceOperand? Build(int eventMetadataTableIndex)
         {
             foreach (object? instrumentationManifestTypeItem in _manifest.Items)
             {
@@ -421,10 +421,13 @@ internal static unsafe class EventTraceOperandBuilder
                 }
 
                 /* save important information in an object */
+                MapInformation? map = mapOfValues is null
+                    ? null
+                    : new MapInformation(mapName ?? string.Empty, mapOfValues);
                 EventTracePropertyOperand operand = new(
                     new PropertyMetadata((_TDH_IN_TYPE)eventPropertyInfo->Anonymous1.nonStructType.InType,
-                        (_TDH_OUT_TYPE)eventPropertyInfo->Anonymous1.nonStructType.OutType, propertyName, mapOfValues != null,
-                        isStruct, isStruct ? structChildren : 0, new MapInformation(mapName ?? string.Empty, mapOfValues)),
+                        (_TDH_OUT_TYPE)eventPropertyInfo->Anonymous1.nonStructType.OutType, propertyName, map is not null,
+                        isStruct, isStruct ? structChildren : 0, map),
                     i,
                     isVariableArray,
                     isFixedArray,

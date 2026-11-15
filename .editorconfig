@@ -388,3 +388,8 @@ dotnet_style_allow_multiple_blank_lines_experimental = true:silent
 
 # Unnecessary usings
 dotnet_diagnostic.IDE0005.severity = warning
+
+# Checked-in sgen output. Treat it as generated and silence its unused-local warning.
+[src/Deserializer/EventManifestSchema.XmlSerializers.cs]
+generated_code = true
+dotnet_diagnostic.CS0219.severity = none

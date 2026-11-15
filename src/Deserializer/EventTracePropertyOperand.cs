@@ -1,4 +1,4 @@
-﻿namespace Nefarius.Utilities.ETW.Deserializer;
+namespace Nefarius.Utilities.ETW.Deserializer;
 
 internal sealed class EventTracePropertyOperand : IEventTracePropertyOperand
 {
@@ -21,11 +21,17 @@ internal sealed class EventTracePropertyOperand : IEventTracePropertyOperand
 
     public bool IsVariableArray { get; }
 
-    public IEventTracePropertyOperand VariableArraySize { get; private set; }
+    private IEventTracePropertyOperand? _variableArraySize;
+
+    public IEventTracePropertyOperand VariableArraySize =>
+        _variableArraySize ?? throw new InvalidOperationException("The variable array size was not resolved.");
 
     public bool IsVariableLength { get; }
 
-    public IEventTracePropertyOperand VariableLengthSize { get; private set; }
+    private IEventTracePropertyOperand? _variableLengthSize;
+
+    public IEventTracePropertyOperand VariableLengthSize =>
+        _variableLengthSize ?? throw new InvalidOperationException("The variable length size was not resolved.");
 
     public bool IsFixedArray { get; }
 
@@ -48,7 +54,7 @@ internal sealed class EventTracePropertyOperand : IEventTracePropertyOperand
 
     public void SetVariableArraySize(IEventTracePropertyOperand reference)
     {
-        VariableArraySize = reference;
+        _variableArraySize = reference;
     }
 
     public void SetFixedLengthSize(int fixedLengthSize)
@@ -58,6 +64,6 @@ internal sealed class EventTracePropertyOperand : IEventTracePropertyOperand
 
     public void SetVariableLengthSize(IEventTracePropertyOperand reference)
     {
-        VariableLengthSize = reference;
+        _variableLengthSize = reference;
     }
 }

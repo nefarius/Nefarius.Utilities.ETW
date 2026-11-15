@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Security.Principal;
 using System.Text.Json;
 
@@ -10,6 +11,7 @@ namespace Nefarius.Utilities.ETW.Tests;
 ///     These tests require administrator privileges and are skipped when the
 ///     test runner is not elevated.
 /// </summary>
+[SupportedOSPlatform("windows")]
 [Category("Realtime")]
 [Category("RequiresAdmin")]
 [Platform("Win")]
@@ -152,6 +154,7 @@ public class RealtimeSessionTests
 ///     Argument-guard tests for <see cref="EtwRealtimeSession" /> that do not
 ///     require administrator privileges (no ETW session is actually started).
 /// </summary>
+[SupportedOSPlatform("windows")]
 [Category("Realtime")]
 public class RealtimeSessionArgumentValidationTests
 {

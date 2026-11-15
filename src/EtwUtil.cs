@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -655,9 +655,14 @@ public static class EtwUtil
                 {
                     if (isRealtime)
                     {
+                        if (realtimeSessionName is not string sessionName)
+                        {
+                            throw new InvalidOperationException("A real-time session name is required.");
+                        }
+
                         sessions[i] = new EVENT_TRACE_LOGFILEW
                         {
-                            LoggerName = realtimeSessionName,
+                            LoggerName = sessionName,
                             EventRecordCallback = deserializer.Deserialize,
                             BufferCallback = _ => !cancellationToken.IsCancellationRequested,
                             LogFileMode = PInvoke.PROCESS_TRACE_MODE_EVENT_RECORD |

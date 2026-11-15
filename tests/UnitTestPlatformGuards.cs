@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Nefarius.Utilities.ETW.Tests;
 
 /// <summary>
@@ -15,30 +17,40 @@ public class PlatformGuardTests
     }
 
     [Test]
+    [SuppressMessage("Interoperability", "CA1416:Validate platform compatibility",
+        Justification = "Intentionally calls a Windows-only API off Windows and expects PlatformNotSupportedException.")]
     public void RealtimeSession_Create_Throws()
     {
         Assert.Throws<PlatformNotSupportedException>(() => EtwRealtimeSession.Create("guard-test"));
     }
 
     [Test]
+    [SuppressMessage("Interoperability", "CA1416:Validate platform compatibility",
+        Justification = "Intentionally calls a Windows-only API off Windows and expects PlatformNotSupportedException.")]
     public void StopOrphanSession_Throws()
     {
         Assert.Throws<PlatformNotSupportedException>(() => EtwUtil.StopOrphanSession("guard-test"));
     }
 
     [Test]
+    [SuppressMessage("Interoperability", "CA1416:Validate platform compatibility",
+        Justification = "Intentionally calls a Windows-only API off Windows and expects PlatformNotSupportedException.")]
     public void EnumerateSessionNames_Throws()
     {
         Assert.Throws<PlatformNotSupportedException>(() => EtwUtil.EnumerateSessionNames());
     }
 
     [Test]
+    [SuppressMessage("Interoperability", "CA1416:Validate platform compatibility",
+        Justification = "Intentionally calls a Windows-only API off Windows and expects PlatformNotSupportedException.")]
     public void EnumerateRealtimeEventsAsync_Throws()
     {
         Assert.Throws<PlatformNotSupportedException>(() => EtwUtil.EnumerateRealtimeEventsAsync("guard-test"));
     }
 
     [Test]
+    [SuppressMessage("Interoperability", "CA1416:Validate platform compatibility",
+        Justification = "Intentionally calls a Windows-only API off Windows and expects PlatformNotSupportedException.")]
     public void ConvertRealtimeToJson_Throws()
     {
         using MemoryStream ms = new();

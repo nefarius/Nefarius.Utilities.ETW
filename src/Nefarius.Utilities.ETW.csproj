@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFrameworks>net8.0;net9.0;net10.0;net8.0-windows8.0;net9.0-windows8.0;net10.0-windows8.0</TargetFrameworks>
@@ -10,10 +10,8 @@
         <RepositoryUrl>https://github.com/nefarius/Nefarius.Utilities.ETW</RepositoryUrl>
         <PackageProjectUrl>https://github.com/nefarius/Nefarius.Utilities.ETW</PackageProjectUrl>
         <Description>Summary. README takes priority over this but nice to have.</Description>
-        <NoWarn Condition="'$(CI)' == 'true'">CS1591;CS8618;CS8600;CS8601;CS8603;CS8604;CS8765;CS0219;CS8625;CS8625;CS8714</NoWarn>
-        <NoWarn>CS8765;CS1591;CS8600</NoWarn>
         <!-- Windows-only calls are gated at runtime by the backend selection and PlatformGuard. -->
-        <NoWarn>$(NoWarn);CA1416</NoWarn>
+        <NoWarn>CS8765;CS1591;CS8600;CA1416</NoWarn>
     </PropertyGroup>
     
     <PropertyGroup>
@@ -33,7 +31,7 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.404" PrivateAssets="All" />
         <PackageReference Include="Nefarius.Shared.PdbUtils" Version="1.0.0" />
     </ItemGroup>
 

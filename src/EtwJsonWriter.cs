@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 using Nefarius.Utilities.ETW.Deserializer;
@@ -134,7 +134,7 @@ internal readonly struct EtwJsonWriter : IEtwWriter
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void WriteUnicodeString(string value)
+    public void WriteUnicodeString(string? value)
     {
         _writer.WriteStringValue(value);
     }
