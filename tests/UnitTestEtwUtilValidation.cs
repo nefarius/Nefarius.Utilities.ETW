@@ -47,6 +47,7 @@ public class EtwUtilArgumentValidationTests
 
     [Test]
     [Category("EndToEnd")]
+    [Platform("Win")]
     public void EnumeratePdbReferences_ReportsError_AndReturnsEmpty_WhenFileDoesNotExist()
     {
         List<string> errors = [];
@@ -68,6 +69,7 @@ public class EtwUtilArgumentValidationTests
 
     [Test]
     [Category("EndToEnd")]
+    [Platform("Win")]
     public void ConvertToJson_ReturnsFalse_AndReportsError_WhenFileDoesNotExist()
     {
         List<string> errors = [];

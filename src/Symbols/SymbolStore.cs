@@ -219,7 +219,8 @@ public static class SymbolStore
     {
         if (searchPath.Contains('*') || searchPath.Contains('?'))
         {
-            if (SymbolPathPatterns.Validate(searchPath) is not null || !Directory.Exists(SymbolPathPatterns.NormalizeRoot(searchPath)))
+            if (SymbolPathPatterns.Validate(searchPath) is not null ||
+                !Directory.Exists(PathHelper.ToHostPath(SymbolPathPatterns.NormalizeRoot(searchPath))))
             {
                 return [];
             }
@@ -227,12 +228,13 @@ public static class SymbolStore
             return SymbolPathPatterns.Enumerate(searchPath);
         }
 
-        if (!Directory.Exists(searchPath))
+        string directory = PathHelper.ToHostPath(searchPath);
+        if (!Directory.Exists(directory))
         {
             return [];
         }
 
-        return Directory.EnumerateFiles(searchPath, "*.pdb", SearchOption.AllDirectories);
+        return Directory.EnumerateFiles(directory, "*.pdb", SearchOption.AllDirectories);
     }
 
     private static void DeleteIfExists(string path)

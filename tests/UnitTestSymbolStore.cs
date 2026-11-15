@@ -27,6 +27,24 @@ public class SymbolStoreTests
     }
 
     [Test]
+    public void Enumerate_FindsFiles_WhenGlobUsesBackslashes()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "etw-glob-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllBytes(Path.Combine(dir, "sample.pdb"), [1]);
+            string glob = dir.Replace(Path.DirectorySeparatorChar, '\\') + @"\*.pdb";
+
+            Assert.That(SymbolPathPatterns.Enumerate(glob).Select(Path.GetFileName), Does.Contain("sample.pdb"));
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    [Test]
     public void Resolve_PrefersExplicitServerOverNtSymbolPath()
     {
         SymbolStoreConfiguration configuration = SymbolStoreConfiguration.Resolve(

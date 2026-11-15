@@ -234,7 +234,7 @@ public static class DecodingSources
             return;
         }
 
-        string root = SymbolPathPatterns.NormalizeRoot(glob);
+        string root = PathHelper.ToHostPath(SymbolPathPatterns.NormalizeRoot(glob));
         if (!Directory.Exists(root))
         {
             diagnostics.Add($"[!] Glob root directory not found: {root}");

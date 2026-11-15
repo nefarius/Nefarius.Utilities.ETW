@@ -52,10 +52,12 @@ public readonly struct PdbMetaData : IEquatable<PdbMetaData>
     /// <inheritdoc />
     public bool Equals(PdbMetaData other) =>
         Guid == other.Guid && Age == other.Age &&
-        string.Equals(
-            PathHelper.GetFileName(PdbName),
-            PathHelper.GetFileName(other.PdbName),
-            StringComparison.OrdinalIgnoreCase);
+        string.Equals(FileName(PdbName), FileName(other.PdbName), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    ///     <see langword="default" /> leaves <see cref="PdbName" /> null even though the property is required.
+    /// </summary>
+    private static string? FileName(string? pdbName) => pdbName is null ? null : PathHelper.GetFileName(pdbName);
 
     /// <inheritdoc />
     public override bool Equals(object? obj) => obj is PdbMetaData other && Equals(other);
@@ -65,7 +67,7 @@ public readonly struct PdbMetaData : IEquatable<PdbMetaData>
         HashCode.Combine(
             Guid,
             Age,
-            StringComparer.OrdinalIgnoreCase.GetHashCode(PathHelper.GetFileName(PdbName) ?? string.Empty));
+            StringComparer.OrdinalIgnoreCase.GetHashCode(FileName(PdbName) ?? string.Empty));
 
     /// <inheritdoc />
     public static bool operator ==(PdbMetaData left, PdbMetaData right) => left.Equals(right);

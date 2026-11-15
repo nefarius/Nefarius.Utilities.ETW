@@ -74,7 +74,7 @@ public static class SymbolPathPatterns
     /// </summary>
     public static IEnumerable<string> Enumerate(string glob)
     {
-        string root = NormalizeRoot(glob);
+        string root = PathHelper.ToHostPath(NormalizeRoot(glob));
         string pattern = PathHelper.GetFileName(glob);
         SearchOption search = glob.Contains("**", StringComparison.Ordinal)
             ? SearchOption.AllDirectories

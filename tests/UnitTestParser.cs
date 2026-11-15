@@ -91,6 +91,7 @@ public class Tests
 
     [Test]
     [Category("EndToEnd")]
+    [Platform("Win")]
     public void BthPs3EtlTraceDecodingTest()
     {
         string json = Shared.BthPs3EtlTraceDecodeToString();
@@ -128,6 +129,7 @@ public class Tests
 
     [Test]
     [Category("EndToEnd")]
+    [Platform("Win")]
     public void BthPs3EtlTraceIncompleteContextTest()
     {
         string json = Shared.BthPs3EtlIncompleteContextDecodeToString();
@@ -162,6 +164,7 @@ public class Tests
 
     [Test]
     [Category("EndToEnd")]
+    [Platform("Win")]
     public void DsHidMiniEtlTraceDecodingTest()
     {
         string json = Shared.DsHidMiniEtlTraceDecodeToString();
@@ -197,6 +200,7 @@ public class Tests
 
     [Test]
     [Category("EndToEnd")]
+    [Platform("Win")]
     public void EnumeratePdbReferencesTest()
     {
         const string etwFilePath = @"./traces/BthPS3_0.etl";
@@ -219,6 +223,7 @@ public class Tests
 
     [Test]
     [Category("Integration")]
+    [Platform("Win")]
     public async Task SymbolServerDownloadTest()
     {
         if (!string.Equals(Environment.GetEnvironmentVariable("RUN_INTEGRATION_TESTS"), "true",

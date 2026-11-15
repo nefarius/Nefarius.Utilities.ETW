@@ -31,4 +31,12 @@ internal static class PathHelper
 
         return path[..index];
     }
+
+    /// <summary>
+    ///     Rewrites separators so a Windows-style path can be passed to the host filesystem.
+    /// </summary>
+    public static string ToHostPath(string path) =>
+        Path.DirectorySeparatorChar == '\\'
+            ? path
+            : path.Replace('\\', '/');
 }
