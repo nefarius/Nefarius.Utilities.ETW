@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Security.Principal;
+using System.Text;
 
 namespace Nefarius.Utilities.ETW.Deserializer;
 
@@ -385,9 +385,35 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe string ReadSid()
     {
-        SecurityIdentifier value = new((IntPtr)NativeEventRecord->UserData);
-        IncrementBy(ref NativeEventRecord->UserData, value.BinaryLength);
-        return value.Value;
+        if (RemainingBytes < 8)
+        {
+            throw new FormatException("SID is truncated.");
+        }
+
+        byte* p = (byte*)NativeEventRecord->UserData;
+        byte revision = p[0];
+        int count = p[1];
+        int size = 8 + count * 4;
+        if (count > 15 || size > RemainingBytes)
+        {
+            throw new FormatException("SID is truncated.");
+        }
+
+        ulong authority = 0;
+        for (int i = 0; i < 6; i++)
+        {
+            authority = (authority << 8) | p[2 + i];
+        }
+
+        StringBuilder text = new();
+        text.Append('S').Append('-').Append(revision).Append('-').Append(authority);
+        for (int i = 0; i < count; i++)
+        {
+            text.Append('-').Append(*(uint*)(p + 8 + 4 * i));
+        }
+
+        IncrementBy(ref NativeEventRecord->UserData, size);
+        return text.ToString();
     }
 
     /// <summary>

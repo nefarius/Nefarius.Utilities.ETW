@@ -16,24 +16,6 @@ public class StreamingTests
     // -----------------------------------------------------------------------
 
     [Test]
-    public async Task NativeBackend_StreamsTheErrorInsteadOfKillingTheProcess()
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            Assert.Ignore("Native backend is available.");
-        }
-
-        Assert.ThrowsAsync<PlatformNotSupportedException>(async () =>
-        {
-            await foreach (ReadOnlyMemory<byte> _ in EtwUtil.EnumerateEventsAsync(
-                               ["./traces/BthPS3_0.etl"],
-                               opts => opts.Backend = EtwBackend.Native))
-            {
-            }
-        });
-    }
-
-    [Test]
     [Category("EndToEnd")]
     public async Task StreamingEnumerationYieldsEventsTest()
     {
@@ -197,5 +179,29 @@ public class StreamingTests
         // No OperationCanceledException expected; loop must have completed normally.
         Assert.That(received, Is.EqualTo(breakAfter),
             "Consumer must receive exactly the requested number of events before breaking.");
+    }
+}
+
+/// <summary>
+///     Streaming checks that must run off Windows. The rest of <see cref="StreamingTests" /> is Windows-only.
+/// </summary>
+public class StreamingBackendTests
+{
+    [Test]
+    public async Task NativeBackend_StreamsTheErrorInsteadOfKillingTheProcess()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Ignore("Native backend is available.");
+        }
+
+        Assert.ThrowsAsync<PlatformNotSupportedException>(async () =>
+        {
+            await foreach (ReadOnlyMemory<byte> _ in EtwUtil.EnumerateEventsAsync(
+                               ["./traces/BthPS3_0.etl"],
+                               opts => opts.Backend = EtwBackend.Native))
+            {
+            }
+        });
     }
 }
