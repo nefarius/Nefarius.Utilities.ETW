@@ -37,7 +37,7 @@ public class DecodingContextTests
     [Category("Parse")]
     public void GetTraceMessageFormatFor_ReturnsNull_ForUnknownGuid()
     {
-        DecodingContext context = new(PdbFileDecodingContextType.CreateFrom(@".\symbols\BthPS3.pdb"));
+        DecodingContext context = new(PdbFileDecodingContextType.CreateFrom(@"./symbols/BthPS3.pdb"));
 
         TraceMessageFormat? result = context.GetTraceMessageFormatFor(Guid.NewGuid(), 0);
 
@@ -48,7 +48,7 @@ public class DecodingContextTests
     [Category("Parse")]
     public void GetTraceMessageFormatFor_ReturnsNull_WhenGuidIsNull()
     {
-        DecodingContext context = new(PdbFileDecodingContextType.CreateFrom(@".\symbols\BthPS3.pdb"));
+        DecodingContext context = new(PdbFileDecodingContextType.CreateFrom(@"./symbols/BthPS3.pdb"));
 
         TraceMessageFormat? result = context.GetTraceMessageFormatFor(null, 0);
 
@@ -59,7 +59,7 @@ public class DecodingContextTests
     [Category("Parse")]
     public void GetTraceMessageFormatFor_ReturnsKnownFormat_WhenGuidAndIdMatch()
     {
-        DecodingContext context = new(PdbFileDecodingContextType.CreateFrom(@".\symbols\BthPS3.pdb"));
+        DecodingContext context = new(PdbFileDecodingContextType.CreateFrom(@"./symbols/BthPS3.pdb"));
 
         TraceMessageFormat? result = context.GetTraceMessageFormatFor(KnownGuid, KnownId);
 
@@ -77,8 +77,8 @@ public class DecodingContextTests
     {
         // BthPS3PSM.pdb contains formats that BthPS3.pdb does not — loading only one
         // at a time lets us confirm ExtendWith truly unions both sets.
-        IList<DecodingContextType> bthPs3Types    = PdbFileDecodingContextType.CreateFrom(@".\symbols\BthPS3.pdb");
-        IList<DecodingContextType> bthPs3PsmTypes = PdbFileDecodingContextType.CreateFrom(@".\symbols\BthPS3PSM.pdb");
+        IList<DecodingContextType> bthPs3Types    = PdbFileDecodingContextType.CreateFrom(@"./symbols/BthPS3.pdb");
+        IList<DecodingContextType> bthPs3PsmTypes = PdbFileDecodingContextType.CreateFrom(@"./symbols/BthPS3PSM.pdb");
 
         DecodingContext bthPs3Context = new(bthPs3Types);
         DecodingContext extended      = bthPs3Context.ExtendWith(bthPs3PsmTypes);
@@ -108,10 +108,10 @@ public class DecodingContextTests
     public void PdbFileDecodingContextType_StreamCtor_ProducesSameFormatsAsPathCtor()
     {
         // Path-based
-        PdbFileDecodingContextType fromPath = new(@".\symbols\BthPS3.pdb");
+        PdbFileDecodingContextType fromPath = new(@"./symbols/BthPS3.pdb");
 
         // Stream-based — open the same file as a stream
-        using FileStream fs = File.OpenRead(@".\symbols\BthPS3.pdb");
+        using FileStream fs = File.OpenRead(@"./symbols/BthPS3.pdb");
         PdbFileDecodingContextType fromStream = new(fs);
 
         IEnumerable<TraceMessageFormat> pathFormats   = fromPath.TraceMessageFormats.Distinct();
@@ -129,7 +129,7 @@ public class DecodingContextTests
     [Category("Parse")]
     public void TmfFilesDirectoryDecodingContextType_LooksUpKnownFormat()
     {
-        IList<DecodingContextType> tmfTypes = TmfFilesDirectoryDecodingContextType.CreateFrom(@".\symbols");
+        IList<DecodingContextType> tmfTypes = TmfFilesDirectoryDecodingContextType.CreateFrom(@"./symbols");
         DecodingContext context = new(tmfTypes);
 
         TraceMessageFormat? result = context.GetTraceMessageFormatFor(KnownGuid, KnownId);
@@ -154,7 +154,7 @@ public class DecodingContextTests
     public void TmfFileDecodingContextType_LooksUpKnownFormat()
     {
         DecodingContext context = new(new TmfFileDecodingContextType(
-            @".\symbols\e4b27b5e-24d0-369f-a4b5-23228e160bd2.tmf"));
+            @"./symbols/e4b27b5e-24d0-369f-a4b5-23228e160bd2.tmf"));
 
         TraceMessageFormat? result = context.GetTraceMessageFormatFor(KnownGuid, KnownId);
 
@@ -170,7 +170,7 @@ public class DecodingContextTests
     [Category("Parse")]
     public void PdbFileDecodingContextType_WppTraceControls_ContainsBthPS3ControlGuid()
     {
-        PdbFileDecodingContextType ctx = new(@".\symbols\BthPS3.pdb");
+        PdbFileDecodingContextType ctx = new(@"./symbols/BthPS3.pdb");
 
         Assert.That(ctx.WppTraceControls.Select(c => c.ControlGuid),
             Does.Contain(BthPS3ControlGuid));
@@ -180,7 +180,7 @@ public class DecodingContextTests
     [Category("Parse")]
     public void PdbFileDecodingContextType_WppTraceControls_HasCorrectName()
     {
-        PdbFileDecodingContextType ctx = new(@".\symbols\BthPS3.pdb");
+        PdbFileDecodingContextType ctx = new(@"./symbols/BthPS3.pdb");
 
         WppTraceControl? ctrl = ctx.WppTraceControls
             .FirstOrDefault(c => c.ControlGuid == BthPS3ControlGuid);
@@ -193,7 +193,7 @@ public class DecodingContextTests
     [Category("Parse")]
     public void PdbFileDecodingContextType_WppTraceControls_HasExpectedBitFlags()
     {
-        PdbFileDecodingContextType ctx = new(@".\symbols\BthPS3.pdb");
+        PdbFileDecodingContextType ctx = new(@"./symbols/BthPS3.pdb");
 
         WppTraceControl? ctrl = ctx.WppTraceControls
             .FirstOrDefault(c => c.ControlGuid == BthPS3ControlGuid);
@@ -210,7 +210,7 @@ public class DecodingContextTests
     [Category("Parse")]
     public void PdbFileDecodingContextType_ProviderGuids_ContainsBthPS3ControlGuid()
     {
-        PdbFileDecodingContextType ctx = new(@".\symbols\BthPS3.pdb");
+        PdbFileDecodingContextType ctx = new(@"./symbols/BthPS3.pdb");
 
         Assert.That(ctx.ProviderGuids, Does.Contain(BthPS3ControlGuid));
     }
@@ -224,7 +224,7 @@ public class DecodingContextTests
     public void EnumerateProviderGuids_ReturnsBthPS3ControlGuid()
     {
         IReadOnlyCollection<Guid> guids =
-            PdbFileDecodingContextType.EnumerateProviderGuids(@".\symbols\BthPS3.pdb");
+            PdbFileDecodingContextType.EnumerateProviderGuids(@"./symbols/BthPS3.pdb");
 
         Assert.That(guids, Does.Contain(BthPS3ControlGuid));
     }
@@ -234,7 +234,7 @@ public class DecodingContextTests
     public void EnumerateProviderGuids_ReturnsBthPS3PsmControlGuid()
     {
         IReadOnlyCollection<Guid> guids =
-            PdbFileDecodingContextType.EnumerateProviderGuids(@".\symbols\BthPS3PSM.pdb");
+            PdbFileDecodingContextType.EnumerateProviderGuids(@"./symbols/BthPS3PSM.pdb");
 
         Assert.That(guids, Does.Contain(BthPS3PsmControlGuid));
     }
@@ -244,7 +244,7 @@ public class DecodingContextTests
     public void EnumerateProviderGuids_ReturnsDistinctGuids()
     {
         IReadOnlyCollection<Guid> guids =
-            PdbFileDecodingContextType.EnumerateProviderGuids(@".\symbols\BthPS3.pdb");
+            PdbFileDecodingContextType.EnumerateProviderGuids(@"./symbols/BthPS3.pdb");
 
         Assert.That(guids.Count, Is.EqualTo(guids.Distinct().Count()));
     }
@@ -266,7 +266,7 @@ public class DecodingContextTests
     public void EnumerateTraceControls_ReturnsSingleEntryForBthPS3()
     {
         IReadOnlyCollection<WppTraceControl> controls =
-            PdbFileDecodingContextType.EnumerateTraceControls(@".\symbols\BthPS3.pdb");
+            PdbFileDecodingContextType.EnumerateTraceControls(@"./symbols/BthPS3.pdb");
 
         Assert.That(controls, Has.Count.EqualTo(1));
         Assert.That(controls.Single().ControlGuid, Is.EqualTo(BthPS3ControlGuid));
@@ -290,7 +290,7 @@ public class DecodingContextTests
     public void DecodingContext_ProviderGuids_ContainsBothControlGuids()
     {
         IList<DecodingContextType> types = PdbFileDecodingContextType
-            .CreateFrom(@".\symbols\BthPS3.pdb", @".\symbols\BthPS3PSM.pdb");
+            .CreateFrom(@"./symbols/BthPS3.pdb", @"./symbols/BthPS3PSM.pdb");
         DecodingContext context = new(types);
 
         Assert.That(context.ProviderGuids, Does.Contain(BthPS3ControlGuid));
@@ -302,7 +302,7 @@ public class DecodingContextTests
     public void DecodingContext_ProviderGuids_IsDistinct()
     {
         IList<DecodingContextType> types = PdbFileDecodingContextType
-            .CreateFrom(@".\symbols\BthPS3.pdb", @".\symbols\BthPS3PSM.pdb");
+            .CreateFrom(@"./symbols/BthPS3.pdb", @"./symbols/BthPS3PSM.pdb");
         DecodingContext context = new(types);
 
         Assert.That(context.ProviderGuids.Count,
@@ -315,7 +315,7 @@ public class DecodingContextTests
     {
         // TMF files don't contain TMC: records — provider GUIDs cannot be derived from them.
         IList<DecodingContextType> tmfTypes =
-            TmfFilesDirectoryDecodingContextType.CreateFrom(@".\symbols");
+            TmfFilesDirectoryDecodingContextType.CreateFrom(@"./symbols");
         DecodingContext context = new(tmfTypes);
 
         Assert.That(context.ProviderGuids, Is.Empty);
@@ -327,7 +327,7 @@ public class DecodingContextTests
     {
         // KnownGuid (e4b27b5e-...) is a per-source-file TMF message hash, not a control GUID.
         DecodingContext context =
-            new(PdbFileDecodingContextType.CreateFrom(@".\symbols\BthPS3.pdb"));
+            new(PdbFileDecodingContextType.CreateFrom(@"./symbols/BthPS3.pdb"));
 
         Assert.That(context.ProviderGuids, Does.Not.Contain(KnownGuid));
     }
@@ -343,7 +343,7 @@ public class DecodingContextTests
         // BthPS3.pdb declares exactly one control (BthPS3TraceGuid), so every format
         // derived from that PDB should resolve to the friendly control name.
         DecodingContext context =
-            new(PdbFileDecodingContextType.CreateFrom(@".\symbols\BthPS3.pdb"));
+            new(PdbFileDecodingContextType.CreateFrom(@"./symbols/BthPS3.pdb"));
 
         TraceMessageFormat? format = context.GetTraceMessageFormatFor(KnownGuid, KnownId);
 
@@ -363,8 +363,8 @@ public class DecodingContextTests
         // Build a combined context — BthPS3.pdb and BthPS3PSM.pdb each declare exactly
         // one control, so the override map must contain entries for both independently.
         DecodingContext context = new(PdbFileDecodingContextType.CreateFrom(
-            @".\symbols\BthPS3.pdb",
-            @".\symbols\BthPS3PSM.pdb"
+            @"./symbols/BthPS3.pdb",
+            @"./symbols/BthPS3PSM.pdb"
         ));
 
         // KnownGuid/KnownId belongs to BthPS3.pdb.
@@ -384,7 +384,7 @@ public class DecodingContextTests
     {
         // TMF files carry no TMC: annotations, so no override entries can be built.
         IList<DecodingContextType> tmfTypes =
-            TmfFilesDirectoryDecodingContextType.CreateFrom(@".\symbols");
+            TmfFilesDirectoryDecodingContextType.CreateFrom(@"./symbols");
         DecodingContext context = new(tmfTypes);
 
         TraceMessageFormat? format = context.GetTraceMessageFormatFor(KnownGuid, KnownId);
@@ -398,7 +398,7 @@ public class DecodingContextTests
     public void GetWppProviderNameOverride_ReturnsNull_ForUnknownFormat()
     {
         DecodingContext context =
-            new(PdbFileDecodingContextType.CreateFrom(@".\symbols\BthPS3.pdb"));
+            new(PdbFileDecodingContextType.CreateFrom(@"./symbols/BthPS3.pdb"));
 
         // Fabricate a format that does not exist in BthPS3.pdb.
         TraceMessageFormat unknown = new()

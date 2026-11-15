@@ -22,6 +22,7 @@ namespace Nefarius.Utilities.ETW.Tests;
 ///     Baseline files live under <c>tests/Snapshots/</c>.
 /// </summary>
 [Category("EndToEnd")]
+[Platform("Win")]
 public class SnapshotTests
 {
     [Test]

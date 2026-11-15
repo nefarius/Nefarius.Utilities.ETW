@@ -13,9 +13,10 @@ namespace Nefarius.Utilities.ETW.Tests;
 ///     (<see cref="EtwMetadataScanOptions.OnDbgIdRsds" />).  Tests are written accordingly.
 /// </summary>
 [Category("EndToEnd")]
+[Platform("Win")]
 public class ScanCallbackTests
 {
-    private const string EtwFilePath = @".\traces\BthPS3_0.etl";
+    private const string EtwFilePath = @"./traces/BthPS3_0.etl";
 
     // -----------------------------------------------------------------------
     // OnKernelDbgIdRsds  (the path BthPS3_0.etl actually uses)

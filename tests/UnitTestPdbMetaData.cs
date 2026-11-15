@@ -115,6 +115,20 @@ public class PdbMetaDataTests
     }
 
     [Test]
+    public void DefaultValue_CanBeComparedAndHashed()
+    {
+        PdbMetaData unset = default;
+        HashSet<PdbMetaData> set = [unset];
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(unset, Is.EqualTo(default(PdbMetaData)));
+            Assert.That(set, Does.Contain(default(PdbMetaData)));
+            Assert.That(unset.GetHashCode(), Is.EqualTo(default(PdbMetaData).GetHashCode()));
+        }
+    }
+
+    [Test]
     public void GetHashCode_DiffersWhenGuidDiffers()
     {
         PdbMetaData a = new() { PdbName = SampleFileName, Guid = SampleGuid,    Age = SampleAge };

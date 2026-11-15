@@ -8,6 +8,7 @@ namespace Nefarius.Utilities.ETW.Tests;
 ///     Tests for <see cref="EtwUtil.EnumerateEventsAsync" />.
 /// </summary>
 [Category("Streaming")]
+[Platform("Win")]
 public class StreamingTests
 {
     // -----------------------------------------------------------------------
@@ -18,11 +19,11 @@ public class StreamingTests
     [Category("EndToEnd")]
     public async Task StreamingEnumerationYieldsEventsTest()
     {
-        const string etwFilePath = @".\traces\BthPS3_0.etl";
+        const string etwFilePath = @"./traces/BthPS3_0.etl";
 
         DecodingContext decodingContext = new(PdbFileDecodingContextType.CreateFrom(
-            @".\symbols\BthPS3.pdb",
-            @".\symbols\BthPS3PSM.pdb"
+            @"./symbols/BthPS3.pdb",
+            @"./symbols/BthPS3PSM.pdb"
         ));
 
         int eventCount = 0;
@@ -67,11 +68,11 @@ public class StreamingTests
     [Category("EndToEnd")]
     public async Task StreamingEventCountMatchesSynchronousTest()
     {
-        const string etwFilePath = @".\traces\BthPS3_0.etl";
+        const string etwFilePath = @"./traces/BthPS3_0.etl";
 
         DecodingContext decodingContext = new(PdbFileDecodingContextType.CreateFrom(
-            @".\symbols\BthPS3.pdb",
-            @".\symbols\BthPS3PSM.pdb"
+            @"./symbols/BthPS3.pdb",
+            @"./symbols/BthPS3PSM.pdb"
         ));
 
         // Count events via the synchronous JSON path.
@@ -100,14 +101,14 @@ public class StreamingTests
     [Category("EndToEnd")]
     public async Task CancellationStopsEnumerationTest()
     {
-        const string etwFilePath = @".\traces\BthPS3_0.etl";
+        const string etwFilePath = @"./traces/BthPS3_0.etl";
         const int cancelAfter = 10;
 
         // Provide the full decoding context so WPP events are decoded and the trace
         // yields well more than cancelAfter items before the cancellation is triggered.
         DecodingContext decodingContext = new(PdbFileDecodingContextType.CreateFrom(
-            @".\symbols\BthPS3.pdb",
-            @".\symbols\BthPS3PSM.pdb"
+            @"./symbols/BthPS3.pdb",
+            @"./symbols/BthPS3PSM.pdb"
         ));
 
         using CancellationTokenSource cts = new();
@@ -152,12 +153,12 @@ public class StreamingTests
     [Category("EndToEnd")]
     public async Task EarlyBreakWithoutCancellationDisposesCleanlyTest()
     {
-        const string etwFilePath = @".\traces\BthPS3_0.etl";
+        const string etwFilePath = @"./traces/BthPS3_0.etl";
         const int breakAfter = 10;
 
         DecodingContext decodingContext = new(PdbFileDecodingContextType.CreateFrom(
-            @".\symbols\BthPS3.pdb",
-            @".\symbols\BthPS3PSM.pdb"
+            @"./symbols/BthPS3.pdb",
+            @"./symbols/BthPS3PSM.pdb"
         ));
 
         int received = 0;

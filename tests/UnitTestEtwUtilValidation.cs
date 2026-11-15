@@ -47,12 +47,13 @@ public class EtwUtilArgumentValidationTests
 
     [Test]
     [Category("EndToEnd")]
+    [Platform("Win")]
     public void EnumeratePdbReferences_ReportsError_AndReturnsEmpty_WhenFileDoesNotExist()
     {
         List<string> errors = [];
 
         IReadOnlyCollection<PdbMetaData> result = EtwUtil.EnumeratePdbReferences(
-            [@".\traces\__does_not_exist__.etl"],
+            [@"./traces/__does_not_exist__.etl"],
             opts => opts.ReportError = errors.Add);
 
         using (Assert.EnterMultipleScope())
@@ -68,6 +69,7 @@ public class EtwUtilArgumentValidationTests
 
     [Test]
     [Category("EndToEnd")]
+    [Platform("Win")]
     public void ConvertToJson_ReturnsFalse_AndReportsError_WhenFileDoesNotExist()
     {
         List<string> errors = [];
@@ -77,7 +79,7 @@ public class EtwUtilArgumentValidationTests
 
         bool result = EtwUtil.ConvertToJson(
             writer,
-            [@".\traces\__does_not_exist__.etl"],
+            [@"./traces/__does_not_exist__.etl"],
             opts => opts.ReportError = errors.Add);
 
         using (Assert.EnterMultipleScope())
