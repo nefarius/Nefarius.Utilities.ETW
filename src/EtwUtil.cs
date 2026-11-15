@@ -654,7 +654,7 @@ public static partial class EtwUtil
     ///     For real-time sessions, cancellation is honoured by closing the trace handle, which causes
     ///     <c>ProcessTrace</c> to return promptly rather than waiting for the next flush-timer tick.
     /// </summary>
-    private static void RunWorker(
+    private static unsafe void RunWorker(
         List<string>? files,
         string? realtimeSessionName,
         EtwJsonConverterOptions opts,
@@ -662,22 +662,35 @@ public static partial class EtwUtil
         ChannelWriter<PooledEventBuffer> writer,
         CancellationToken cancellationToken)
     {
-        bool isRealtime = realtimeSessionName is not null;
-        int sessionCount = isRealtime ? 1 : files!.Count;
+        if (realtimeSessionName is not null)
+        {
+            try
+            {
+                // The shared pump closes the handle on cancellation; cancellation ends the stream normally.
+                RunRealtimeTrace(realtimeSessionName, opts.PreserveRawTimestamps, deserializer.Deserialize,
+                    _ => !cancellationToken.IsCancellationRequested, opts.ReportError, null, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                writer.TryComplete(ex);
+                return;
+            }
+
+            writer.TryComplete();
+            return;
+        }
+
+        int sessionCount = files!.Count;
 
         EVENT_TRACE_LOGFILEW[] sessions = new EVENT_TRACE_LOGFILEW[sessionCount];
         ulong[] handles = new ulong[sessionCount];
         int[] openTraceErrors = new int[sessionCount];
 
-        // For real-time mode only: closed flag prevents double-close between the
-        // cancellation callback and the finally block.
-        int handleClosed = 0;
-
         try
         {
-            if (!isRealtime && TraceProcessor.Resolve(opts.Backend) == EtwBackend.Managed)
+            if (TraceProcessor.Resolve(opts.Backend) == EtwBackend.Managed)
             {
-                RunManagedWorker(files!, opts, deserializer, writer, cancellationToken);
+                RunManagedWorker(files, opts, deserializer, writer, cancellationToken);
                 return;
             }
 
@@ -685,45 +698,21 @@ public static partial class EtwUtil
             {
                 unsafe
                 {
-                    if (isRealtime)
+                    sessions[i] = new EVENT_TRACE_LOGFILEW
                     {
-                        if (realtimeSessionName is not string sessionName)
-                        {
-                            throw new InvalidOperationException("A real-time session name is required.");
-                        }
+                        LogFileName = files[i],
+                        EventRecordCallback = deserializer.Deserialize,
+                        BufferCallback = _ => !cancellationToken.IsCancellationRequested,
+                        LogFileMode = PInvoke.PROCESS_TRACE_MODE_EVENT_RECORD
+                    };
 
-                        sessions[i] = new EVENT_TRACE_LOGFILEW
-                        {
-                            LoggerName = sessionName,
-                            EventRecordCallback = deserializer.Deserialize,
-                            BufferCallback = _ => !cancellationToken.IsCancellationRequested,
-                            LogFileMode = PInvoke.PROCESS_TRACE_MODE_EVENT_RECORD |
-                                          PInvoke.PROCESS_TRACE_MODE_REAL_TIME
-                        };
-
-                        if (opts.PreserveRawTimestamps)
-                        {
-                            sessions[i].LogFileMode |= PInvoke.PROCESS_TRACE_MODE_RAW_TIMESTAMP;
-                        }
-                    }
-                    else
+                    if (opts.PreserveRawTimestamps)
                     {
-                        sessions[i] = new EVENT_TRACE_LOGFILEW
-                        {
-                            LogFileName = files![i],
-                            EventRecordCallback = deserializer.Deserialize,
-                            BufferCallback = _ => !cancellationToken.IsCancellationRequested,
-                            LogFileMode = PInvoke.PROCESS_TRACE_MODE_EVENT_RECORD
-                        };
-
-                        if (opts.PreserveRawTimestamps)
-                        {
-                            sessions[i].LogFileMode |= PInvoke.PROCESS_TRACE_MODE_RAW_TIMESTAMP;
-                        }
+                        sessions[i].LogFileMode |= PInvoke.PROCESS_TRACE_MODE_RAW_TIMESTAMP;
                     }
 
                     handles[i] = Etw.OpenTrace(ref sessions[i]);
-                    // Capture immediately — any subsequent Win32 call overwrites the TLS slot.
+                    // Capture immediately - any subsequent Win32 call overwrites the TLS slot.
                     openTraceErrors[i] = Marshal.GetLastWin32Error();
                 }
             }
@@ -735,26 +724,13 @@ public static partial class EtwUtil
                     if (handles[i] == (ulong)~0)
                     {
                         WIN32_ERROR error = (WIN32_ERROR)openTraceErrors[i];
-                        string source = isRealtime ? realtimeSessionName! : files![i];
-                        EtwOpenTraceException ex = new(error, source);
+                        EtwOpenTraceException ex = new(error, files[i]);
                         opts.ReportError?.Invoke("ERROR: " + ex.Message);
                         writer.TryComplete(ex);
                         return;
                     }
                 }
             }
-
-            // For real-time sessions, closing the handle from the cancellation callback causes
-            // ProcessTrace to return promptly without waiting for the next flush-timer tick.
-            using CancellationTokenRegistration reg = isRealtime
-                ? cancellationToken.Register(() =>
-                {
-                    if (Interlocked.Exchange(ref handleClosed, 1) == 0)
-                    {
-                        Etw.CloseTrace(handles[0]);
-                    }
-                })
-                : default;
 
             Etw.ProcessTrace(handles, (uint)handles.Length, IntPtr.Zero, IntPtr.Zero);
             GC.KeepAlive(sessions);
@@ -766,32 +742,15 @@ public static partial class EtwUtil
         }
         finally
         {
-            if (isRealtime)
+            for (int i = 0; i < sessionCount; ++i)
             {
-                // Safe close: guard against double-close if cancellation already fired.
-                if (Interlocked.Exchange(ref handleClosed, 1) == 0)
+                if (handles[i] != 0)
                 {
                     unchecked
                     {
-                        if (handles[0] != 0 && handles[0] != (ulong)~0)
+                        if (handles[i] != (ulong)~0)
                         {
-                            Etw.CloseTrace(handles[0]);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                for (int i = 0; i < sessionCount; ++i)
-                {
-                    if (handles[i] != 0)
-                    {
-                        unchecked
-                        {
-                            if (handles[i] != (ulong)~0)
-                            {
-                                Etw.CloseTrace(handles[i]);
-                            }
+                            Etw.CloseTrace(handles[i]);
                         }
                     }
                 }

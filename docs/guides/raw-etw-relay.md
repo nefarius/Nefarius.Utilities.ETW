@@ -89,6 +89,18 @@ void WINAPI OnEvent(PEVENT_RECORD r)
 
 Report events you had to drop with a `loss` frame so the server can account for them. An identical retry is acknowledged without being decoded twice only while its hash is still in the receiver's retry window of 64 frames; a retry older than that window is rejected as a conflicting replay, as is a different frame for an already used sequence number. A gap is refused.
 
+## Producing frames from .NET and the command line
+
+On Windows, `EtwUtil.EnumerateRealtimeRelayFramesAsync` attaches to a real-time session and yields complete encoded frames: a hello, an event frame per record, a loss frame whenever ETW's cumulative loss counter grows, and an end frame. Records are copied inside the ETW callback, so no pointer escapes the library. Cancelling delivers the end frame first and then throws `OperationCanceledException`; disposing the enumerator early cannot send an end frame but still closes the trace handle.
+
+The `etwutils` tool exposes this as `etwutils realtime --format relay` (concatenated binary frames) and `--format relay-ndjson` (`{"frame":"<base64>"}` per line). The optional [`etwrelay`](../../tools/Nefarius.Utilities.ETW.Relay.CLI/README.md) tool reads either form and sends it to a gateway as OTLP/HTTP:
+
+```text
+etwutils realtime --format relay <provider-guid> | etwrelay --endpoint http://localhost:4318
+```
+
+PowerShell 7.4+ keeps bytes intact between native commands only. In PowerShell 7.0–7.3 and Windows PowerShell 5.1 use `relay-ndjson` with `etwrelay --input-format base64-ndjson`. `etwrelay` never guesses the input format.
+
 ## Limits and trust model
 
 The sender is untrusted. All lengths are validated against `RawEtwRelayLimits` (frame length, extended item count and size) **before** anything is allocated, records are rebuilt in private memory with no sender pointers, and relayed records are never handed to TDH (a manifest event therefore needs a custom manifest registered with the decoder). Malformed input throws `RawEtwProtocolException` and leaves an established session intact.

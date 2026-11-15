@@ -173,6 +173,14 @@ await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateRelayEventsAsync(au
 
 An optional OpenTelemetry adapter and a standalone decoding gateway (OTLP in, decoded standard OTLP Logs out) are included; OpenTelemetry is not required by the core package.
 
+To try the gateway without writing code, `etwutils realtime --format relay` captures without symbols and the optional `etwrelay` global tool (`dotnet tool install -g Nefarius.Utilities.ETW.Relay.CLI`) delivers the frames as OTLP/HTTP:
+
+```text
+etwutils realtime --format relay <provider-guid> | etwrelay --endpoint http://localhost:4318
+```
+
+This binary pipe needs PowerShell 7.4+, `cmd.exe` or a Unix shell. On older PowerShell versions use `--format relay-ndjson` with `etwrelay --input-format base64-ndjson`. See [tools/Nefarius.Utilities.ETW.Relay.CLI](tools/Nefarius.Utilities.ETW.Relay.CLI/README.md).
+
 - [Raw ETW relay: wire format, C/C++ producer, limits and hosting contract](docs/guides/raw-etw-relay.md)
 - [OpenTelemetry integration and decoding gateway](docs/guides/opentelemetry-gateway.md)
 

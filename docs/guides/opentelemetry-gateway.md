@@ -34,6 +34,18 @@ It listens for OTLP/HTTP (`POST /v1/logs`, protobuf, optional gzip) on port 4318
 
 If the downstream receiver is slow or down, the gateway buffers decoded batches in a bounded queue and retries. When the queue is full it answers **before consuming any frame** with HTTP 503 and `Retry-After` (gRPC `UNAVAILABLE`), so the sender can resend the identical request; frames that were accepted are never lost to a refusal. A batch that still fails after `MaxAttempts` is dropped and counted. A rejected frame is reported through the standard OTLP `partial_success` response; a continuation of a session the gateway does not know (expired or restarted) is rejected so the client opens a new session with a hello frame.
 
+## Testing the gateway from the command line
+
+Two small tools make a capture-to-gateway round trip possible without writing a client. `etwutils` captures and writes raw frames; the optional `etwrelay` tool wraps them in OTLP Logs and posts them to the gateway's `/v1/logs`:
+
+```text
+etwutils realtime --format relay <provider-guid> | etwrelay --endpoint http://localhost:4318 --resource service.name=my-host
+```
+
+`etwrelay` batches at most 64 frames per request (the gateway's duplicate-retry window), keeps sessions apart, and resends a failed request with identical bytes, so a retry after a `503` and `Retry-After` is recognised as a duplicate. Connection failures, timeouts, `408`, `429` and `5xx` are retried; other `4xx` responses and rejected records (for example a session the gateway no longer knows) are final. Credential-like headers are only accepted with `https://`.
+
+The binary pipe needs PowerShell 7.4+, `cmd.exe` or a Unix shell. In PowerShell 7.0–7.3 and Windows PowerShell 5.1, use `etwutils realtime --format relay-ndjson ... | etwrelay --input-format base64-ndjson`. Details: [etwrelay](../../tools/Nefarius.Utilities.ETW.Relay.CLI/README.md).
+
 ## Embedding in your own host
 
 Authentication stays yours. Register your scheme, then:

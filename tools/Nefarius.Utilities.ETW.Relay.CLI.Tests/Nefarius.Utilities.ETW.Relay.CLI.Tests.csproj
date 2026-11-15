@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <IsPackable>false</IsPackable>
+        <RootNamespace>Nefarius.Utilities.ETW.Relay.CLI.Tests</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+        <PackageReference Include="NUnit" Version="4.6.1" />
+        <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="NUnit.Framework" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Nefarius.Utilities.ETW.Relay.CLI\Nefarius.Utilities.ETW.Relay.CLI.csproj" />
+        <!-- Only used to run the real capture side of the pipeline in the Windows-only end-to-end test, so it is not\r\n             built where that test cannot run. -->
+        <ProjectReference Include="..\Nefarius.Utilities.ETW.CLI\Nefarius.Utilities.ETW.CLI.csproj" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+    </ItemGroup>
+
+</Project>

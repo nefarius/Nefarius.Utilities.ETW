@@ -104,7 +104,7 @@ etwutils realtime [<provider-guid> ...]
     [--symbols <path>] ...             # repeatable; PDB file, directory, or glob
     [--buffer-size-kb <n>]             # ETW buffer size, default 64
     [--flush-seconds  <n>]             # flush interval, default 1
-    [--format <ndjson|plain>]          # output format, default ndjson
+    [--format <ndjson|plain|relay|relay-ndjson>]  # output format, default ndjson
     [--color  <auto|always|never>]     # colorize Level column (plain only), default auto
     [--columns <list>]                 # plain only: comma-separated column tokens; default Timestamp,Provider,Level,Message
     [--header]                         # plain only: emit a TSV header line first
@@ -123,6 +123,23 @@ etwutils realtime [<provider-guid> ...]
 > Auto-derivation requires **PDB files**. TMF files do not contain the WPP control GUID (they only hold per-call-site message format data). If `--symbols` points to a directory or glob that contains only TMF files, you must also supply `provider-guid` explicitly.
 
 The provider name rewrite described under `parse` applies here too. Pass `--keep-original-provider` to disable it.
+
+#### `--format relay` — undecoded frames for `etwrelay`
+
+`--format relay` writes the captured records as raw [relay frames](../../docs/guides/raw-etw-relay.md) instead of decoded text: one hello frame, an event frame per record, loss frames for events ETW dropped, and an end frame on a clean stop. Nothing is decoded or formatted on this machine, so no symbols are needed. The optional [`etwrelay`](../Nefarius.Utilities.ETW.Relay.CLI/README.md) tool delivers the frames to an OpenTelemetry decoding gateway; it is installed separately so that `etwutils` stays free of OTLP dependencies.
+
+```text
+# PowerShell 7.4+, cmd.exe, bash: binary pipe
+etwutils realtime --format relay <provider-guid> | etwrelay --endpoint http://localhost:4318
+
+# PowerShell 7.0-7.3 and Windows PowerShell 5.1: text-safe frames
+etwutils realtime --format relay-ndjson <provider-guid> | etwrelay --input-format base64-ndjson
+```
+
+- `relay` writes raw bytes with no newlines or text encoding and refuses to write to a terminal. PowerShell 7.4+ preserves bytes only between **native commands**; a cmdlet in the pipeline turns them into text.
+- `relay-ndjson` writes each frame as a `{"frame":"<base64>"}` line.
+- Options that only affect decoding or display (`--columns`, `--header`, `--filter`, `--color`, `--keep-original-provider`) are rejected in relay modes instead of being ignored. `--symbols` and `--driver` still work as a source of provider GUIDs.
+- Status messages go to stderr, so stdout carries nothing but frames.
 
 #### `--driver` — zero-configuration capture from a service name
 
