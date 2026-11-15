@@ -226,6 +226,35 @@ public unsafe class EtlFixtureTests
     }
 
     [Test]
+    public void XpressLz77_RejectsExtendedMatchLengthBelowTheMinimum()
+    {
+        // Extended length 1 is below 15 + 7 and must not wrap into a valid match (MS-XCA 2.4.4).
+        byte[] input = [0xFF, 0xFF, 0xFF, 0x7F, 0x61, 0x07, 0x00, 0x0F, 0xFF, 0x01, 0x00];
+        Assert.That(XpressLz77.TryDecompress(input, new byte[64], out _), Is.False);
+    }
+
+    [Test]
+    public void CompressedFixture_TruncatedInsideTheFirstBuffer_IsRejected()
+    {
+        string path = Path.GetTempFileName();
+        try
+        {
+            byte[] bytes = File.ReadAllBytes("./traces/fixtures/bulk-compressed.etl");
+            File.WriteAllBytes(path, bytes.AsSpan(0, 65536 - 100).ToArray());
+
+            TraceOpenFailure? failure = TraceProcessor.ProcessFiles([path], EtwBackend.Managed, false, default, null,
+                (EVENT_RECORD* _, in EtlRecordExtras _) => Assert.Fail("A truncated compressed file must not be read."));
+
+            Assert.That(failure, Is.Not.Null);
+            Assert.That(failure!.Value.Error, Is.EqualTo(WIN32_ERROR.ERROR_INVALID_DATA));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Test]
     public void CompressedAndUncompressedFixtures_ShareTheirWorkload()
     {
         FileInfo compressed = new("./traces/fixtures/bulk-compressed.etl");
