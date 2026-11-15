@@ -582,7 +582,7 @@ All column tokens listed above are available as identifiers directly in the expr
 
 - Currently relies on **Windows-only** APIs so no support for other platforms.
 - `%!ItemEnum!`/`%!ItemFlagsEnum!` types display raw numeric values; PDB-based enum name resolution is not yet implemented.
-- Kernel-mode ETW providers and the NT Kernel Logger session are not yet supported.
+- Creating an NT Kernel Logger / system-logger session is not supported; registered kernel-mode providers (e.g. `Microsoft-Windows-Kernel-Process`) work in realtime mode.
 
 ## Links
 
