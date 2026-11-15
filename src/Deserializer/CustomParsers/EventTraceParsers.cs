@@ -232,9 +232,6 @@ internal static class EventTraceParsers
 
     private sealed class DbgIdRsdsParser : ICustomParser
     {
-        private static readonly PropertyMetadata ImageBase = Pointer("ImageBase");
-        private static readonly PropertyMetadata ProcessId = UInt32("ProcessId");
-
         private static readonly PropertyMetadata GuidSig =
             Prop(_TDH_IN_TYPE.TDH_INTYPE_GUID, _TDH_OUT_TYPE.TDH_OUTTYPE_GUID, "GuidSig");
 
@@ -244,7 +241,7 @@ internal static class EventTraceParsers
             Prop(_TDH_IN_TYPE.TDH_INTYPE_ANSISTRING, _TDH_OUT_TYPE.TDH_OUTTYPE_STRING, "PdbFileName");
 
         private static readonly EventMetadata EventMetadata = new(CustomParserGuids.EventTraceGuid, 0, 0,
-            "MSNT_SystemTrace/EventTrace/DbgIdRSDS", [ImageBase, ProcessId, GuidSig, Age, PdbFileName]);
+            "MSNT_SystemTrace/EventTrace/DbgIdRSDS", [GuidSig, Age, PdbFileName]);
 
         public void Parse<T>(EventRecordReader reader, T writer, EventMetadata[] metadataArray,
             RuntimeEventMetadata runtimeMetadata)
@@ -257,14 +254,6 @@ internal static class EventTraceParsers
             }
 
             writer.WriteEventBegin(EventMetadata, runtimeMetadata);
-
-            writer.WritePropertyBegin(ImageBase);
-            writer.WritePointer(reader.ReadPointer());
-            writer.WritePropertyEnd();
-
-            writer.WritePropertyBegin(ProcessId);
-            writer.WriteUInt32(reader.ReadUInt32());
-            writer.WritePropertyEnd();
 
             writer.WritePropertyBegin(GuidSig);
             writer.WriteGuid(reader.ReadGuid());
