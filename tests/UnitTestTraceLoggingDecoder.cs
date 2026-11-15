@@ -268,6 +268,14 @@ public unsafe class TraceLoggingDecoderTests
     }
 
     [Test]
+    public void CustomSerialization_IsRejected()
+    {
+        byte[] schema = Schema("C", Field("Blob", 0x66, 3, 0, 0x5A, 0, 0));
+
+        Assert.That(Try(schema, [4, 0, 1, 2, 3, 4]), Is.False);
+    }
+
+    [Test]
     public void UnterminatedStrings_AreRejected()
     {
         Assert.That(Try(Schema("U", Field("Name", 1)), [0x41, 0x00]), Is.False);

@@ -184,21 +184,26 @@ internal static unsafe class TraceLoggingDecoder
             }
         }
 
-        if ((inType & InTypeConstantCount) != 0)
+        // Bits 0x60 are a count kind: 0x20 fixed, 0x40 variable, 0x60 custom serialization.
+        // Custom serialization's next ushort is a type-info size, not an array count.
+        switch ((byte)(inType & (InTypeConstantCount | InTypeVariableCount)))
         {
-            if (position + 2 > end)
-            {
-                throw new FormatException("TraceLogging array count is truncated.");
-            }
+            case InTypeConstantCount | InTypeVariableCount:
+                throw new FormatException("TraceLogging custom serialization is not supported.");
+            case InTypeConstantCount:
+                if (position + 2 > end)
+                {
+                    throw new FormatException("TraceLogging array count is truncated.");
+                }
 
-            field.IsArray = true;
-            field.ConstantCount = *(ushort*)(data + position);
-            position += 2;
-        }
-        else if ((inType & InTypeVariableCount) != 0)
-        {
-            field.IsArray = true;
-            field.IsVariableArray = true;
+                field.IsArray = true;
+                field.ConstantCount = *(ushort*)(data + position);
+                position += 2;
+                break;
+            case InTypeVariableCount:
+                field.IsArray = true;
+                field.IsVariableArray = true;
+                break;
         }
 
         if (field.Type == InType.Struct)
