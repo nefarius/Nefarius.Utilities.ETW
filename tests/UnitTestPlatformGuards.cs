@@ -51,6 +51,14 @@ public class PlatformGuardTests
     [Test]
     [SuppressMessage("Interoperability", "CA1416:Validate platform compatibility",
         Justification = "Intentionally calls a Windows-only API off Windows and expects PlatformNotSupportedException.")]
+    public void EnumerateRealtimeRelayFramesAsync_Throws()
+    {
+        Assert.Throws<PlatformNotSupportedException>(() => EtwUtil.EnumerateRealtimeRelayFramesAsync("guard-test"));
+    }
+
+    [Test]
+    [SuppressMessage("Interoperability", "CA1416:Validate platform compatibility",
+        Justification = "Intentionally calls a Windows-only API off Windows and expects PlatformNotSupportedException.")]
     public void ConvertRealtimeToJson_Throws()
     {
         using MemoryStream ms = new();

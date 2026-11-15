@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+        <AssemblyName>etwrelay</AssemblyName>
+        <RootNamespace>Nefarius.Utilities.ETW.Relay.CLI</RootNamespace>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+
+        <IsPackable>true</IsPackable>
+        <PackAsTool>true</PackAsTool>
+        <ToolCommandName>etwrelay</ToolCommandName>
+        <PackageId>Nefarius.Utilities.ETW.Relay.CLI</PackageId>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/nefarius/Nefarius.Utilities.ETW</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/nefarius/Nefarius.Utilities.ETW</PackageProjectUrl>
+        <Description>Optional companion tool for etwutils: reads raw ETW relay frames from stdin and delivers them to an OpenTelemetry decoding gateway as OTLP/HTTP logs.</Description>
+        <PackageTags>etw;opentelemetry;otlp;relay;cli;dotnet-tool</PackageTags>
+
+        <MinVerTagPrefix>v</MinVerTagPrefix>
+
+        <!-- NU1702: expected false-positive when AssetTargetFallback bridges bare TFMs to
+             their -windows8.0 counterparts (required because PackAsTool rejects platform TFMs). -->
+        <NoWarn>$(NoWarn);NU1702;CS1591;CS8981</NoWarn>
+
+        <AssetTargetFallback Condition="'$(TargetFramework)' == 'net8.0'">$(AssetTargetFallback);net8.0-windows8.0</AssetTargetFallback>
+        <AssetTargetFallback Condition="'$(TargetFramework)' == 'net9.0'">$(AssetTargetFallback);net9.0-windows8.0</AssetTargetFallback>
+        <AssetTargetFallback Condition="'$(TargetFramework)' == 'net10.0'">$(AssetTargetFallback);net10.0-windows8.0</AssetTargetFallback>
+    </PropertyGroup>
+
+    <Import Project="$(MSBuildThisFileDirectory)..\..\CommonProjectProperties.targets" />
+
+    <!-- Override the root README that CommonProjectProperties.targets injects for the library package. -->
+    <PropertyGroup>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Remove="$(SolutionDir)README.md" />
+        <None Include="README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="System.CommandLine" Version="2.0.14" />
+        <PackageReference Include="MinVer" Version="8.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- etwutils references only the core library; the protobuf/OTLP dependencies live here. -->
+        <ProjectReference Include="..\..\integrations\Nefarius.Utilities.ETW.OpenTelemetry\Nefarius.Utilities.ETW.OpenTelemetry.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Nefarius.Utilities.ETW.Relay.CLI.Tests" />
+    </ItemGroup>
+
+</Project>

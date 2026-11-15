@@ -80,7 +80,9 @@ internal static class RealtimeCommand
         Option<string> realtimeFormatOpt = new("--format")
         {
             Description = "Output format: 'ndjson' (default) streams one JSON object per line; " +
-                          "'plain' emits tab-separated Timestamp/Provider/Level/Message columns.",
+                          "'plain' emits tab-separated Timestamp/Provider/Level/Message columns; " +
+                          "'relay' writes undecoded raw relay frames as binary for 'etwrelay' (stdout must be redirected or piped); " +
+                          "'relay-ndjson' writes the same frames as {\"frame\":\"<base64>\"} lines for shells that cannot pipe bytes.",
             DefaultValueFactory = _ => "ndjson"
         };
 
@@ -267,11 +269,44 @@ internal static class RealtimeCommand
             }
 
             if (!formatRaw.Equals("ndjson", StringComparison.OrdinalIgnoreCase) &&
-                !formatRaw.Equals("plain", StringComparison.OrdinalIgnoreCase))
+                !formatRaw.Equals("plain", StringComparison.OrdinalIgnoreCase) &&
+                !formatRaw.Equals("relay", StringComparison.OrdinalIgnoreCase) &&
+                !formatRaw.Equals("relay-ndjson", StringComparison.OrdinalIgnoreCase))
             {
                 Console.Error.WriteLine(
-                    $"[!] Unknown --format value '{formatRaw}'. Expected 'ndjson' or 'plain'.");
+                    $"[!] Unknown --format value '{formatRaw}'. Expected 'ndjson', 'plain', 'relay' or 'relay-ndjson'.");
                 return 2;
+            }
+
+            bool relayBinary = formatRaw.Equals("relay", StringComparison.OrdinalIgnoreCase);
+            bool relayText = formatRaw.Equals("relay-ndjson", StringComparison.OrdinalIgnoreCase);
+            bool useRelay = relayBinary || relayText;
+
+            if (useRelay)
+            {
+                // Relay frames are undecoded: refuse decoding and presentation options instead of silently ignoring them.
+                List<string> rejected = [];
+                if (columnsRaw is not null) rejected.Add("--columns");
+                if (emitHeader) rejected.Add("--header");
+                if (filterExpr is not null) rejected.Add("--filter");
+                if (keepOriginalProvider) rejected.Add("--keep-original-provider");
+                if (result.GetResult(colorOpt) is { Implicit: false }) rejected.Add("--color");
+
+                if (rejected.Count > 0)
+                {
+                    Console.Error.WriteLine(
+                        $"[!] {string.Join(", ", rejected)} cannot be combined with --format {formatRaw}: " +
+                        "relay output is not decoded or formatted on this machine.");
+                    return 2;
+                }
+
+                if (relayBinary && !Console.IsOutputRedirected)
+                {
+                    Console.Error.WriteLine(
+                        "[!] --format relay writes binary frames and refuses to write to a terminal. " +
+                        "Pipe it into 'etwrelay' or redirect it to a file; use --format relay-ndjson for text.");
+                    return 2;
+                }
             }
 
             if (!colorRaw.Equals("auto", StringComparison.OrdinalIgnoreCase) &&
@@ -287,7 +322,7 @@ internal static class RealtimeCommand
             bool useColor = usePlain && ConsoleOutput.ResolveColor(colorRaw);
 
             // Warn when plain-only flags are supplied alongside --format ndjson.
-            if (!usePlain && (columnsRaw is not null || emitHeader || filterExpr is not null))
+            if (!usePlain && !useRelay && (columnsRaw is not null || emitHeader || filterExpr is not null))
             {
                 Console.Error.WriteLine(
                     "[*] Warning: --columns, --header, and --filter are only active with --format plain; " +
@@ -344,6 +379,7 @@ internal static class RealtimeCommand
                 bufferSizeKb,
                 flushSeconds,
                 usePlain,
+                relayBinary ? RelayOutput.Binary : relayText ? RelayOutput.Base64Lines : RelayOutput.None,
                 useColor,
                 columns,
                 emitHeader,
@@ -360,6 +396,63 @@ internal static class RealtimeCommand
         return realtime;
     }
 
+    private enum RelayOutput
+    {
+        None,
+        Binary,
+        Base64Lines
+    }
+
+    /// <summary>
+    ///     Opens standard output as a file stream on the raw handle. Unlike <c>Console.OpenStandardOutput</c>, it
+    ///     reports a reader that has gone away (broken pipe) instead of silently succeeding.
+    /// </summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static Stream OpenRelayStdout()
+    {
+        IntPtr handle = NativeConsole.GetStdHandle(-11); // STD_OUTPUT_HANDLE
+        if (handle == IntPtr.Zero || handle == new IntPtr(-1))
+        {
+            throw new IOException("Standard output is not available.");
+        }
+
+        return new FileStream(new Microsoft.Win32.SafeHandles.SafeFileHandle(handle, false), FileAccess.Write, 1, false);
+    }
+
+    /// <summary>
+    ///     Writes one frame and flushes it, so a pipe consumer sees it immediately. The synchronous write runs on a
+    ///     worker so that it can be abandoned: once <paramref name="stop" /> fires, a write already in progress gets a
+    ///     few seconds to finish (the end frame must still go out), after which the reader is considered stalled.
+    /// </summary>
+    private static async Task WriteRelayFrameAsync(Stream stdout, byte[] frame, RelayOutput format,
+        CancellationToken stop)
+    {
+        byte[] bytes = format == RelayOutput.Binary
+            ? frame
+            : System.Text.Encoding.ASCII.GetBytes("{\"frame\":\"" + Convert.ToBase64String(frame) + "\"}\n");
+
+        Task write = Task.Run(() =>
+        {
+            stdout.Write(bytes, 0, bytes.Length);
+            stdout.Flush();
+        });
+
+        try
+        {
+            await write.WaitAsync(stop).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (stop.IsCancellationRequested)
+        {
+            try
+            {
+                await write.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+            }
+            catch (TimeoutException)
+            {
+                throw new IOException("The reader of standard output stopped consuming frames; giving up.");
+            }
+        }
+    }
     private static ulong ParseKeywordMask(string raw)
     {
         ReadOnlySpan<char> s = raw.AsSpan().Trim();
@@ -381,6 +474,7 @@ internal static class RealtimeCommand
         uint bufferSizeKb,
         uint flushSeconds,
         bool usePlain,
+        RelayOutput relayOutput,
         bool useColor,
         IReadOnlyList<PlainOutput.ColumnSpec> columns,
         bool emitHeader,
@@ -394,7 +488,7 @@ internal static class RealtimeCommand
         CancellationToken cancellationToken)
     {
         // ---------------------------------------------------------------------------
-        // --driver: for each named driver, resolve binary → read PDB identity → download/cache PDB
+        // --driver: for each named driver, resolve binary â†’ read PDB identity â†’ download/cache PDB
         // ---------------------------------------------------------------------------
         if (driverNames.Length > 0)
         {
@@ -475,7 +569,7 @@ internal static class RealtimeCommand
             }
             else
             {
-                // All driver resolutions failed — fatal only when nothing else can supply providers.
+                // All driver resolutions failed â€” fatal only when nothing else can supply providers.
                 if (explicitProviderGuids.Length == 0 && symbolPaths.Length == 0)
                 {
                     Console.Error.WriteLine(
@@ -491,9 +585,14 @@ internal static class RealtimeCommand
         }
 
         // Resolve --symbols paths into a DecodingContext and the raw context list.
-        (DecodingContext? decodingContext, List<DecodingContextType> contextTypes) = SymbolResolution.ResolveSymbols(symbolPaths);
+        // Relay output is undecoded, so symbols matter only as a source of provider GUIDs.
+        (DecodingContext? decodingContext, List<DecodingContextType> contextTypes) =
+            relayOutput != RelayOutput.None && symbolPaths.Length == 0
+                ? (null, [])
+                : SymbolResolution.ResolveSymbols(symbolPaths);
 
-        bool rewriteProviderName = SymbolResolution.ShouldRewriteProviderName(contextTypes, keepOriginalProvider);
+        bool rewriteProviderName = relayOutput == RelayOutput.None &&
+                                SymbolResolution.ShouldRewriteProviderName(contextTypes, keepOriginalProvider);
 
         // Determine the final provider list: explicit args take precedence; fall back to WPP control
         // GUIDs extracted from TMC: annotations in the PDB files.
@@ -519,7 +618,7 @@ internal static class RealtimeCommand
                 Console.Error.WriteLine(
                     "[!] No provider GUIDs could be derived from the supplied --symbols paths. " +
                     "Only PDB files carry WPP control GUID information (TMC: annotations). " +
-                    "TMF files alone are not sufficient — either pass a PDB file or supply the " +
+                    "TMF files alone are not sufficient â€” either pass a PDB file or supply the " +
                     "provider-guid argument explicitly.");
             }
             else
@@ -539,7 +638,7 @@ internal static class RealtimeCommand
         // Print the "stopping" notice the moment the token is cancelled, regardless
         // of what triggered it (Ctrl+C or ProcessExit), so it always appears before
         // the finally-block "[*] Done." message.
-        cts.Token.Register(() => Console.Error.WriteLine("\r[*] Interrupt received — stopping session..."));
+        cts.Token.Register(() => Console.Error.WriteLine("\r[*] Interrupt received â€” stopping session..."));
 
         // Ctrl+C: cancel gracefully without immediately terminating the process.
         Console.CancelKeyPress += (_, e) =>
@@ -561,7 +660,7 @@ internal static class RealtimeCommand
         // Choose output writer based on format.
         // NDJSON: raw byte BufferedStream for maximum throughput.
         // Plain: StreamWriter (UTF-8, 64 KB) for text formatting.
-        Stream? ndjsonOut = usePlain ? null : new BufferedStream(Console.OpenStandardOutput(), 65536);
+        Stream? ndjsonOut = usePlain || relayOutput != RelayOutput.None ? null : new BufferedStream(Console.OpenStandardOutput(), 65536);
         StreamWriter? plainOut = usePlain
             ? new StreamWriter(Console.OpenStandardOutput(), new System.Text.UTF8Encoding(false), 65536)
             : null;
@@ -570,6 +669,9 @@ internal static class RealtimeCommand
         {
             ConsoleOutput.TryEnableWindowsVt();
         }
+
+        // Relay: raw stdout, no text layer, so nothing but frames ever reaches the pipe.
+        Stream? relayOut = relayOutput != RelayOutput.None ? OpenRelayStdout() : null;
 
         Action<Guid, ushort, uint> missingFormatWarner = ConsoleOutput.CreateMissingFormatWarner();
 
@@ -597,6 +699,19 @@ internal static class RealtimeCommand
             {
                 await plainOut!.WriteLineAsync(PlainOutput.FormatHeader(columns).AsMemory(), cts.Token);
                 await plainOut.FlushAsync(cts.Token);
+            }
+
+            if (relayOut is not null)
+            {
+                // Cancellation is not honoured by breaking out: the producer finishes with an end frame and only then
+                // throws, so a clean Ctrl+C always ends the relay session properly.
+                await foreach (byte[] frame in EtwUtil.EnumerateRealtimeRelayFramesAsync(
+                                   sessionName, null, cts.Token))
+                {
+                    await WriteRelayFrameAsync(relayOut, frame, relayOutput, cts.Token);
+                }
+
+                return 0;
             }
 
             await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateRealtimeEventsAsync(
@@ -630,7 +745,7 @@ internal static class RealtimeCommand
         }
         catch (OperationCanceledException)
         {
-            // Expected on Ctrl+C — not an error.
+            // Expected on Ctrl+C â€” not an error.
         }
         catch (Exception ex)
         {
@@ -656,11 +771,12 @@ internal static class RealtimeCommand
                 await plainOut!.FlushAsync(CancellationToken.None);
                 await plainOut.DisposeAsync();
             }
-            else
+            else if (ndjsonOut is not null)
             {
-                await ndjsonOut!.FlushAsync(CancellationToken.None);
+                await ndjsonOut.FlushAsync(CancellationToken.None);
                 await ndjsonOut.DisposeAsync();
             }
+
 
             Console.Error.WriteLine("[*] Done.");
         }
