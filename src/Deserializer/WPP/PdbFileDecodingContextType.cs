@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 
 using Kaitai;
@@ -88,9 +88,13 @@ public sealed class PdbFileDecodingContextType()
             .SelectMany(list => list!)
             .ToList();
 
-        TraceMessageFormats = TmfParser
+        List<TraceMessageFormat> formats = TmfParser
             .ExtractTraceMessageFormats(allSymbols.ExtractTmfAnnotations(), originalName)
-            .Distinct();
+            .Distinct()
+            .ToList();
+
+        ResolveEnumNames(pdb, formats);
+        TraceMessageFormats = formats;
 
         WppTraceControls = allSymbols
             .ExtractTraceControls()
@@ -98,6 +102,37 @@ public sealed class PdbFileDecodingContextType()
             .DistinctBy(c => c.ControlGuid)
             .ToList()
             .AsReadOnly();
+    }
+
+    /// <summary>
+    ///     Gives `ItemEnum`/`ItemFlagsEnum` parameters their enumerator names from the PDB type stream.
+    /// </summary>
+    private static void ResolveEnumNames(MsPdb pdb, List<TraceMessageFormat> formats)
+    {
+        HashSet<string> wanted = formats
+            .SelectMany(f => f.FunctionParameters)
+            .Where(p => p.EnumTypeName is not null)
+            .Select(p => p.EnumTypeName!)
+            .ToHashSet(StringComparer.Ordinal);
+        if (wanted.Count == 0)
+        {
+            return;
+        }
+
+        Dictionary<string, IReadOnlyDictionary<long, string>> enums = PdbEnumReader.Read(pdb, wanted);
+        foreach (TraceMessageFormat format in formats)
+        {
+            if (format.FunctionParameters.All(p => p.EnumTypeName is null))
+            {
+                continue;
+            }
+
+            format.FunctionParameters = format.FunctionParameters
+                .Select(p => p.EnumTypeName is not null && enums.TryGetValue(p.EnumTypeName, out var values)
+                    ? p with { EnumValues = values }
+                    : p)
+                .ToArray();
+        }
     }
 
     /// <summary>

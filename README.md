@@ -24,11 +24,10 @@ contributors.*
 - Added support for [WPP Software Tracing](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/wpp-software-tracing) decoding
   - Supports `.PDB` files as a decoding source — WPP provider GUIDs (ETW trace control GUIDs) are automatically extracted from `TMC:` annotations in the PDB symbol stream so no manual GUID lookup is required
   - Supports `.TMF` files as a decoding source
-  - Support for the [WPP extended format specification strings](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-)
+  - Full support for all [WPP extended format specification strings](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-)
     (`%!FUNC!`, `%!LEVEL!`, `%!FLAGS!`, `%!IPADDR!`, `%!TIMESTAMP!`, `%!delta!`, `%!due!`, `%!GUID!`,
     `%!CLSID!`/`%!LIBID!`/`%!IID!`, `%!PORT!`, `%!STATUS!`, `%!WINERROR!`, `%!HRESULT!`,
-    `%!NDIS_STATUS!`, `%!NDIS_OID!`, `%!sid!`, bitset/list enumerations, and more); known exceptions are
-    `%!ItemEnum!`/`%!ItemFlagsEnum!` (raw values), `%!CLSID!` (no registry name lookup) and `%!LINE!` (rendered empty) (see [Known limitations](#known-limitations))
+    `%!NDIS_STATUS!`, `%!NDIS_OID!`, `%!sid!`, bitset/list enumerations, and more)
   - `USEPREFIX`/`USESUFFIX` trace message prefixes are automatically expanded — the `%0` standard-prefix
     sentinel and `%!FUNC!`/`%!LEVEL!` context markers are resolved from the TMF metadata at decode time
 - Added `EtwUtil.EnumeratePdbReferences` for lightweight pre-scanning of ETL files to collect all PDB metadata
@@ -59,7 +58,7 @@ private async IAsyncEnumerable<object> GetEtwStream([EnumeratorCancellation] Can
 }
 ```
 
-- Added a managed, cross-platform `.etl` reader (`EtwBackend`): `EtwUtil.ConvertToJson`, `EnumerateEventsAsync` and `EnumeratePdbReferences` now also run on Linux/macOS, including WPP decoding and TraceLogging events
+- Added a managed, cross-platform `.etl` reader (`EtwBackend`): `EtwUtil.ConvertToJson`, `EnumerateEventsAsync` and `EnumeratePdbReferences` now also run on Linux/macOS, including WPP decoding and TraceLogging events (custom-serialized fields use their base in-type unless a TraceLoggingCustomDecoders decoder is registered; both backends decode TraceLogging from the embedded schema)
 - Added realtime ETW session support via `EtwRealtimeSession` and `EtwUtil.EnumerateRealtimeEventsAsync`:
   - `EtwRealtimeSession.Create(name)` starts a user-mode ETW session (`StartTraceW`)
   - `EnableProvider` / `DisableProvider` toggle providers at runtime via `EnableTraceEx2`
@@ -127,7 +126,7 @@ await foreach (ReadOnlyMemory<byte> eventJson in EtwUtil.EnumerateRealtimeEvents
 - **Admin required** to start a session. `EtwRealtimeSession.Create` throws `EtwStartTraceException` with `ERROR_ACCESS_DENIED` when the process is not elevated.
 - **Sessions persist after process exit.** Always dispose `EtwRealtimeSession`, and call `EtwUtil.StopOrphanSession("name")` at startup as a safety net.
 - **WPP decoding** in realtime mode requires a pre-built `DecodingContext`. The file-based `EnumeratePdbReferences` pre-scan only works on `.etl` files, not on live sessions. Build the `DecodingContext` from known `.pdb` or `.tmf` paths before starting the session.
-- **Kernel-mode providers**: modern (manifest/TraceLogging) providers that are registered by drivers, e.g. `Microsoft-Windows-Kernel-Process`, can be enabled and consumed like any other provider. Creating the special **NT Kernel Logger** / system-logger session (kernel enable flags, `SystemTraceProvider`) is not exposed by `EtwRealtimeSession`.
+- **Kernel-mode providers / NT Kernel Logger** are not supported in this release.
 
 ## Symbol resolution
 
@@ -162,11 +161,10 @@ See [tools/Nefarius.Utilities.ETW.CLI/README.md](tools/Nefarius.Utilities.ETW.CL
 
 ## Known limitations
 
-- Reading `.etl` files works on Windows, Linux and macOS through a managed reader (`EtwBackend.Managed`, the default off Windows; set `EtwJsonConverterOptions.Backend` / `EtwMetadataScanOptions.Backend` to choose). Real-time sessions, session management and manifest value-map resolution remain **Windows-only** and throw `PlatformNotSupportedException` elsewhere
-- The managed reader does not read compressed `.etl` files (it reports a clear error) and covers the record types found in WPP, kernel image-ID and TraceLogging/manifest traces; unsupported record types are skipped with a warning via `ReportError`
-- `%!ItemEnum!`/`%!ItemFlagsEnum!` types display raw numeric values; PDB-based enum name resolution is not yet implemented
-- `%!CLSID!` prints the GUID without a registry name lookup and `%!LINE!` is rendered as an empty string
-- Creating an NT Kernel Logger / system-logger session is not supported by `EtwRealtimeSession`; registered kernel-mode providers work in realtime mode
+- Reading `.etl` files works on Windows, Linux and macOS through a managed reader (`EtwBackend.Managed`, the default off Windows; set `EtwJsonConverterOptions.Backend` / `EtwMetadataScanOptions.Backend` to choose). Real-time sessions and session management remain **Windows-only**. Manifest-described events decode on every platform, including structs, fixed and variable array counts, fixed and variable lengths, declared out-types and value/bit maps (maps are kept in the property metadata; JSON output keeps the raw values) and throw `PlatformNotSupportedException` elsewhere
+- The managed reader reads compressed (`EVENT_TRACE_COMPRESSED_MODE`, Xpress LZ77) `.etl` files by decompressing every buffer into memory first, and covers the record types found in WPP, kernel and TraceLogging/manifest traces; unsupported record types are skipped with a warning via `ReportError`
+- `%!ItemEnum!`/`%!ItemFlagsEnum!` types are shown with enumerator names when the enum type (named in the TMF as `ItemEnum(Name)`) is found in a PDB type stream; from TMF files, or when the type is missing, the raw value is shown. Without a `WppDecodingContext`, WPP events are still emitted with the "No format information found." message and `OnWppFormatMissing` fires
+- Kernel-mode ETW providers and the NT Kernel Logger session are not yet supported for realtime mode
 
 ## Documentation
 
