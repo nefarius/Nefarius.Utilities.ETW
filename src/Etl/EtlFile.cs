@@ -94,12 +94,126 @@ internal sealed unsafe class EtlFile : IDisposable
 
     public uint BufferSize => Info.BufferSize;
 
-    public byte* Pointer => _base;
+    /// <summary>
+    ///     The logger buffers of the file in file order. Buffers of compressed files are decompressed up front into
+    ///     memory owned by this instance.
+    /// </summary>
+    public IReadOnlyList<BufferSegment> Buffers => _buffers;
 
-    public long BufferCount => BufferSize == 0 ? 0 : (Length + BufferSize - 1) / BufferSize;
+    private readonly List<BufferSegment> _buffers = [];
+    private readonly List<nint> _owned = [];
+
+    /// <summary>
+    ///     Upper bound for the memory taken by decompressed buffers of one file.
+    /// </summary>
+    private const long MaxDecompressedBytes = 16L << 30;
+
+    internal readonly struct BufferSegment(byte* pointer, int length)
+    {
+        public byte* Pointer { get; } = pointer;
+        public int Length { get; } = length;
+    }
+
+    private void IndexBuffers(string path, CancellationToken cancellationToken)
+    {
+        long bufferSize = BufferSize;
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!Info.IsCompressed)
+        {
+            for (long start = 0; start < Length; start += bufferSize)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                _buffers.Add(new BufferSegment(_base + start, (int)Math.Min(bufferSize, Length - start)));
+            }
+
+            return;
+        }
+
+        // The first buffer carries the logfile header and is stored as is. Every following buffer is a 72 byte
+        // buffer header whose first field holds the size of the whole record (header and data), followed by the
+        // Xpress LZ77 compressed buffer contents. Records are not aligned.
+        if (Length < bufferSize)
+        {
+            throw new EtlFormatException(WIN32_ERROR.ERROR_INVALID_DATA,
+                $"'{path}' ends inside the first buffer of a compressed file.");
+        }
+
+        _buffers.Add(new BufferSegment(_base, (int)bufferSize));
+
+        long position = bufferSize;
+        long decompressed = 0;
+        while (position < Length)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            long remaining = Length - position;
+            if (remaining < BufferHeaderSize)
+            {
+                throw new EtlFormatException(WIN32_ERROR.ERROR_INVALID_DATA,
+                    $"'{path}' ends with a truncated compressed buffer header at offset {position}.");
+            }
+
+            uint recordSize = *(uint*)(_base + position);
+            if (recordSize <= BufferHeaderSize || recordSize > remaining)
+            {
+                throw new EtlFormatException(WIN32_ERROR.ERROR_INVALID_DATA,
+                    $"'{path}' has a compressed buffer of size {recordSize} at offset {position} that does not fit " +
+                    $"into the file.");
+            }
+
+            decompressed += bufferSize;
+            if (decompressed > MaxDecompressedBytes)
+            {
+                throw new EtlFormatException(WIN32_ERROR.ERROR_NOT_ENOUGH_MEMORY,
+                    $"'{path}' decompresses to more than {MaxDecompressedBytes >> 30} GiB.");
+            }
+
+            // Reserve the bookkeeping slot first so an allocated buffer can always be registered for cleanup.
+            _owned.EnsureCapacity(_owned.Count + 1);
+
+            byte* buffer;
+            try
+            {
+                buffer = (byte*)NativeMemory.AllocZeroed((nuint)bufferSize);
+            }
+            catch (OutOfMemoryException ex)
+            {
+                throw new EtlFormatException(WIN32_ERROR.ERROR_NOT_ENOUGH_MEMORY,
+                    $"Not enough memory to decompress '{path}'.", ex);
+            }
+
+            _owned.Add((nint)buffer);
+
+            Buffer.MemoryCopy(_base + position, buffer, BufferHeaderSize, BufferHeaderSize);
+            *(uint*)buffer = (uint)bufferSize;
+
+            ReadOnlySpan<byte> compressed = new(_base + position + BufferHeaderSize, (int)recordSize - BufferHeaderSize);
+            Span<byte> target = new(buffer + BufferHeaderSize, (int)bufferSize - BufferHeaderSize);
+            if (!XpressLz77.TryDecompress(compressed, target, out int written) || written != target.Length)
+            {
+                throw new EtlFormatException(WIN32_ERROR.ERROR_INVALID_DATA,
+                    $"'{path}' has a corrupt compressed buffer at offset {position}.");
+            }
+
+            _buffers.Add(new BufferSegment(buffer, (int)bufferSize));
+            position += recordSize;
+        }
+    }
+
+    private void FreeOwnedBuffers()
+    {
+        foreach (nint owned in _owned)
+        {
+            NativeMemory.Free((void*)owned);
+        }
+
+        _owned.Clear();
+        _buffers.Clear();
+    }
 
     public void Dispose()
     {
+        FreeOwnedBuffers();
+
         if (_base is not null)
         {
             _view.SafeMemoryMappedViewHandle.ReleasePointer();
@@ -110,7 +224,7 @@ internal sealed unsafe class EtlFile : IDisposable
         _file.Dispose();
     }
 
-    public static EtlFile Open(string path)
+    public static EtlFile Open(string path, CancellationToken cancellationToken = default)
     {
         MemoryMappedFile? file = null;
         MemoryMappedViewAccessor? view = null;
@@ -133,6 +247,16 @@ internal sealed unsafe class EtlFile : IDisposable
             {
                 EtlTraceInfo info = ReadTraceInfo(path, pointer, length);
                 EtlFile result = new(file, mappedView, pointer, length, info);
+                try
+                {
+                    result.IndexBuffers(path, cancellationToken);
+                }
+                catch
+                {
+                    result.FreeOwnedBuffers();
+                    throw;
+                }
+
                 file = null;
                 view = null;
                 return result;
@@ -279,12 +403,6 @@ internal sealed unsafe class EtlFile : IDisposable
             HeaderRawTimestamp = headerRaw,
             ClockType = *(uint*)(h + boot + 24)
         };
-
-        if (info.IsCompressed)
-        {
-            throw new EtlFormatException(WIN32_ERROR.ERROR_NOT_SUPPORTED,
-                $"'{path}' is a compressed ETL file, which the managed reader does not support yet.");
-        }
 
         return info;
     }
