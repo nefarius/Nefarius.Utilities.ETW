@@ -37,6 +37,8 @@ internal sealed class EventTracePropertyOperand : IEventTracePropertyOperand
 
     public int FixedArraySize { get; private set; }
 
+    public bool LengthIsInCharacters { get; set; }
+
     public bool IsFixedLength { get; }
 
     public int FixedLengthSize { get; private set; }

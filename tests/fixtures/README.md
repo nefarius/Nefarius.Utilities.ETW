@@ -17,5 +17,5 @@ process ids), so after regenerating update the expected counts in `UnitTestEtlFi
 ## Known differences found with these fixtures
 
 * TraceLogging/manifest decoding differs between the native and managed backends (event names, binary array counts,
-  nested structures, manifest binary fields); the parity cases for the new fixtures are ignored until fixed.
+  nested structures); the TraceLogging parity cases are ignored until fixed.
 * `BackendParityTests` compares SYSTEMTIME values in local time on Windows and therefore only passes in a UTC time zone.
