@@ -40,6 +40,17 @@ public sealed class EtwRealtimeSession : IDisposable
     }
 
     /// <summary>
+    ///     The name of the system-wide NT Kernel Logger session. A session created with this name (and without
+    ///     <see cref="EtwRealtimeSessionOptions.SystemLogger" />) is the NT Kernel Logger; its event groups come from
+    ///     <see cref="EtwRealtimeSessionOptions.EnableFlags" />.
+    /// </summary>
+    public const string NtKernelLoggerName = "NT Kernel Logger";
+
+    private static readonly Guid SystemTraceControlGuid = new("9e814aad-3204-11d2-9a82-006008a86939");
+
+    private const uint SystemLoggerMode = 0x02000000;
+
+    /// <summary>
     ///     Gets the session name passed to <see cref="Create" />.
     /// </summary>
     public string SessionName => _sessionName;
@@ -93,6 +104,15 @@ public sealed class EtwRealtimeSession : IDisposable
                 props->MaximumBuffers = maxBufs;
                 props->FlushTimer = opts.FlushTimerSeconds;
                 props->LogFileMode = Etw.EVENT_TRACE_REAL_TIME_MODE | Etw.EVENT_TRACE_NO_PER_PROCESSOR_BUFFERING;
+                if (opts.SystemLogger)
+                {
+                    props->LogFileMode |= SystemLoggerMode;
+                }
+                else if (string.Equals(sessionName, NtKernelLoggerName, StringComparison.OrdinalIgnoreCase))
+                {
+                    props->Wnode.Guid = SystemTraceControlGuid;
+                    props->EnableFlags = (EVENT_TRACE_FLAG)opts.EnableFlags;
+                }
                 props->LoggerNameOffset = (uint)propsSize;
 
                 CopySessionName(sessionName, (byte*)props, propsSize);

@@ -126,7 +126,7 @@ await foreach (ReadOnlyMemory<byte> eventJson in EtwUtil.EnumerateRealtimeEvents
 - **Admin required** to start a session. `EtwRealtimeSession.Create` throws `EtwStartTraceException` with `ERROR_ACCESS_DENIED` when the process is not elevated.
 - **Sessions persist after process exit.** Always dispose `EtwRealtimeSession`, and call `EtwUtil.StopOrphanSession("name")` at startup as a safety net.
 - **WPP decoding** in realtime mode requires a pre-built `DecodingContext`. The file-based `EnumeratePdbReferences` pre-scan only works on `.etl` files, not on live sessions. Build the `DecodingContext` from known `.pdb` or `.tmf` paths before starting the session.
-- **Kernel-mode providers / NT Kernel Logger** are not supported in this release.
+- **Kernel providers**: `EnumerateRealtimeEventsAsync` attaches by name to an existing `NT Kernel Logger` session (verified against an externally created one). `EtwRealtimeSession.Create` can also create kernel sessions: set `EtwRealtimeSessionOptions.SystemLogger` and enable `EtwSystemProviders` GUIDs (Windows 8+), or create a session named `EtwRealtimeSession.NtKernelLoggerName` with `EnableFlags` (the single system-wide classic logger).
 
 ## Symbol resolution
 
@@ -164,7 +164,7 @@ See [tools/Nefarius.Utilities.ETW.CLI/README.md](tools/Nefarius.Utilities.ETW.CL
 - Reading `.etl` files works on Windows, Linux and macOS through a managed reader (`EtwBackend.Managed`, the default off Windows; set `EtwJsonConverterOptions.Backend` / `EtwMetadataScanOptions.Backend` to choose). Real-time sessions, session management and manifest value-map resolution remain **Windows-only** and throw `PlatformNotSupportedException` elsewhere
 - The managed reader does not read compressed `.etl` files (it reports a clear error) and covers the record types found in WPP, kernel image-ID and TraceLogging/manifest traces; unsupported record types are skipped with a warning via `ReportError`
 - `%!ItemEnum!`/`%!ItemFlagsEnum!` types display raw numeric values; PDB-based enum name resolution is not yet implemented
-- Kernel-mode ETW providers and the NT Kernel Logger session are not yet supported for realtime mode
+- The CLI does not create kernel sessions; use the library API (`SystemLogger` / `NtKernelLoggerName`) or attach to an existing session by name
 
 ## Documentation
 
