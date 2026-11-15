@@ -15,7 +15,10 @@ Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/sys
 
 ### <a id="methods-enumerate"/>**Enumerate(String)**
 
-Enumerates files matched by a filename glob. The caller must already have validated `glob`.
+Enumerates files matched by a glob. The caller must already have validated `glob`.
+ Directory segments after the wildcard-free root are honoured: a literal segment must exist, and a
+ standalone `**` matches zero or more directories, so `root\**\sub\*.pdb` only returns files
+ inside directories named `sub` below `root`.
 
 ```csharp
 public static IEnumerable<String> Enumerate(string glob)

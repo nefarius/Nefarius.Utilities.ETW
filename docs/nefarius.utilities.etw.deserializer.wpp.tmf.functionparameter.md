@@ -11,6 +11,34 @@ Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/sys
 
 ## Properties
 
+### <a id="properties-enumtypename"/>**EnumTypeName**
+
+The C type name of the enum, as written in the TMF (ItemEnum(Name)).
+
+```csharp
+public string EnumTypeName { get; set; }
+```
+
+#### Property Value
+
+[String](https://learn.microsoft.com/dotnet/api/system.string)<br>
+
+**Remarks:**
+
+Only populated for [ItemType.ItemEnum](./nefarius.utilities.etw.deserializer.wpp.tmf.itemtype.md#itemenum) and [ItemType.ItemFlagsEnum](./nefarius.utilities.etw.deserializer.wpp.tmf.itemtype.md#itemflagsenum).
+
+### <a id="properties-enumvalues"/>**EnumValues**
+
+Enumerator values and names resolved from PDB type information, when available.
+
+```csharp
+public IReadOnlyDictionary<Int64, String> EnumValues { get; set; }
+```
+
+#### Property Value
+
+[IReadOnlyDictionary](https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlydictionary-2)<[Int64](https://learn.microsoft.com/dotnet/api/system.int64), [String](https://learn.microsoft.com/dotnet/api/system.string)><br>
+
 ### <a id="properties-expression"/>**Expression**
 
 The expression (variable) passed to the function parameter.
