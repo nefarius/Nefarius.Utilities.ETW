@@ -101,6 +101,12 @@ internal sealed class EventTraceOperandExpressionBuilderImpl
                             ? operandReferenceTable[operand.VariableLengthSize]
                             : Expression.Constant(operand.FixedLengthSize);
 
+                        if (operand.IsVariableLength && operand.LengthIsInCharacters)
+                        {
+                            length = Expression.MultiplyChecked(Expression.ConvertChecked(length, typeof(int)),
+                                Expression.Constant(2));
+                        }
+
                         readValue = Call(eventRecordReader, inType.ReadMethodInfo(eventRecordReader.Type, length.Type),
                             length);
                     }

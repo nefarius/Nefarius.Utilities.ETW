@@ -18,6 +18,11 @@ internal interface IEventTracePropertyOperand
 
     int FixedArraySize { get; }
 
+    /// <summary>
+    ///     True when the length of a Unicode string is counted in characters (manifest XML) instead of bytes.
+    /// </summary>
+    bool LengthIsInCharacters { get; }
+
     bool IsFixedLength { get; }
 
     int FixedLengthSize { get; }
