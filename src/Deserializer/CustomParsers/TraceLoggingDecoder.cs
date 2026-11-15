@@ -61,6 +61,7 @@ internal static unsafe class TraceLoggingDecoder
         public byte OutType;
         public bool IsArray;
         public bool IsVariableArray;
+        public byte[]? TypeInfo;
         public ushort ConstantCount;
         public List<Field> Children = [];
         public PropertyMetadata Metadata = null!;
@@ -185,11 +186,26 @@ internal static unsafe class TraceLoggingDecoder
         }
 
         // Bits 0x60 are a count kind: 0x20 fixed, 0x40 variable, 0x60 custom serialization.
-        // Custom serialization's next ushort is a type-info size, not an array count.
+        // Custom serialization's next ushort is a type-info size, not an array count. The value is laid out as the
+        // base in-type says; the type info is kept for an optional registered decoder.
         switch ((byte)(inType & (InTypeConstantCount | InTypeVariableCount)))
         {
             case InTypeConstantCount | InTypeVariableCount:
-                throw new FormatException("TraceLogging custom serialization is not supported.");
+                if (position + 2 > end)
+                {
+                    throw new FormatException("TraceLogging type info size is truncated.");
+                }
+
+                int typeInfoSize = *(ushort*)(data + position);
+                position += 2;
+                if (typeInfoSize > end - position)
+                {
+                    throw new FormatException("TraceLogging type info is truncated.");
+                }
+
+                field.TypeInfo = new ReadOnlySpan<byte>(data + position, typeInfoSize).ToArray();
+                position += typeInfoSize;
+                break;
             case InTypeConstantCount:
                 if (position + 2 > end)
                 {
@@ -369,6 +385,10 @@ internal static unsafe class TraceLoggingDecoder
         else
         {
             value = ReadValue(reader, field);
+            if (field.TypeInfo is not null && TraceLoggingCustomDecoders.TryGet(field.TypeInfo, out var decoder))
+            {
+                value = ApplyCustomDecoder(decoder!, field.TypeInfo, value);
+            }
         }
 
         if (elements is null)
@@ -381,20 +401,35 @@ internal static unsafe class TraceLoggingDecoder
         }
     }
 
+    private static object? ApplyCustomDecoder(TraceLoggingCustomDecoder decoder, byte[] typeInfo, object? value)
+    {
+        object? decoded;
+        try
+        {
+            decoded = decoder(typeInfo, value);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            throw new FormatException("A TraceLogging custom decoder failed.", ex);
+        }
+
+        if (decoded is null or string or byte[] or bool or sbyte or byte or short or ushort or int or uint or long
+            or ulong or float or double or Guid or DateTime)
+        {
+            return decoded;
+        }
+
+        throw new FormatException("A TraceLogging custom decoder returned an unsupported value type.");
+    }
     private static object? ReadValue(EventRecordReader reader, Field field)
     {
         object? value = ReadValueUnchecked(reader, field);
-        if (reader.NativeEventRecord->UserDataLength < ConsumedBytes(reader))
+        if (reader.NativeEventRecord->UserDataLength < reader.ConsumedBytes)
         {
             throw new FormatException("TraceLogging payload is shorter than its schema.");
         }
 
         return value;
-    }
-
-    private static int ConsumedBytes(EventRecordReader reader)
-    {
-        return (int)((byte*)reader.NativeEventRecord->UserData - (byte*)reader.NativeEventRecord->UserContext);
     }
 
     private static void Need(EventRecordReader reader, int bytes)

@@ -45,7 +45,6 @@ public class BackendParityTests
             // decoder gap re-enable its case.
             TestCaseData data = new(fixture, $"./traces/fixtures/{fixture}.etl", false, false);
             data.SetName($"{{m}}({fixture})");
-            data.Ignore("Known decoder gap tracked by the unsupported-claims work; see tests/fixtures/README.md.");
             yield return data;
         }
     }

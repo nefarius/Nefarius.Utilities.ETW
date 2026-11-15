@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -23,6 +23,11 @@ internal readonly struct EventRecordReader
     public unsafe int RemainingBytes =>
         Math.Max(0, NativeEventRecord->UserDataLength - (int)((byte*)NativeEventRecord->UserData - (byte*)_originalUserData));
 
+    /// <summary>
+    ///     Number of payload bytes consumed so far; may exceed the payload length after an overrun.
+    /// </summary>
+    public unsafe int ConsumedBytes => (int)((byte*)NativeEventRecord->UserData - (byte*)_originalUserData);
+
     private unsafe void IncrementBy(ref void* ptr, int value)
     {
         ptr = (byte*)ptr + value;
@@ -44,8 +49,7 @@ internal readonly struct EventRecordReader
     {
         int length = 0;
         byte* ptr = (byte*)NativeEventRecord->UserData;
-        long maxLength = NativeEventRecord->UserDataLength -
-                         ((byte*)NativeEventRecord->UserData - (byte*)NativeEventRecord->UserContext);
+        long maxLength = RemainingBytes;
 
         // A terminator is a UTF-16 code unit. Stepping one byte at a time treats the
         // 00 00 formed by 'A' (41 00) and U+0100 (00 01) as the end of the string.
@@ -127,8 +131,7 @@ internal readonly struct EventRecordReader
     {
         int length = 0;
         byte* ptr = (byte*)NativeEventRecord->UserData;
-        long maxLength = NativeEventRecord->UserDataLength -
-                         ((byte*)NativeEventRecord->UserData - (byte*)NativeEventRecord->UserContext);
+        long maxLength = RemainingBytes;
         while (length < maxLength && ptr[length] != 0)
         {
             ++length;

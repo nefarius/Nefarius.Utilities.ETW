@@ -58,7 +58,7 @@ private async IAsyncEnumerable<object> GetEtwStream([EnumeratorCancellation] Can
 }
 ```
 
-- Added a managed, cross-platform `.etl` reader (`EtwBackend`): `EtwUtil.ConvertToJson`, `EnumerateEventsAsync` and `EnumeratePdbReferences` now also run on Linux/macOS, including WPP decoding and TraceLogging events
+- Added a managed, cross-platform `.etl` reader (`EtwBackend`): `EtwUtil.ConvertToJson`, `EnumerateEventsAsync` and `EnumeratePdbReferences` now also run on Linux/macOS, including WPP decoding and TraceLogging events (custom-serialized fields use their base in-type unless a TraceLoggingCustomDecoders decoder is registered; both backends decode TraceLogging from the embedded schema)
 - Added realtime ETW session support via `EtwRealtimeSession` and `EtwUtil.EnumerateRealtimeEventsAsync`:
   - `EtwRealtimeSession.Create(name)` starts a user-mode ETW session (`StartTraceW`)
   - `EnableProvider` / `DisableProvider` toggle providers at runtime via `EnableTraceEx2`
