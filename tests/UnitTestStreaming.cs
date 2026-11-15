@@ -8,7 +8,6 @@ namespace Nefarius.Utilities.ETW.Tests;
 ///     Tests for <see cref="EtwUtil.EnumerateEventsAsync" />.
 /// </summary>
 [Category("Streaming")]
-[Platform("Win")]
 public class StreamingTests
 {
     // -----------------------------------------------------------------------
