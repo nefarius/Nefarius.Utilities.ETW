@@ -24,10 +24,11 @@ contributors.*
 - Added support for [WPP Software Tracing](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/wpp-software-tracing) decoding
   - Supports `.PDB` files as a decoding source — WPP provider GUIDs (ETW trace control GUIDs) are automatically extracted from `TMC:` annotations in the PDB symbol stream so no manual GUID lookup is required
   - Supports `.TMF` files as a decoding source
-  - Full support for all [WPP extended format specification strings](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-)
+  - Support for the [WPP extended format specification strings](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-)
     (`%!FUNC!`, `%!LEVEL!`, `%!FLAGS!`, `%!IPADDR!`, `%!TIMESTAMP!`, `%!delta!`, `%!due!`, `%!GUID!`,
     `%!CLSID!`/`%!LIBID!`/`%!IID!`, `%!PORT!`, `%!STATUS!`, `%!WINERROR!`, `%!HRESULT!`,
-    `%!NDIS_STATUS!`, `%!NDIS_OID!`, `%!sid!`, bitset/list enumerations, and more)
+    `%!NDIS_STATUS!`, `%!NDIS_OID!`, `%!sid!`, bitset/list enumerations, and more); known exceptions are
+    `%!CLSID!` (no registry name lookup) and `%!LINE!` (rendered empty) (see [Known limitations](#known-limitations))
   - `USEPREFIX`/`USESUFFIX` trace message prefixes are automatically expanded — the `%0` standard-prefix
     sentinel and `%!FUNC!`/`%!LEVEL!` context markers are resolved from the TMF metadata at decode time
 - Added `EtwUtil.EnumeratePdbReferences` for lightweight pre-scanning of ETL files to collect all PDB metadata
@@ -164,6 +165,7 @@ See [tools/Nefarius.Utilities.ETW.CLI/README.md](tools/Nefarius.Utilities.ETW.CL
 - Reading `.etl` files works on Windows, Linux and macOS through a managed reader (`EtwBackend.Managed`, the default off Windows; set `EtwJsonConverterOptions.Backend` / `EtwMetadataScanOptions.Backend` to choose). Real-time sessions and session management remain **Windows-only**. Manifest-described events decode on every platform, including structs, fixed and variable array counts, fixed and variable lengths, declared out-types and value/bit maps (maps are kept in the property metadata; JSON output keeps the raw values) and throw `PlatformNotSupportedException` elsewhere
 - The managed reader reads compressed (`EVENT_TRACE_COMPRESSED_MODE`, Xpress LZ77) `.etl` files by decompressing every buffer into memory first, and covers the record types found in WPP, kernel and TraceLogging/manifest traces; unsupported record types are skipped with a warning via `ReportError`
 - `%!ItemEnum!`/`%!ItemFlagsEnum!` types are shown with enumerator names when the enum type (named in the TMF as `ItemEnum(Name)`) is found in a PDB type stream; from TMF files, or when the type is missing, the raw value is shown. Without a `WppDecodingContext`, WPP events are still emitted with the "No format information found." message and `OnWppFormatMissing` fires
+- `%!CLSID!` prints the GUID without a registry name lookup and `%!LINE!` is rendered as an empty string
 - The CLI does not create kernel sessions; use the library API (`SystemLogger` / `NtKernelLoggerName`) or attach to an existing session by name
 
 ## Documentation
