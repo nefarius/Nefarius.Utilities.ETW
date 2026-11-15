@@ -42,6 +42,15 @@ public Func<Guid, Stream> CustomProviderManifest { get; set; }
 
 [Func](https://learn.microsoft.com/dotnet/api/system.func-2)<[Guid](https://learn.microsoft.com/dotnet/api/system.guid), [Stream](https://learn.microsoft.com/dotnet/api/system.io.stream)><br>
 
+**Remarks:**
+
+Called at most once per provider GUID with the provider of the event being decoded; return an
+ instrumentation manifest (`.man`) stream, or `null` if you have none. The library
+ reads and disposes the returned stream.
+
+A manifest may declare several providers; events are matched on provider GUID, event ID and version
+ (an omitted version means 0). Events the manifest does not describe fall back to the default decoding.
+
 ### <a id="properties-onwppformatmissing"/>**OnWppFormatMissing**
 
 Invoked whenever a WPP event is decoded but no matching [TraceMessageFormat](./nefarius.utilities.etw.deserializer.wpp.tmf.tracemessageformat.md)
