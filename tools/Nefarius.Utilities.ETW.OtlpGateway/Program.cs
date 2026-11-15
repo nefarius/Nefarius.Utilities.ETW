@@ -1,6 +1,13 @@
 using Nefarius.Utilities.ETW.OtlpGateway;
 
+using Serilog;
+
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext());
 
 builder.Services.AddEtwOtlpGateway(builder.Configuration);
 
@@ -18,6 +25,9 @@ builder.WebHost.ConfigureKestrel(kestrel =>
     kestrel.Limits.MaxRequestBodySize = gatewayOptions.Limits.MaxRequestBodyBytes);
 
 WebApplication app = builder.Build();
+
+app.UseSerilogRequestLogging(options => options.GetLevel = (httpContext, _, exception) =>
+    GatewayRequestLogging.GetLevel(httpContext, exception));
 
 app.Services.GetRequiredService<GatewayMetrics>().Observe(
     () => app.Services.GetRequiredService<Nefarius.Utilities.ETW.OpenTelemetry.RelayLogProcessor>().ActiveSessions,

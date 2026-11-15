@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -14,6 +15,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using NUnit.Framework;
+
+using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 
 using Nefarius.Utilities.ETW.Etl;
 using Nefarius.Utilities.ETW.OpenTelemetry;
@@ -220,17 +225,49 @@ internal sealed class TestGateway : IAsyncDisposable
 
     public CapturingSink Sink { get; } = new();
 
+    public CapturingLoggerProvider? Logs { get; private set; }
+
+    public ConcurrentQueue<LogEvent>? SerilogEvents { get; private set; }
+
+    private Serilog.Core.Logger? _requestLogger;
+
     public TestServer Server => _app.GetTestServer();
 
     public static async Task<TestGateway> StartAsync(
         Dictionary<string, string?>? settings = null,
-        bool authenticated = false)
+        bool authenticated = false,
+        bool captureLogs = false,
+        bool captureSerilogRequests = false)
     {
         TestGateway gateway = new();
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
+        if (captureLogs)
+        {
+            gateway.Logs = new CapturingLoggerProvider();
+            builder.Logging.AddProvider(gateway.Logs);
+            builder.Logging.AddFilter("SymbolDiscovery", LogLevel.Debug);
+            builder.Logging.AddFilter("RelaySessions", LogLevel.Information);
+        }
+
+        if (captureSerilogRequests)
+        {
+            gateway.SerilogEvents = new ConcurrentQueue<LogEvent>();
+            SerilogRequestSink sink = new(gateway.SerilogEvents);
+            gateway._requestLogger = new LoggerConfiguration()
+                .MinimumLevel.Verbose()
+                .WriteTo.Sink(sink)
+                .CreateLogger();
+            // The request middleware writes to its own logger. This registration only supplies its diagnostic context
+            // and leaves the process-wide Serilog logger unchanged.
+            builder.Host.UseSerilog((_, _, configuration) => configuration
+                    .MinimumLevel.Verbose()
+                    .WriteTo.Sink(sink),
+                preserveStaticLogger: true);
+        }
+
         builder.Configuration.AddInMemoryCollection(settings ?? []);
 
         builder.Services.AddEtwOtlpGateway(builder.Configuration);
@@ -244,6 +281,16 @@ internal sealed class TestGateway : IAsyncDisposable
         }
 
         gateway._app = builder.Build();
+
+        if (captureSerilogRequests)
+        {
+            gateway._app.UseSerilogRequestLogging(options =>
+            {
+                options.Logger = gateway._requestLogger;
+                options.GetLevel = (httpContext, _, exception) =>
+                    GatewayRequestLogging.GetLevel(httpContext, exception);
+            });
+        }
 
         if (authenticated)
         {
@@ -305,5 +352,50 @@ internal sealed class TestGateway : IAsyncDisposable
     {
         Client.Dispose();
         await _app.DisposeAsync();
+        _requestLogger?.Dispose();
+    }
+
+    private sealed class SerilogRequestSink(ConcurrentQueue<LogEvent> events) : ILogEventSink
+    {
+        public void Emit(LogEvent logEvent) => events.Enqueue(logEvent);
     }
 }
+
+/// <summary>Records <see cref="Microsoft.Extensions.Logging.ILogger" /> events emitted by a hosted gateway.</summary>
+internal sealed class CapturingLoggerProvider : ILoggerProvider
+{
+    private readonly ConcurrentQueue<CapturedLog> _entries = new();
+
+    public IReadOnlyList<CapturedLog> Entries => _entries.ToArray();
+
+    public Microsoft.Extensions.Logging.ILogger CreateLogger(string categoryName) => new Logger(categoryName, _entries);
+
+    public void Dispose()
+    {
+    }
+
+    private sealed class Logger(string category, ConcurrentQueue<CapturedLog> entries) : Microsoft.Extensions.Logging.ILogger
+    {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            entries.Enqueue(new CapturedLog(logLevel, category, formatter(state, exception), exception));
+        }
+    }
+
+    private sealed class NullScope : IDisposable
+    {
+        public static readonly NullScope Instance = new();
+
+        public void Dispose()
+        {
+        }
+    }
+}
+
+/// <summary>One captured log event.</summary>
+internal readonly record struct CapturedLog(LogLevel Level, string Category, string Message, Exception? Exception);

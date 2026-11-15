@@ -388,6 +388,136 @@ public class SymbolDiscoveryTests
         Assert.That(server.Requests, Is.Empty);
     }
 
+    [Test]
+    [Category("EndToEnd")]
+    public async Task SymbolLookup_LogsEachAttemptAndSuccessfulLoad()
+    {
+        await using StubSymbolServer server = await StubSymbolServer.StartAsync();
+        await using TestGateway gateway = await TestGateway.StartAsync(Settings(server), captureLogs: true);
+
+        Guid session = NewSession();
+        await PostAll(gateway, session, Stream(session, TestPdbs().Select(p => Rsds(p.Identity))));
+
+        CapturedLog[] logs = SymbolLogs(gateway);
+        Assert.That(logs.Count(e => e.Level == LogLevel.Debug && e.Message.Contains("attempt 1 of")),
+            Is.EqualTo(TestPdbs().Count()));
+        Assert.That(logs.Count(e => e.Message.Contains("Loaded symbols for")), Is.EqualTo(TestPdbs().Count()));
+        Assert.That(logs.Where(e => e.Message.Contains("Loaded symbols for")).Select(e => e.Level),
+            Has.All.EqualTo(LogLevel.Information));
+    }
+
+    [Test]
+    [Category("EndToEnd")]
+    public async Task SymbolLookup_LogsRetriesBeforeTheSuccessfulAttempt()
+    {
+        await using StubSymbolServer server = await StubSymbolServer.StartAsync(StubMode.FailFirstRequest);
+        await using TestGateway gateway = await TestGateway.StartAsync(Settings(server), captureLogs: true);
+
+        Guid session = NewSession();
+        await PostAll(gateway, session, Stream(session, TestPdbs().Select(p => Rsds(p.Identity))));
+
+        CapturedLog[] logs = SymbolLogs(gateway);
+        Assert.That(
+            logs.Count(e => e.Level == LogLevel.Debug && e.Message.Contains("retrying") && e.Message.Contains("503")),
+            Is.EqualTo(TestPdbs().Count()));
+        Assert.That(logs.Count(e => e.Level == LogLevel.Debug && e.Message.Contains("attempt 2 of")),
+            Is.EqualTo(TestPdbs().Count()));
+        Assert.That(logs.Count(e => e.Message.Contains("Loaded symbols for")), Is.EqualTo(TestPdbs().Count()));
+    }
+
+    [Test]
+    [Category("EndToEnd")]
+    public async Task SymbolLookup_LogsTheFailureDetail()
+    {
+        await using StubSymbolServer server = await StubSymbolServer.StartAsync(StubMode.NotFound);
+        await using TestGateway gateway = await TestGateway.StartAsync(Settings(server), captureLogs: true);
+
+        Guid session = NewSession();
+        await PostAll(gateway, session, Stream(session, TestPdbs().Select(p => Rsds(p.Identity))));
+
+        CapturedLog[] warnings = SymbolLogs(gateway).Where(e => e.Level == LogLevel.Warning).ToArray();
+        Assert.That(warnings, Has.Length.EqualTo(TestPdbs().Count()));
+        foreach (CapturedLog warning in warnings)
+        {
+            Assert.That(warning.Message, Does.Contain("NotFoundOnServer"));
+            Assert.That(warning.Message, Does.Contain("after 1 attempt"));
+            Assert.That(warning.Message, Does.Contain(server.Url));
+        }
+
+        Assert.That(SymbolLogs(gateway).Any(e => e.Message.Contains("retrying")), Is.False);
+        Assert.That(SymbolLogs(gateway).Any(e => e.Message.Contains("Loaded symbols for")), Is.False);
+    }
+
+    [Test]
+    [Category("EndToEnd")]
+    public async Task SymbolLookup_LogsTheExceptionWhenACachedPdbCannotBeLoaded()
+    {
+        (string file, PdbMetaData identity) = TestPdbs().OrderBy(p => new FileInfo(p.File).Length).First();
+        byte[] broken = PdbThatKeepsItsIdentityButFailsToLoad(file);
+        string cacheFile = Path.GetFullPath(Path.Combine(_cache,
+            identity.IndexPrefix.Replace('/', Path.DirectorySeparatorChar)));
+        Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)!);
+        await File.WriteAllBytesAsync(cacheFile, broken);
+
+        await using StubSymbolServer server = await StubSymbolServer.StartAsync();
+        await using TestGateway gateway = await TestGateway.StartAsync(Settings(server), captureLogs: true);
+
+        Guid session = NewSession();
+        await PostAll(gateway, session, Stream(session, [Rsds(identity)]));
+
+        CapturedLog failure = SymbolLogs(gateway).Single(e => e.Level == LogLevel.Warning);
+        Assert.That(failure.Exception, Is.Not.Null);
+        Assert.That(failure.Message, Does.Contain(identity.PdbName));
+        Assert.That(failure.Message, Does.Contain(identity.Guid.ToString()));
+        Assert.That(failure.Message, Does.Contain("could not be loaded after 1 attempt"));
+        Assert.That(server.Requests, Is.Empty);
+    }
+
+    private static CapturedLog[] SymbolLogs(TestGateway gateway) =>
+        gateway.Logs!.Entries.Where(e => e.Category == "SymbolDiscovery").ToArray();
+
+    /// <summary>
+    ///     A copy of <paramref name="pdbPath" /> whose GUID and age still match, while loading its WPP formats throws.
+    /// </summary>
+    private static byte[] PdbThatKeepsItsIdentityButFailsToLoad(string pdbPath)
+    {
+        byte[] bytes = File.ReadAllBytes(pdbPath);
+        Assert.That(PdbFileIdentityReader.TryRead(pdbPath, out PdbFileIdentity identity), Is.True);
+        string probe = Path.Combine(Path.GetTempPath(), "etw-pdb-corrupt-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            for (int offset = 0; offset < bytes.Length; offset += 4096)
+            {
+                byte[] mutated = (byte[])bytes.Clone();
+                Array.Clear(mutated, offset, Math.Min(4096, mutated.Length - offset));
+                File.WriteAllBytes(probe, mutated);
+                if (!PdbFileIdentityReader.TryRead(probe, out PdbFileIdentity read) || read != identity)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    _ = new PdbFileDecodingContextType(probe);
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    return mutated;
+                }
+            }
+        }
+        finally
+        {
+            if (File.Exists(probe))
+            {
+                File.Delete(probe);
+            }
+        }
+
+        Assert.Fail($"No corruption of {pdbPath} kept its identity while failing to load.");
+        return [];
+    }
+
     private static async Task WaitFor(Func<bool> condition)
     {
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));

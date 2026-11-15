@@ -242,11 +242,17 @@ public sealed class GatewaySymbolResolver : IDisposable
         await Task.Yield();
 
         string name = identity.PdbName;
+        int attempts = 0;
         try
         {
             ResolvedPdb result = null!;
             for (int attempt = 1; ; attempt++)
             {
+                attempts = attempt;
+                _logger.LogDebug(
+                    "Resolving symbols for {Pdb} ({Guid}, age {Age}), attempt {Attempt} of {MaxAttempts}.",
+                    name, identity.Guid, identity.Age, attempt, _maxAttempts);
+
                 // The deadline covers the request and the body copy. Disposal cancels it too; a deadline on its
                 // own is one failed attempt, not the end of resolution.
                 using CancellationTokenSource attemptTimeout =
@@ -263,11 +269,16 @@ public sealed class GatewaySymbolResolver : IDisposable
                 {
                     if (attempt >= _maxAttempts)
                     {
-                        _logger.LogWarning("Symbols for {Pdb} timed out after {Attempts} attempt(s).", name, attempt);
+                        _logger.LogWarning(
+                            "Symbols for {Pdb} ({Guid}, age {Age}) timed out after {Attempts} attempt(s).",
+                            name, identity.Guid, identity.Age, attempt);
                         entry.MarkFailed(_time.GetUtcNow() + FailureRetryDelay);
                         return;
                     }
 
+                    _logger.LogDebug(
+                        "Symbol lookup for {Pdb} ({Guid}, age {Age}) timed out on attempt {Attempt}; retrying.",
+                        name, identity.Guid, identity.Age, attempt);
                     await Task.Delay(TimeSpan.FromMilliseconds(250 * attempt), _disposed.Token).ConfigureAwait(false);
                     continue;
                 }
@@ -277,13 +288,17 @@ public sealed class GatewaySymbolResolver : IDisposable
                     break;
                 }
 
+                _logger.LogDebug(
+                    "Symbol lookup for {Pdb} ({Guid}, age {Age}) failed on attempt {Attempt}: {Failure}. {Detail}; retrying.",
+                    name, identity.Guid, identity.Age, attempt, result.Failure, result.Detail);
                 await Task.Delay(TimeSpan.FromMilliseconds(250 * attempt), _disposed.Token).ConfigureAwait(false);
             }
 
             if (result.LocalPath is null)
             {
-                _logger.LogWarning("Symbols for {Pdb} ({Guid}, age {Age}) could not be resolved: {Failure}.",
-                    name, identity.Guid, identity.Age, result.Failure);
+                _logger.LogWarning(
+                    "Symbols for {Pdb} ({Guid}, age {Age}) could not be resolved after {Attempts} attempt(s): {Failure}. {Detail}",
+                    name, identity.Guid, identity.Age, attempts, result.Failure, result.Detail);
                 // A permanent failure (not found, denied, wrong identity) is final; others are retried later.
                 entry.MarkFailed(IsPermanent(result)
                     ? DateTimeOffset.MaxValue
@@ -311,7 +326,9 @@ public sealed class GatewaySymbolResolver : IDisposable
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            _logger.LogWarning("Symbols for {Pdb} could not be loaded: {Error}", name, ex.GetType().Name);
+            _logger.LogWarning(ex,
+                "Symbols for {Pdb} ({Guid}, age {Age}) could not be loaded after {Attempts} attempt(s).",
+                name, identity.Guid, identity.Age, attempts);
             entry.MarkFailed(_time.GetUtcNow() + FailureRetryDelay);
         }
         finally

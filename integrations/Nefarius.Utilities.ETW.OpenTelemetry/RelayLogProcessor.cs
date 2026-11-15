@@ -41,6 +41,18 @@ public sealed class RelayLogProcessorOptions
 
     /// <summary>Source of time for idle expiry. Defaults to <see cref="TimeProvider.System" />.</summary>
     public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
+
+    /// <summary>
+    ///     Invoked when a hello frame is accepted. The arguments are the tenant, the relay session identifier, and the
+    ///     hello. Rejected and duplicate hellos are not reported.
+    /// </summary>
+    public Action<string, Guid, RawEtwHello>? OnHello { get; set; }
+
+    /// <summary>
+    ///     Invoked when an end frame is accepted. The arguments are the tenant and the relay session identifier.
+    ///     Rejected and duplicate end frames are not reported.
+    /// </summary>
+    public Action<string, Guid>? OnEnd { get; set; }
 }
 
 /// <summary>
@@ -281,7 +293,13 @@ public sealed class RelayLogProcessor : IDisposable
                 return null;
             }
 
-            Session created = new(new RawEtwRelayDecoder(_options.DecodingOptions, new RawEtwRelayOptions { Limits = _options.Limits }),
+            RawEtwRelayOptions relayOptions = new()
+            {
+                Limits = _options.Limits,
+                OnHello = hello => _options.OnHello?.Invoke(key.Tenant, key.SessionId, hello),
+                OnEnd = () => _options.OnEnd?.Invoke(key.Tenant, key.SessionId)
+            };
+            Session created = new(new RawEtwRelayDecoder(_options.DecodingOptions, relayOptions),
                 _options.TimeProvider.GetTimestamp());
 
             if (!_sessions.TryAdd(key, created))
