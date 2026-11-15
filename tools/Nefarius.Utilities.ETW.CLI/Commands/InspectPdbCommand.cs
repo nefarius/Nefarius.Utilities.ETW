@@ -75,9 +75,6 @@ internal static class InspectPdbCommand
                     }
 
                     string root = PathGlobbing.NormalizeGlobRoot(arg);
-                    string pattern = Path.GetFileName(arg);
-                    bool recurse = arg.Contains("**");
-                    SearchOption search = recurse ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
 
                     if (!Directory.Exists(root))
                     {
@@ -87,7 +84,7 @@ internal static class InspectPdbCommand
 
                     try
                     {
-                        foreach (string file in Directory.EnumerateFiles(root, pattern, search))
+                        foreach (string file in Nefarius.Utilities.ETW.Symbols.SymbolPathPatterns.Enumerate(arg))
                         {
                             SymbolResolution.TryAddPdb(pdbContexts, file);
                         }

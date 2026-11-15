@@ -45,7 +45,7 @@ etwutils parse <etl-path> [<etl-path> ...]
     [--keep-original-provider]         # keep raw WPP GuidName instead of rewriting to TMC: friendly name
 ```
 
-`<etl-path>` accepts individual `.etl` files, directories (top-level `*.etl` enumeration), and glob patterns (e.g. `C:\Traces\*.etl`). Multiple paths are accepted and deduplicated.
+`<etl-path>` accepts individual `.etl` files, directories (top-level `*.etl` enumeration), and glob patterns (e.g. `C:\Traces\*.etl`). Multiple paths are accepted and deduplicated. Globs allow a filename wildcard and standalone `**` directory segments (zero or more directories); literal directories after `**` are honoured (`C:\Symbols\**\x64\*.pdb` only matches files inside directories named `x64`), and wildcards inside other directory names are rejected.
 
 #### Output modes
 

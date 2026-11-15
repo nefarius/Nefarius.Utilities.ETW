@@ -70,21 +70,72 @@ public static class SymbolPathPatterns
     }
 
     /// <summary>
-    ///     Enumerates files matched by a filename glob. The caller must already have validated <paramref name="glob" />.
+    ///     Enumerates files matched by a glob. The caller must already have validated <paramref name="glob" />.
+    ///     Directory segments after the wildcard-free root are honoured: a literal segment must exist, and a
+    ///     standalone <c>**</c> matches zero or more directories, so <c>root\**\sub\*.pdb</c> only returns files
+    ///     inside directories named <c>sub</c> below <c>root</c>.
     /// </summary>
     public static IEnumerable<string> Enumerate(string glob)
     {
         string root = PathHelper.ToHostPath(NormalizeRoot(glob));
-        string pattern = PathHelper.GetFileName(glob);
-        SearchOption search = glob.Contains("**", StringComparison.Ordinal)
-            ? SearchOption.AllDirectories
-            : SearchOption.TopDirectoryOnly;
-
         if (!Directory.Exists(root))
         {
             return [];
         }
 
-        return Directory.EnumerateFiles(root, pattern, search);
+        string[] segments = glob.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
+        string[] directories = segments[..^1];
+        int firstWildcard = Array.FindIndex(directories, s => s.Contains('*') || s.Contains('?'));
+        string[] rest = firstWildcard < 0 ? [] : directories[firstWildcard..];
+
+        return Walk(root, rest, 0, PathHelper.GetFileName(glob)).Distinct(StringComparer.Ordinal);
+    }
+
+    private static readonly EnumerationOptions DirectoryOptions = new()
+    {
+        IgnoreInaccessible = true,
+        AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReparsePoint
+    };
+
+    private static IEnumerable<string> Walk(string directory, string[] rest, int index, string filePattern)
+    {
+        if (index == rest.Length)
+        {
+            foreach (string file in Directory.EnumerateFiles(directory, filePattern, SearchOption.TopDirectoryOnly))
+            {
+                yield return file;
+            }
+
+            yield break;
+        }
+
+        if (rest[index] == "**")
+        {
+            // zero directories
+            foreach (string file in Walk(directory, rest, index + 1, filePattern))
+            {
+                yield return file;
+            }
+
+            // one or more directories
+            foreach (string child in Directory.EnumerateDirectories(directory, "*", DirectoryOptions))
+            {
+                foreach (string file in Walk(child, rest, index, filePattern))
+                {
+                    yield return file;
+                }
+            }
+
+            yield break;
+        }
+
+        string literal = Path.Combine(directory, rest[index]);
+        if (Directory.Exists(literal))
+        {
+            foreach (string file in Walk(literal, rest, index + 1, filePattern))
+            {
+                yield return file;
+            }
+        }
     }
 }
