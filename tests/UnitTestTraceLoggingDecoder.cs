@@ -189,4 +189,103 @@ public unsafe class TraceLoggingDecoderTests
     {
         Assert.That(Decode(Schema("Other"), [], 5), Is.EqualTo("[]"));
     }
+
+    [Test]
+    public void Boolean8AndNull_AreWrittenAsJsonValues()
+    {
+        byte[] schema = Schema("Flags",
+            Field("On", 4 | 0x80, 3),
+            Field("Absent", 0));
+
+        using JsonDocument doc = JsonDocument.Parse(Decode(schema, [1]));
+        JsonElement props = doc.RootElement[0].GetProperty("Event").GetProperty("Properties")[0];
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(props.GetProperty("On").GetBoolean(), Is.True);
+            Assert.That(props.GetProperty("Absent").ValueKind, Is.EqualTo(JsonValueKind.Null));
+        }
+    }
+
+    [Test]
+    public void Utf8OutType_DecodesTerminatedAndCountedStrings()
+    {
+        byte[] schema = Schema("Text",
+            Field("Term", 2 | 0x80, 35),
+            Field("Count", 23 | 0x80, 35));
+        byte[] hello = "héllo"u8.ToArray();
+        byte[] payload = [.. hello, 0, .. BitConverter.GetBytes((ushort)hello.Length), .. hello];
+
+        using JsonDocument doc = JsonDocument.Parse(Decode(schema, payload));
+        JsonElement props = doc.RootElement[0].GetProperty("Event").GetProperty("Properties")[0];
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(props.GetProperty("Term").GetString(), Is.EqualTo("héllo"));
+            Assert.That(props.GetProperty("Count").GetString(), Is.EqualTo("héllo"));
+        }
+    }
+
+    [Test]
+    public void Sid_IsDecodedWithoutTheWindowsApi()
+    {
+        byte[] schema = Schema("Who", Field("User", 19));
+        byte[] sid = [1, 1, 0, 0, 0, 0, 0, 5, 18, 0, 0, 0];
+
+        using JsonDocument doc = JsonDocument.Parse(Decode(schema, sid));
+        string? value = doc.RootElement[0].GetProperty("Event").GetProperty("Properties")[0]
+            .GetProperty("User").GetString();
+
+        Assert.That(value, Is.EqualTo("S-1-5-18"));
+    }
+
+    [Test]
+    public void DeeplyNestedSchema_IsRejected()
+    {
+        List<byte> body = [0];
+        body.AddRange(Encoding.UTF8.GetBytes("Deep\0"));
+        for (int i = 0; i < 33; i++)
+        {
+            body.AddRange(Encoding.UTF8.GetBytes("S\0"));
+            body.Add(24 | 0x80);
+            body.Add(1);
+        }
+
+        body.AddRange(Encoding.UTF8.GetBytes("N\0"));
+        body.Add(4);
+        ushort size = (ushort)(body.Count + 2);
+        byte[] schema = [.. BitConverter.GetBytes(size), .. body];
+
+        Assert.That(Try(schema, [0]), Is.False);
+    }
+
+    [Test]
+    public void HugeArray_IsRejectedBeforeAllocation()
+    {
+        byte[] schema = Schema("Wide", Field("Items", 4 | 0x40));
+
+        Assert.That(Try(schema, BitConverter.GetBytes((ushort)5000)), Is.False);
+    }
+
+    private static bool Try(byte[] schema, byte[] payload)
+    {
+        fixed (byte* schemaPtr = schema)
+        fixed (byte* payloadPtr = payload)
+        {
+            EVENT_HEADER_EXTENDED_DATA_ITEM item = default;
+            item.ExtType = 11;
+            item.DataSize = (ushort)schema.Length;
+            item.DataPtr = (ulong)schemaPtr;
+            EVENT_RECORD record = default;
+            record.ExtendedDataCount = 1;
+            record.ExtendedData = &item;
+            record.UserData = payloadPtr;
+            record.UserContext = payloadPtr;
+            record.UserDataLength = (ushort)payload.Length;
+            using MemoryStream ms = new();
+            using Utf8JsonWriter json = new(ms);
+            return TraceLoggingDecoder.TryDecode(&record, new EventRecordReader(&record), new EtwJsonWriter(json),
+                new RuntimeEventMetadata(&record));
+        }
+    }
 }

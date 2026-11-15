@@ -108,6 +108,11 @@ internal readonly struct RuntimeEventMetadata
                 {
                     if (extendedData[i].ExtType == PInvoke.EVENT_HEADER_EXT_TYPE_RELATED_ACTIVITYID)
                     {
+                        if (extendedData[i].DataSize < 16)
+                        {
+                            return Guid.Empty;
+                        }
+
                         return *(Guid*)extendedData[i].DataPtr;
                     }
                 }
@@ -140,12 +145,22 @@ internal readonly struct RuntimeEventMetadata
                 {
                     case (ushort)PInvoke.EVENT_HEADER_EXT_TYPE_STACK_TRACE32:
                         {
+                            if (extendedData[i].DataSize < sizeof(ulong))
+                            {
+                                break;
+                            }
+
                             int numberOfInstructionPointers = (extendedData[i].DataSize - sizeof(ulong)) / sizeof(uint);
                             return GetStacks32(numberOfInstructionPointers, ref extendedData[i], out matchId);
                         }
 
                     case (ushort)PInvoke.EVENT_HEADER_EXT_TYPE_STACK_TRACE64:
                         {
+                            if (extendedData[i].DataSize < sizeof(ulong))
+                            {
+                                break;
+                            }
+
                             int numberOfInstructionPointers =
                                 (extendedData[i].DataSize - sizeof(ulong)) / sizeof(ulong);
                             return GetStacks64(numberOfInstructionPointers, ref extendedData[i], out matchId);

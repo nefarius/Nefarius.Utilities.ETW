@@ -20,6 +20,9 @@ internal static unsafe class TraceLoggingDecoder
     private const byte OutTypeMask = 0x7F;
 
     private const byte OutTypeBoolean = 3;
+    private const byte OutTypeUtf8 = 35;
+    private const int MaxSchemaDepth = 32;
+    private const int MaxNodes = 4096;
 
     private enum InType : byte
     {
@@ -103,7 +106,7 @@ internal static unsafe class TraceLoggingDecoder
         try
         {
             List<Field> fields = ParseSchema(schema, schemaSize, out eventName);
-            nodes = ReadPayload(reader, fields);
+            nodes = ReadPayload(reader, fields, new Budget());
         }
         catch (Exception ex) when (ex is FormatException or ArgumentException or OverflowException
                                        or InvalidOperationException or IndexOutOfRangeException)
@@ -139,14 +142,19 @@ internal static unsafe class TraceLoggingDecoder
         List<Field> fields = [];
         while (position < end)
         {
-            fields.Add(ParseField(data, ref position, end));
+            fields.Add(ParseField(data, ref position, end, 1));
         }
 
         return fields;
     }
 
-    private static Field ParseField(byte* data, ref int position, int end)
+    private static Field ParseField(byte* data, ref int position, int end, int depth)
     {
+        if (depth > MaxSchemaDepth)
+        {
+            throw new FormatException("TraceLogging schema is nested too deeply.");
+        }
+
         Field field = new() { Name = ReadUtf8(data, ref position, end) };
 
         if (position >= end)
@@ -198,7 +206,7 @@ internal static unsafe class TraceLoggingDecoder
             // for structs the out type carries the number of member fields
             for (int i = 0; i < field.OutType; i++)
             {
-                field.Children.Add(ParseField(data, ref position, end));
+                field.Children.Add(ParseField(data, ref position, end, depth + 1));
             }
         }
 
@@ -279,6 +287,7 @@ internal static unsafe class TraceLoggingDecoder
             InType.UnicodeString or InType.AnsiString or InType.CountedString or InType.CountedAnsiString =>
                 _TDH_OUT_TYPE.TDH_OUTTYPE_STRING,
             InType.Bool32 => _TDH_OUT_TYPE.TDH_OUTTYPE_BOOLEAN,
+            InType.UInt8 when field.OutType == OutTypeBoolean => _TDH_OUT_TYPE.TDH_OUTTYPE_BOOLEAN,
             InType.Guid => _TDH_OUT_TYPE.TDH_OUTTYPE_GUID,
             InType.FileTime or InType.SystemTime => _TDH_OUT_TYPE.TDH_OUTTYPE_DATETIME,
             InType.HexInt32 => _TDH_OUT_TYPE.TDH_OUTTYPE_HEXINT32,
@@ -287,45 +296,69 @@ internal static unsafe class TraceLoggingDecoder
         };
     }
 
-    private static List<Node> ReadPayload(EventRecordReader reader, List<Field> fields)
+    private sealed class Budget
+    {
+        public int Nodes;
+    }
+
+    private static List<Node> ReadPayload(EventRecordReader reader, List<Field> fields, Budget budget)
     {
         List<Node> nodes = new(fields.Count);
         foreach (Field field in fields)
         {
-            nodes.Add(ReadNode(reader, field));
+            nodes.Add(ReadNode(reader, field, budget));
         }
 
         return nodes;
     }
 
-    private static Node ReadNode(EventRecordReader reader, Field field)
+    private static Node ReadNode(EventRecordReader reader, Field field, Budget budget)
     {
+        Charge(budget, 1);
         Node node = new(field);
 
         if (!field.IsArray)
         {
-            ReadInto(reader, field, node, null);
+            ReadInto(reader, field, node, null, budget);
             return node;
         }
 
-        int count = field.IsVariableArray ? reader.ReadUInt16() : field.ConstantCount;
+        int count = field.ConstantCount;
+        if (field.IsVariableArray)
+        {
+            Need(reader, sizeof(ushort));
+            count = reader.ReadUInt16();
+        }
+
+        Charge(budget, count);
         node.Elements = new List<object?>(count);
         for (int i = 0; i < count; i++)
         {
             Node element = new(field);
-            ReadInto(reader, field, element, node.Elements);
+            ReadInto(reader, field, element, node.Elements, budget);
         }
 
         return node;
     }
 
-    private static void ReadInto(EventRecordReader reader, Field field, Node node, List<object?>? elements)
+    private static void Charge(Budget budget, int count)
+    {
+        if (count < 0 || budget.Nodes > MaxNodes - count)
+        {
+            throw new FormatException("TraceLogging event exceeds the node budget.");
+        }
+
+        budget.Nodes += count;
+    }
+
+    private static void ReadInto(EventRecordReader reader, Field field, Node node, List<object?>? elements,
+        Budget budget)
     {
         object? value;
 
         if (field.Type == InType.Struct)
         {
-            node.Members = ReadPayload(reader, field.Children);
+            node.Members = ReadPayload(reader, field.Children, budget);
             value = node;
         }
         else
@@ -359,34 +392,92 @@ internal static unsafe class TraceLoggingDecoder
         return (int)((byte*)reader.NativeEventRecord->UserData - (byte*)reader.NativeEventRecord->UserContext);
     }
 
+    private static void Need(EventRecordReader reader, int bytes)
+    {
+        if (bytes < 0 || reader.RemainingBytes < bytes)
+        {
+            throw new FormatException("TraceLogging payload is shorter than its schema.");
+        }
+    }
+
     private static object? ReadValueUnchecked(EventRecordReader reader, Field field)
     {
-        return field.Type switch
+        bool utf8 = field.OutType == OutTypeUtf8;
+        switch (field.Type)
         {
-            InType.Null => null,
-            InType.UnicodeString => reader.ReadUnicodeString(),
-            InType.AnsiString => reader.ReadAnsiString(),
-            InType.Int8 => reader.ReadInt8(),
-            InType.UInt8 => reader.ReadUInt8(),
-            InType.Int16 => reader.ReadInt16(),
-            InType.UInt16 => reader.ReadUInt16(),
-            InType.Int32 => reader.ReadInt32(),
-            InType.UInt32 or InType.HexInt32 => reader.ReadUInt32(),
-            InType.Int64 => reader.ReadInt64(),
-            InType.UInt64 or InType.HexInt64 => reader.ReadUInt64(),
-            InType.Float => reader.ReadFloat(),
-            InType.Double => reader.ReadDouble(),
-            InType.Bool32 => reader.ReadInt32() != 0,
-            InType.Binary or InType.CountedBinary => reader.ReadBinary(reader.ReadUInt16()),
-            InType.Guid => reader.ReadGuid(),
-            InType.Pointer => reader.ReadPointer(),
-            InType.FileTime => reader.ReadFileTime(),
-            InType.SystemTime => reader.ReadSystemTime(),
-            InType.Sid => reader.ReadSid(),
-            InType.CountedString => reader.ReadCountedString(),
-            InType.CountedAnsiString => reader.ReadCountedAnsiString(),
-            _ => throw new FormatException($"TraceLogging type {field.Type} is not supported.")
-        };
+            case InType.Null:
+                return null;
+            case InType.UnicodeString:
+                return reader.ReadUnicodeString();
+            case InType.AnsiString:
+                return utf8 ? reader.ReadUtf8String() : reader.ReadAnsiString();
+            case InType.Int8:
+                Need(reader, sizeof(sbyte));
+                return reader.ReadInt8();
+            case InType.UInt8:
+                Need(reader, sizeof(byte));
+                return reader.ReadUInt8();
+            case InType.Int16:
+                Need(reader, sizeof(short));
+                return reader.ReadInt16();
+            case InType.UInt16:
+                Need(reader, sizeof(ushort));
+                return reader.ReadUInt16();
+            case InType.Int32:
+                Need(reader, sizeof(int));
+                return reader.ReadInt32();
+            case InType.UInt32:
+            case InType.HexInt32:
+                Need(reader, sizeof(uint));
+                return reader.ReadUInt32();
+            case InType.Int64:
+                Need(reader, sizeof(long));
+                return reader.ReadInt64();
+            case InType.UInt64:
+            case InType.HexInt64:
+                Need(reader, sizeof(ulong));
+                return reader.ReadUInt64();
+            case InType.Float:
+                Need(reader, sizeof(float));
+                return reader.ReadFloat();
+            case InType.Double:
+                Need(reader, sizeof(double));
+                return reader.ReadDouble();
+            case InType.Bool32:
+                Need(reader, sizeof(int));
+                return reader.ReadInt32() != 0;
+            case InType.Binary:
+            case InType.CountedBinary:
+                Need(reader, sizeof(ushort));
+                int binaryLength = reader.ReadUInt16();
+                Need(reader, binaryLength);
+                return reader.ReadBinary(binaryLength);
+            case InType.Guid:
+                Need(reader, 16);
+                return reader.ReadGuid();
+            case InType.Pointer:
+                Need(reader, PointerBytes(reader));
+                return reader.ReadPointer();
+            case InType.FileTime:
+                Need(reader, sizeof(long));
+                return reader.ReadFileTime();
+            case InType.SystemTime:
+                Need(reader, 16);
+                return reader.ReadSystemTime();
+            case InType.Sid:
+                return reader.ReadSid();
+            case InType.CountedString:
+                return reader.ReadCountedString();
+            case InType.CountedAnsiString:
+                return utf8 ? reader.ReadCountedUtf8String() : reader.ReadCountedAnsiString();
+            default:
+                throw new FormatException($"TraceLogging type {field.Type} is not supported.");
+        }
+    }
+
+    private static unsafe int PointerBytes(EventRecordReader reader)
+    {
+        return (reader.NativeEventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_32_BIT_HEADER) != 0 ? 4 : 8;
     }
 
     private static void WriteNodes<T>(T writer, List<Node> nodes) where T : IEtwWriter
@@ -419,6 +510,7 @@ internal static unsafe class TraceLoggingDecoder
         switch (value)
         {
             case null:
+                writer.WriteNull();
                 break;
             case Node structure:
                 writer.WriteStructBegin();
@@ -436,6 +528,9 @@ internal static unsafe class TraceLoggingDecoder
                 break;
             case sbyte v:
                 writer.WriteInt8(v);
+                break;
+            case byte v when field.OutType == OutTypeBoolean:
+                writer.WriteBoolean(v != 0);
                 break;
             case byte v:
                 writer.WriteUInt8(v);

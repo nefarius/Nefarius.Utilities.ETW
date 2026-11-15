@@ -285,10 +285,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe byte[] ReadBinary(short size)
     {
-        byte[] value = new byte[size];
-        Marshal.Copy((IntPtr)NativeEventRecord->UserData, value, 0, size);
-        IncrementBy(ref NativeEventRecord->UserData, size);
-        return value;
+        return CopyBytes(size);
     }
 
     /// <summary>
@@ -297,10 +294,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe byte[] ReadBinary(ushort size)
     {
-        byte[] value = new byte[size];
-        Marshal.Copy((IntPtr)NativeEventRecord->UserData, value, 0, size);
-        IncrementBy(ref NativeEventRecord->UserData, size);
-        return value;
+        return CopyBytes(size);
     }
 
     /// <summary>
@@ -309,10 +303,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe byte[] ReadBinary(int size)
     {
-        byte[] value = new byte[size];
-        Marshal.Copy((IntPtr)NativeEventRecord->UserData, value, 0, size);
-        IncrementBy(ref NativeEventRecord->UserData, size);
-        return value;
+        return CopyBytes(size);
     }
 
     /// <summary>
@@ -321,9 +312,28 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe byte[] ReadBinary(uint size)
     {
+        if (size > int.MaxValue)
+        {
+            throw new FormatException("Binary field is longer than the payload.");
+        }
+
+        return CopyBytes((int)size);
+    }
+
+    private unsafe byte[] CopyBytes(int size)
+    {
+        if (size < 0 || size > RemainingBytes)
+        {
+            throw new FormatException("Binary field is longer than the payload.");
+        }
+
         byte[] value = new byte[size];
-        Marshal.Copy((IntPtr)NativeEventRecord->UserData, value, 0, (int)size);
-        IncrementBy(ref NativeEventRecord->UserData, (int)size);
+        if (size > 0)
+        {
+            Marshal.Copy((IntPtr)NativeEventRecord->UserData, value, 0, size);
+        }
+
+        IncrementBy(ref NativeEventRecord->UserData, size);
         return value;
     }
 
@@ -417,12 +427,66 @@ internal readonly struct EventRecordReader
     }
 
     /// <summary>
+    ///     Reader for a NUL-terminated UTF-8 string (TDH out type 35).
+    /// </summary>
+    public unsafe string ReadUtf8String()
+    {
+        byte* ptr = (byte*)NativeEventRecord->UserData;
+        int maxLength = RemainingBytes;
+        int length = 0;
+        while (length < maxLength && ptr[length] != 0)
+        {
+            length++;
+        }
+
+        if (length >= maxLength)
+        {
+            throw new FormatException("UTF-8 string is not terminated.");
+        }
+
+        string value = Encoding.UTF8.GetString(ptr, length);
+        IncrementBy(ref NativeEventRecord->UserData, length + 1);
+        return value;
+    }
+
+    /// <summary>
+    ///     Reader for a counted UTF-8 string (TDH out type 35).
+    /// </summary>
+    public unsafe string ReadCountedUtf8String()
+    {
+        if (RemainingBytes < sizeof(ushort))
+        {
+            throw new FormatException("UTF-8 string is truncated.");
+        }
+
+        int length = ReadUInt16();
+        if (length > RemainingBytes)
+        {
+            throw new FormatException("UTF-8 string is truncated.");
+        }
+
+        string value = Encoding.UTF8.GetString((byte*)NativeEventRecord->UserData, length);
+        IncrementBy(ref NativeEventRecord->UserData, length);
+        return value;
+    }
+
+    /// <summary>
     ///     Reader for TDH_INTYPE_COUNTEDSTRING
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public string ReadCountedString()
     {
+        if (RemainingBytes < sizeof(ushort))
+        {
+            throw new FormatException("Counted string is truncated.");
+        }
+
         ushort length = ReadUInt16();
+        if (length > RemainingBytes)
+        {
+            throw new FormatException("Counted string is truncated.");
+        }
+
         return ReadUnicodeStringHelper(length);
     }
 
@@ -432,7 +496,17 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public string ReadCountedAnsiString()
     {
+        if (RemainingBytes < sizeof(ushort))
+        {
+            throw new FormatException("Counted string is truncated.");
+        }
+
         ushort length = ReadUInt16();
+        if (length > RemainingBytes)
+        {
+            throw new FormatException("Counted string is truncated.");
+        }
+
         return ReadAnsiStringHelper(length);
     }
 
@@ -529,6 +603,11 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private unsafe string ReadAnsiStringHelper(int length)
     {
+        if (length < 0 || length > RemainingBytes)
+        {
+            throw new FormatException("String is longer than the payload.");
+        }
+
         byte* ptr = (byte*)NativeEventRecord->UserData;
         char[] arr = new char[length];
         for (int i = 0; i < length; ++i)
@@ -543,6 +622,11 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private unsafe string ReadUnicodeStringHelper(int length)
     {
+        if (length < 0 || length > RemainingBytes)
+        {
+            throw new FormatException("String is longer than the payload.");
+        }
+
         string value = new((char*)NativeEventRecord->UserData, 0, length / 2);
         IncrementBy(ref NativeEventRecord->UserData, value.Length * 2);
         return value;

@@ -457,7 +457,7 @@ internal static unsafe class EtlReader
                 ushort linkage = *(ushort*)(data + offset + 4);
                 ushort size = *(ushort*)(data + offset + 6);
                 int dataOffset = offset + 8;
-                if (dataOffset + size > length)
+                if (dataOffset + size > length || size < MinimumExtendedDataSize(type))
                 {
                     return -1;
                 }
@@ -481,6 +481,25 @@ internal static unsafe class EtlReader
             record->ExtendedDataCount = (ushort)count;
             record->ExtendedData = (EVENT_HEADER_EXTENDED_DATA_ITEM*)items;
             return offset;
+        }
+
+        /// <summary>
+        ///     Fixed prefix that consumers read before consulting <c>DataSize</c>. A shorter item is malformed.
+        /// </summary>
+        private static int MinimumExtendedDataSize(ushort type)
+        {
+            if (type == PInvoke.EVENT_HEADER_EXT_TYPE_RELATED_ACTIVITYID)
+            {
+                return 16;
+            }
+
+            if (type == (ushort)PInvoke.EVENT_HEADER_EXT_TYPE_STACK_TRACE32
+                || type == (ushort)PInvoke.EVENT_HEADER_EXT_TYPE_STACK_TRACE64)
+            {
+                return sizeof(ulong);
+            }
+
+            return 0;
         }
 
         /// <summary>

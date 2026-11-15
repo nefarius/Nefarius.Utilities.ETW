@@ -202,6 +202,8 @@ internal sealed class EtwJsonChannelWriter : IEtwWriter
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteBoolean(bool value) => _jsonWriter.WriteBooleanValue(value);
 
+    public void WriteNull() => _jsonWriter.WriteNullValue();
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteBinary(byte[] value) => _jsonWriter.WriteBase64StringValue(value);
 

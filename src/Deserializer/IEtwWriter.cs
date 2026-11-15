@@ -44,6 +44,8 @@ internal interface IEtwWriter
 
     void WriteBoolean(bool value);
 
+    void WriteNull();
+
     void WriteBinary(byte[] value);
 
     void WriteGuid(Guid value);
