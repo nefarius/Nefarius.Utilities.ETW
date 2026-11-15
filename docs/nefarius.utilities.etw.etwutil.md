@@ -250,6 +250,22 @@ The Windows default maximum is 64 concurrent sessions. When the registry key
  `EtwMaxLoggers` raises the limit above 64, this method retries first with
  capacity 128 and then with capacity 256 before giving up.
 
+### <a id="methods-querysessionsettings"/>**QuerySessionSettings(String)**
+
+Queries the `LogFileMode` and `EnableFlags` of a running session without changing it.
+
+```csharp
+internal static Nullable<ValueTuple<UInt32, UInt32>> QuerySessionSettings(string sessionName)
+```
+
+#### Parameters
+
+`sessionName` [String](https://learn.microsoft.com/dotnet/api/system.string)<br>
+
+#### Returns
+
+The mode and flags, or `null` when the session cannot be queried.
+
 ### <a id="methods-stoporphansession"/>**StopOrphanSession(String)**
 
 Stops a real-time ETW session by name, ignoring the error if no session with that name exists.

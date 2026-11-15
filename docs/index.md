@@ -14,6 +14,8 @@
 
 - [EtwRealtimeSessionOptions](./nefarius.utilities.etw.etwrealtimesessionoptions.md)
 
+- [EtwSystemProviders](./nefarius.utilities.etw.etwsystemproviders.md)
+
 - [EtwUtil](./nefarius.utilities.etw.etwutil.md)
 
 - [TraceEventLevel](./nefarius.utilities.etw.traceeventlevel.md)

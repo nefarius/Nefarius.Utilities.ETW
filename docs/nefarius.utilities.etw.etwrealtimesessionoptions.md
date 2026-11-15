@@ -37,6 +37,20 @@ public EtwClockResolution ClockResolution { get; set; }
 
 [EtwClockResolution](./nefarius.utilities.etw.etwclockresolution.md)<br>
 
+### <a id="properties-enableflags"/>**EnableFlags**
+
+Classic kernel event groups (`EVENT_TRACE_FLAG_*`) for a session named
+ [EtwRealtimeSession.NtKernelLoggerName](./nefarius.utilities.etw.etwrealtimesession.md#ntkernelloggername), which is created as the NT Kernel Logger. Ignored for
+ other sessions. Defaults to `0`.
+
+```csharp
+public uint EnableFlags { get; set; }
+```
+
+#### Property Value
+
+[UInt32](https://learn.microsoft.com/dotnet/api/system.uint32)<br>
+
 ### <a id="properties-flushtimerseconds"/>**FlushTimerSeconds**
 
 How often, in seconds, the session flushes non-full buffers to consumers.
@@ -89,3 +103,20 @@ public Action<String> ReportError { get; set; }
 #### Property Value
 
 [Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[String](https://learn.microsoft.com/dotnet/api/system.string)><br>
+
+### <a id="properties-systemlogger"/>**SystemLogger**
+
+Creates a system logger session (`EVENT_TRACE_SYSTEM_LOGGER_MODE`, available from Windows 8) that can
+ receive the kernel providers listed in [EtwSystemProviders](./nefarius.utilities.etw.etwsystemproviders.md) through
+ [EtwRealtimeSession.EnableProvider(Guid, TraceEventLevel, UInt64, UInt64)](./nefarius.utilities.etw.etwrealtimesession.md#enableproviderguid-traceeventlevel-uint64-uint64). Enabling those system provider GUIDs requires Windows 11
+ or later; on older versions the session starts but no events are documented to arrive. Any session name is accepted, so it does not collide
+ with the single, system-wide [EtwRealtimeSession.NtKernelLoggerName](./nefarius.utilities.etw.etwrealtimesession.md#ntkernelloggername) session.
+ Defaults to `false`.
+
+```csharp
+public bool SystemLogger { get; set; }
+```
+
+#### Property Value
+
+[Boolean](https://learn.microsoft.com/dotnet/api/system.boolean)<br>

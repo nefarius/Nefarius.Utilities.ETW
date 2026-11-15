@@ -24,6 +24,18 @@ Creating a session requires elevated privileges (administrator) or
 This class is thread-safe: [EtwRealtimeSession.EnableProvider(Guid, TraceEventLevel, UInt64, UInt64)](./nefarius.utilities.etw.etwrealtimesession.md#enableproviderguid-traceeventlevel-uint64-uint64), [EtwRealtimeSession.DisableProvider(Guid)](./nefarius.utilities.etw.etwrealtimesession.md#disableproviderguid),
  [EtwRealtimeSession.Flush()](./nefarius.utilities.etw.etwrealtimesession.md#flush), and [EtwRealtimeSession.Dispose()](./nefarius.utilities.etw.etwrealtimesession.md#dispose) may be called from any thread.
 
+## Fields
+
+### <a id="fields-ntkernelloggername"/>**NtKernelLoggerName**
+
+The name of the system-wide NT Kernel Logger session. A session created with this name (and without
+ [EtwRealtimeSessionOptions.SystemLogger](./nefarius.utilities.etw.etwrealtimesessionoptions.md#systemlogger)) is the NT Kernel Logger; its event groups come from
+ [EtwRealtimeSessionOptions.EnableFlags](./nefarius.utilities.etw.etwrealtimesessionoptions.md#enableflags).
+
+```csharp
+public static string NtKernelLoggerName;
+```
+
 ## Properties
 
 ### <a id="properties-sessionname"/>**SessionName**
