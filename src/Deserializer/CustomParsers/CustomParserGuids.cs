@@ -13,5 +13,11 @@ internal static class CustomParserGuids
 
     public static Guid EventTraceGuid = new("68fdd900-4a3e-11d1-84f4-0000f80464e3");
 
+    /// <summary>
+    ///     MOF provider TDH reports for the <c>MSNT_SystemTrace</c> classes. The on-disk header group is still
+    ///     <see cref="EventTraceGuid" />.
+    /// </summary>
+    public static Guid SystemTraceControlGuid = new("9e814aad-3204-11d2-9a82-006008a86939");
+
     public static Guid KernelStackWalkGuid = new("def2fe46-7bd6-4b80-bd94-f57fe20d0ce3");
 }

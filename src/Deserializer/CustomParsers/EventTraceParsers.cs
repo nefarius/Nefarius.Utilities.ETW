@@ -28,6 +28,11 @@ internal static class EventTraceParsers
         return parser is not null;
     }
 
+    private static EventMetadata Event(string name, PropertyMetadata[] properties)
+    {
+        return new EventMetadata(CustomParserGuids.SystemTraceControlGuid, 0, 2, name, properties);
+    }
+
     private static unsafe int PointerBytes(EventRecordReader reader)
     {
         return (reader.NativeEventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_32_BIT_HEADER) != 0 ? 4 : 8;
@@ -49,9 +54,9 @@ internal static class EventTraceParsers
         return Prop(_TDH_IN_TYPE.TDH_INTYPE_UINT64, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDLONG, name);
     }
 
-    private static PropertyMetadata Int32(string name)
+    private static PropertyMetadata Int64(string name)
     {
-        return Prop(_TDH_IN_TYPE.TDH_INTYPE_INT32, _TDH_OUT_TYPE.TDH_OUTTYPE_INT, name);
+        return Prop(_TDH_IN_TYPE.TDH_INTYPE_INT64, _TDH_OUT_TYPE.TDH_OUTTYPE_LONG, name);
     }
 
     private static PropertyMetadata Pointer(string name)
@@ -84,22 +89,12 @@ internal static class EventTraceParsers
         private static readonly PropertyMetadata LoggerName = Pointer("LoggerName");
         private static readonly PropertyMetadata LogFileName = Pointer("LogFileName");
 
+        // TDH exposes the timezone block, including its alignment padding, as a byte array.
+        private const int TimeZoneBytes = 176;
+
         private static readonly PropertyMetadata TimeZoneInformation =
-            Prop(_TDH_IN_TYPE.TDH_INTYPE_NULL, _TDH_OUT_TYPE.TDH_OUTTYPE_NULL, "TimeZoneInformation", true, 7);
+            Prop(_TDH_IN_TYPE.TDH_INTYPE_UINT8, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT, "TimeZoneInformation");
 
-        private static readonly PropertyMetadata Bias = Int32("Bias");
-        private static readonly PropertyMetadata StandardName = UnicodeString("StandardName");
-
-        private static readonly PropertyMetadata StandardDate =
-            Prop(_TDH_IN_TYPE.TDH_INTYPE_HEXDUMP, _TDH_OUT_TYPE.TDH_OUTTYPE_HEXBINARY, "StandardDate");
-
-        private static readonly PropertyMetadata StandardBias = Int32("StandardBias");
-        private static readonly PropertyMetadata DaylightName = UnicodeString("DaylightName");
-
-        private static readonly PropertyMetadata DaylightDate =
-            Prop(_TDH_IN_TYPE.TDH_INTYPE_HEXDUMP, _TDH_OUT_TYPE.TDH_OUTTYPE_HEXBINARY, "DaylightDate");
-
-        private static readonly PropertyMetadata DaylightBias = Int32("DaylightBias");
         private static readonly PropertyMetadata BootTime = UInt64("BootTime");
         private static readonly PropertyMetadata PerfFreq = UInt64("PerfFreq");
         private static readonly PropertyMetadata StartTime = UInt64("StartTime");
@@ -110,7 +105,7 @@ internal static class EventTraceParsers
 
         static HeaderParser()
         {
-            EventMetadata = new EventMetadata(CustomParserGuids.EventTraceGuid, 0, 0, "MSNT_SystemTrace/EventTrace/Header",
+            EventMetadata = Event("MSNT_SystemTrace/EventTrace/Header",
             [
                 BufferSize, Version, ProviderVersion, NumberOfProcessors, EndTime, TimerResolution, MaxFileSize,
                 LogFileMode, BuffersWritten, StartBuffers, PointerSize, EventsLost, CpuSpeedInMHz, LoggerName,
@@ -124,9 +119,9 @@ internal static class EventTraceParsers
             where T : IEtwWriter
         {
             int pointerBytes = PointerBytes(reader);
-            // Fixed prefix through BuffersLost: integers before the pointers, both pointers, the 172-byte
-            // timezone block (32-WCHAR names), alignment, and the trailing timestamps and counters.
-            if (reader.RemainingBytes < 56 + pointerBytes * 2 + 172 + 4 + 24 + 8)
+            // Fixed prefix through BuffersLost: integers before the pointers, both pointers, the timezone
+            // block with its alignment padding, and the trailing timestamps and counters.
+            if (reader.RemainingBytes < 56 + pointerBytes * 2 + TimeZoneBytes + 24 + 8)
             {
                 return;
             }
@@ -160,41 +155,14 @@ internal static class EventTraceParsers
             writer.WritePropertyEnd();
 
             writer.WritePropertyBegin(TimeZoneInformation);
-            writer.WriteStructBegin();
+            writer.WriteArrayBegin();
+            foreach (byte item in reader.ReadBinary(TimeZoneBytes))
+            {
+                writer.WriteUInt8(item);
+            }
 
-            writer.WritePropertyBegin(Bias);
-            writer.WriteInt32(reader.ReadInt32());
+            writer.WriteArrayEnd();
             writer.WritePropertyEnd();
-
-            writer.WritePropertyBegin(StandardName);
-            writer.WriteUnicodeString(reader.ReadUnicodeString(64).TrimEnd('\0'));
-            writer.WritePropertyEnd();
-
-            writer.WritePropertyBegin(StandardDate);
-            writer.WriteHexDump(reader.ReadBinary(16));
-            writer.WritePropertyEnd();
-
-            writer.WritePropertyBegin(StandardBias);
-            writer.WriteInt32(reader.ReadInt32());
-            writer.WritePropertyEnd();
-
-            writer.WritePropertyBegin(DaylightName);
-            writer.WriteUnicodeString(reader.ReadUnicodeString(64).TrimEnd('\0'));
-            writer.WritePropertyEnd();
-
-            writer.WritePropertyBegin(DaylightDate);
-            writer.WriteHexDump(reader.ReadBinary(16));
-            writer.WritePropertyEnd();
-
-            writer.WritePropertyBegin(DaylightBias);
-            writer.WriteInt32(reader.ReadInt32());
-            writer.WritePropertyEnd();
-
-            writer.WriteStructEnd();
-            writer.WritePropertyEnd();
-
-            // alignment padding before the 64-bit fields
-            reader.ReadUInt32();
 
             writer.WritePropertyBegin(BootTime);
             writer.WriteUInt64(reader.ReadUInt64());
@@ -232,16 +200,16 @@ internal static class EventTraceParsers
 
     private sealed class DbgIdRsdsParser : ICustomParser
     {
-        private static readonly PropertyMetadata GuidSig =
-            Prop(_TDH_IN_TYPE.TDH_INTYPE_GUID, _TDH_OUT_TYPE.TDH_OUTTYPE_GUID, "GuidSig");
+        private static readonly PropertyMetadata Guid =
+            Prop(_TDH_IN_TYPE.TDH_INTYPE_GUID, _TDH_OUT_TYPE.TDH_OUTTYPE_GUID, "Guid");
 
         private static readonly PropertyMetadata Age = UInt32("Age");
 
-        private static readonly PropertyMetadata PdbFileName =
-            Prop(_TDH_IN_TYPE.TDH_INTYPE_ANSISTRING, _TDH_OUT_TYPE.TDH_OUTTYPE_STRING, "PdbFileName");
+        private static readonly PropertyMetadata PdbName =
+            Prop(_TDH_IN_TYPE.TDH_INTYPE_ANSISTRING, _TDH_OUT_TYPE.TDH_OUTTYPE_STRING, "PdbName");
 
-        private static readonly EventMetadata EventMetadata = new(CustomParserGuids.EventTraceGuid, 0, 0,
-            "MSNT_SystemTrace/EventTrace/DbgIdRSDS", [GuidSig, Age, PdbFileName]);
+        private static readonly EventMetadata EventMetadata =
+            Event("MSNT_SystemTrace/EventTrace/DbgIdRSDS", [Guid, Age, PdbName]);
 
         public void Parse<T>(EventRecordReader reader, T writer, EventMetadata[] metadataArray,
             RuntimeEventMetadata runtimeMetadata)
@@ -255,7 +223,7 @@ internal static class EventTraceParsers
 
             writer.WriteEventBegin(EventMetadata, runtimeMetadata);
 
-            writer.WritePropertyBegin(GuidSig);
+            writer.WritePropertyBegin(Guid);
             writer.WriteGuid(reader.ReadGuid());
             writer.WritePropertyEnd();
 
@@ -263,7 +231,7 @@ internal static class EventTraceParsers
             writer.WriteUInt32(reader.ReadUInt32());
             writer.WritePropertyEnd();
 
-            writer.WritePropertyBegin(PdbFileName);
+            writer.WritePropertyBegin(PdbName);
             writer.WriteAnsiString(reader.ReadAnsiString());
             writer.WritePropertyEnd();
 
@@ -273,11 +241,11 @@ internal static class EventTraceParsers
 
     private sealed class BuildInfoParser : ICustomParser
     {
-        private static readonly PropertyMetadata BuildInfo =
-            Prop(_TDH_IN_TYPE.TDH_INTYPE_ANSISTRING, _TDH_OUT_TYPE.TDH_OUTTYPE_STRING, "BuildInfo");
+        private static readonly PropertyMetadata BuildString =
+            Prop(_TDH_IN_TYPE.TDH_INTYPE_ANSISTRING, _TDH_OUT_TYPE.TDH_OUTTYPE_STRING, "BuildString");
 
-        private static readonly EventMetadata EventMetadata = new(CustomParserGuids.EventTraceGuid, 0, 0,
-            "MSNT_SystemTrace/EventTrace/BuildInfo", [BuildInfo]);
+        private static readonly EventMetadata EventMetadata =
+            Event("MSNT_SystemTrace/EventTrace/BuildInfo", [BuildString]);
 
         public void Parse<T>(EventRecordReader reader, T writer, EventMetadata[] metadataArray,
             RuntimeEventMetadata runtimeMetadata)
@@ -285,7 +253,7 @@ internal static class EventTraceParsers
         {
             writer.WriteEventBegin(EventMetadata, runtimeMetadata);
 
-            writer.WritePropertyBegin(BuildInfo);
+            writer.WritePropertyBegin(BuildString);
             writer.WriteAnsiString(reader.ReadAnsiString());
             writer.WritePropertyEnd();
 
@@ -295,20 +263,54 @@ internal static class EventTraceParsers
 
     private sealed class PartitionInfoExtensionV2Parser : ICustomParser
     {
-        private static readonly PropertyMetadata Data =
-            Prop(_TDH_IN_TYPE.TDH_INTYPE_HEXDUMP, _TDH_OUT_TYPE.TDH_OUTTYPE_HEXBINARY, "Data");
+        private static readonly PropertyMetadata EventVersion =
+            Prop(_TDH_IN_TYPE.TDH_INTYPE_UINT16, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT, "EventVersion");
 
-        private static readonly EventMetadata EventMetadata = new(CustomParserGuids.EventTraceGuid, 0, 0,
-            "MSNT_SystemTrace/EventTrace/PartitionInfoExtensionV2", [Data]);
+        private static readonly PropertyMetadata Reserved =
+            Prop(_TDH_IN_TYPE.TDH_INTYPE_UINT16, _TDH_OUT_TYPE.TDH_OUTTYPE_UNSIGNEDINT, "Reserved");
+
+        private static readonly PropertyMetadata PartitionType = UInt32("PartitionType");
+        private static readonly PropertyMetadata QpcOffsetFromRoot = Int64("QpcOffsetFromRoot");
+        private static readonly PropertyMetadata PartitionId = UnicodeString("PartitionId");
+        private static readonly PropertyMetadata ParentId = UnicodeString("ParentId");
+
+        private static readonly EventMetadata EventMetadata = Event(
+            "MSNT_SystemTrace/EventTrace/PartitionInfoExtensionV2",
+            [EventVersion, Reserved, PartitionType, QpcOffsetFromRoot, PartitionId, ParentId]);
 
         public void Parse<T>(EventRecordReader reader, T writer, EventMetadata[] metadataArray,
             RuntimeEventMetadata runtimeMetadata)
             where T : IEtwWriter
         {
+            if (reader.RemainingBytes < 2 + 2 + 4 + 8)
+            {
+                return;
+            }
+
             writer.WriteEventBegin(EventMetadata, runtimeMetadata);
 
-            writer.WritePropertyBegin(Data);
-            writer.WriteHexDump(reader.ReadBinary(reader.RemainingBytes));
+            writer.WritePropertyBegin(EventVersion);
+            writer.WriteUInt16(reader.ReadUInt16());
+            writer.WritePropertyEnd();
+
+            writer.WritePropertyBegin(Reserved);
+            writer.WriteUInt16(reader.ReadUInt16());
+            writer.WritePropertyEnd();
+
+            writer.WritePropertyBegin(PartitionType);
+            writer.WriteUInt32(reader.ReadUInt32());
+            writer.WritePropertyEnd();
+
+            writer.WritePropertyBegin(QpcOffsetFromRoot);
+            writer.WriteInt64(reader.ReadInt64());
+            writer.WritePropertyEnd();
+
+            writer.WritePropertyBegin(PartitionId);
+            writer.WriteUnicodeString(reader.ReadUnicodeString());
+            writer.WritePropertyEnd();
+
+            writer.WritePropertyBegin(ParentId);
+            writer.WriteUnicodeString(reader.ReadUnicodeString());
             writer.WritePropertyEnd();
 
             writer.WriteEventEnd();

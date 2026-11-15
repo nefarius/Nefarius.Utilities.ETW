@@ -91,6 +91,9 @@ public class BackendParityTests
 
                 break;
             }
+            case JsonValueKind.Array when path == "$.Events":
+                CompareEvents(expected, actual, path, differences);
+                break;
             case JsonValueKind.Array:
             {
                 if (expected.GetArrayLength() != actual.GetArrayLength())
@@ -123,6 +126,72 @@ public class BackendParityTests
 
                 break;
         }
+    }
+
+    /// <summary>
+    ///     Events that share a timestamp have no defined order across logger buffers. Compare each equal-timestamp
+    ///     run as a set, and keep every other event in order.
+    /// </summary>
+    private static void CompareEvents(JsonElement expected, JsonElement actual, string path, List<string> differences)
+    {
+        JsonElement[] expectedEvents = expected.EnumerateArray().ToArray();
+        JsonElement[] actualEvents = actual.EnumerateArray().ToArray();
+        if (expectedEvents.Length != actualEvents.Length)
+        {
+            differences.Add($"{path}: length {expectedEvents.Length} vs {actualEvents.Length}");
+            return;
+        }
+
+        int index = 0;
+        while (index < expectedEvents.Length && differences.Count < MaxReportedDifferences)
+        {
+            long timestamp = EventTimestamp(expectedEvents[index]);
+            int expectedEnd = RunEnd(expectedEvents, index, timestamp);
+            int actualEnd = RunEnd(actualEvents, index, timestamp);
+            if (expectedEnd == index + 1 && actualEnd == index + 1)
+            {
+                Compare(expectedEvents[index], actualEvents[index], $"{path}[{index}]", differences);
+                index++;
+                continue;
+            }
+
+            if (expectedEnd - index != actualEnd - index)
+            {
+                differences.Add(
+                    $"{path}[{index}]: {expectedEnd - index} events at {timestamp} vs {actualEnd - index}");
+                index = Math.Max(expectedEnd, actualEnd);
+                continue;
+            }
+
+            string[] expectedRun = expectedEvents[index..expectedEnd].Select(e => e.GetRawText()).OrderBy(t => t)
+                .ToArray();
+            string[] actualRun = actualEvents[index..actualEnd].Select(e => e.GetRawText()).OrderBy(t => t).ToArray();
+            for (int offset = 0; offset < expectedRun.Length && differences.Count < MaxReportedDifferences; offset++)
+            {
+                if (expectedRun[offset] != actualRun[offset])
+                {
+                    differences.Add($"{path}[{index + offset}] at timestamp {timestamp}: events differ");
+                }
+            }
+
+            index = expectedEnd;
+        }
+    }
+
+    private static int RunEnd(JsonElement[] events, int start, long timestamp)
+    {
+        int end = start + 1;
+        while (end < events.Length && EventTimestamp(events[end]) == timestamp)
+        {
+            end++;
+        }
+
+        return end;
+    }
+
+    private static long EventTimestamp(JsonElement evt)
+    {
+        return evt.GetProperty("Event").GetProperty("Timestamp").GetInt64();
     }
 
     private static void AssertEquivalent(string expectedJson, string actualJson, string what)
