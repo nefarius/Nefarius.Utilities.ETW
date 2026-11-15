@@ -97,15 +97,35 @@ public class WppEnumTests
     }
 
     [Test]
-    public void WppEventsWithoutADecodingContext_AreReportedAsMissingInsteadOfDropped()
+    public void SignedEnumerators_MatchTheirUnsignedWireValue()
     {
+        FunctionParameter enumeration = Enum(ItemType.ItemEnum, (-1, "Unknown"), (1, "One"));
+        FunctionParameter flags = Enum(ItemType.ItemFlagsEnum, (-1, "Everything"), (1, "Read"), (int.MinValue, "Top"));
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(WppFormatter.ItemToString(enumeration, 0xFFFFFFFFu), Is.EqualTo("Unknown"));
+            Assert.That(WppFormatter.ItemToString(enumeration, 1u), Is.EqualTo("One"));
+            Assert.That(WppFormatter.ItemToString(flags, 0xFFFFFFFFu), Is.EqualTo("Everything"));
+            Assert.That(WppFormatter.ItemToString(flags, 0x80000001u), Is.EqualTo("Read | Top"));
+        }
+    }
+    [TestCase(EtwBackend.Managed)]
+    [TestCase(EtwBackend.Native)]
+    public void WppEventsWithoutADecodingContext_AreReportedAsMissingInsteadOfDropped(EtwBackend backend)
+    {
+        if (backend == EtwBackend.Native && !OperatingSystem.IsWindows())
+        {
+            Assert.Ignore("The native backend requires Windows.");
+        }
+
         List<Guid> missing = [];
         using MemoryStream ms = new();
         using (System.Text.Json.Utf8JsonWriter writer = new(ms))
         {
             Assert.That(EtwUtil.ConvertToJson(writer, ["./traces/BthPS3_0.etl"], o =>
             {
-                o.Backend = EtwBackend.Managed;
+                o.Backend = backend;
                 o.OnWppFormatMissing = (guid, _, _) => missing.Add(guid);
             }), Is.True);
         }

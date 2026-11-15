@@ -2,6 +2,7 @@
 
 using Nefarius.Utilities.ETW.Deserializer.WPP;
 using Nefarius.Utilities.ETW.Etl;
+using Nefarius.Utilities.ETW.Exceptions;
 
 using Windows.Win32.Foundation;
 
@@ -134,7 +135,20 @@ internal sealed class WppTraceEventParser : ICustomParser
         }
         else
         {
-            decodedRecord.Decode(DecodingContext, _onFormatMissing, _rewriteProviderName);
+            try
+            {
+                decodedRecord.Decode(DecodingContext, _onFormatMissing, _rewriteProviderName);
+            }
+            catch (Exception ex) when (ex is TdhGetEventInformationException or TdhGetPropertySizeException
+                                           or TdhGetPropertyException &&
+                                       DecodingContext.GetTraceMessageFormatFor(
+                                           reader.NativeEventRecord->EventHeader.ProviderId, id) is null)
+            {
+                // TDH cannot describe a WPP record without TMF information. Fall back to the header based decoding
+                // so the record still produces the placeholder message and raises the missing format callback.
+                decodedRecord = new WppEventRecord(reader);
+                decodedRecord.DecodeManaged(DecodingContext, extras, _onFormatMissing, _rewriteProviderName);
+            }
         }
 
         writer.WriteEventBegin(eventMetadata, runtimeMetadata);
