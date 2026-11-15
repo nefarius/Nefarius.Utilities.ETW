@@ -490,11 +490,13 @@ public class RawEtwRelayTests
     public void Session_AcceptsHelloEventsLossAndEnd()
     {
         int hellos = 0;
+        int ends = 0;
         List<RawEtwLoss> losses = [];
         using RawEtwRelayDecoder decoder = new(null, new RawEtwRelayOptions
         {
             OnHello = _ => hellos++,
-            OnLoss = losses.Add
+            OnLoss = losses.Add,
+            OnEnd = () => ends++
         });
 
         Assert.That(Feed(decoder, Hello()), Is.EqualTo(RawEtwFrameDisposition.Hello));
@@ -502,10 +504,12 @@ public class RawEtwRelayTests
         Assert.That(Feed(decoder, Loss(1, 5)), Is.EqualTo(RawEtwFrameDisposition.Loss));
         Assert.That(Feed(decoder, Loss(2, 7)), Is.EqualTo(RawEtwFrameDisposition.Loss));
         Assert.That(Feed(decoder, End(3)), Is.EqualTo(RawEtwFrameDisposition.End));
+        Assert.That(Feed(decoder, End(3)), Is.EqualTo(RawEtwFrameDisposition.Duplicate));
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(hellos, Is.EqualTo(1));
+            Assert.That(ends, Is.EqualTo(1));
             Assert.That(losses.Select(l => l.LostEvents), Is.EqualTo(new ulong[] { 5, 7 }));
             Assert.That(decoder.LostEvents, Is.EqualTo(12UL));
             Assert.That(decoder.Ended, Is.True);

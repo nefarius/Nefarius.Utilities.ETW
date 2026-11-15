@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -220,17 +221,28 @@ internal sealed class TestGateway : IAsyncDisposable
 
     public CapturingSink Sink { get; } = new();
 
+    public CapturingLoggerProvider? Logs { get; private set; }
+
     public TestServer Server => _app.GetTestServer();
 
     public static async Task<TestGateway> StartAsync(
         Dictionary<string, string?>? settings = null,
-        bool authenticated = false)
+        bool authenticated = false,
+        bool captureLogs = false)
     {
         TestGateway gateway = new();
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
+        if (captureLogs)
+        {
+            gateway.Logs = new CapturingLoggerProvider();
+            builder.Logging.AddProvider(gateway.Logs);
+            builder.Logging.AddFilter("SymbolDiscovery", LogLevel.Debug);
+            builder.Logging.AddFilter("RelaySessions", LogLevel.Information);
+        }
+
         builder.Configuration.AddInMemoryCollection(settings ?? []);
 
         builder.Services.AddEtwOtlpGateway(builder.Configuration);
@@ -307,3 +319,42 @@ internal sealed class TestGateway : IAsyncDisposable
         await _app.DisposeAsync();
     }
 }
+
+/// <summary>Records <see cref="ILogger" /> events emitted by a hosted gateway.</summary>
+internal sealed class CapturingLoggerProvider : ILoggerProvider
+{
+    private readonly ConcurrentQueue<CapturedLog> _entries = new();
+
+    public IReadOnlyList<CapturedLog> Entries => _entries.ToArray();
+
+    public ILogger CreateLogger(string categoryName) => new Logger(categoryName, _entries);
+
+    public void Dispose()
+    {
+    }
+
+    private sealed class Logger(string category, ConcurrentQueue<CapturedLog> entries) : ILogger
+    {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            entries.Enqueue(new CapturedLog(logLevel, category, formatter(state, exception), exception));
+        }
+    }
+
+    private sealed class NullScope : IDisposable
+    {
+        public static readonly NullScope Instance = new();
+
+        public void Dispose()
+        {
+        }
+    }
+}
+
+/// <summary>One captured log event.</summary>
+internal readonly record struct CapturedLog(LogLevel Level, string Category, string Message, Exception? Exception);

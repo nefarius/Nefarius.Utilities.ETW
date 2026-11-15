@@ -153,6 +153,7 @@ internal sealed unsafe class RelaySessionCore<TWriter> : IDisposable where TWrit
 
             case RawEtwFrameType.End:
                 Ended = true;
+                _options.OnEnd?.Invoke();
                 return RawEtwFrameDisposition.End;
 
             default:

@@ -20,6 +20,11 @@ public sealed class RawEtwRelayOptions
     ///     Invoked when the producer reports dropped events.
     /// </summary>
     public Action<RawEtwLoss>? OnLoss { get; set; }
+
+    /// <summary>
+    ///     Invoked when the session's end frame is accepted. Retries of an end frame already processed are not reported.
+    /// </summary>
+    public Action? OnEnd { get; set; }
 }
 
 /// <summary>

@@ -174,6 +174,7 @@ public static class GatewayExtensions
         {
             GatewayOptions options = provider.GetRequiredService<IOptions<GatewayOptions>>().Value;
             DecodingContext? wpp = provider.GetRequiredService<GatewayWppAssets>().Context;
+            ILogger sessions = provider.GetRequiredService<ILoggerFactory>().CreateLogger("RelaySessions");
 
             return new RelayLogProcessor(new RelayLogProcessorOptions
             {
@@ -186,7 +187,13 @@ public static class GatewayExtensions
                 MaxSessions = options.Limits.MaxSessions,
                 MaxSessionsPerTenant = options.Limits.MaxSessionsPerTenant,
                 MaxRecordsPerRequest = options.Limits.MaxRecordsPerRequest,
-                SessionIdleTimeout = options.Limits.SessionIdleTimeout
+                SessionIdleTimeout = options.Limits.SessionIdleTimeout,
+                OnHello = (tenant, sessionId, hello) => sessions.LogInformation(
+                    "Relay hello accepted for session {SessionId}, tenant {Tenant}, producer {Producer}, maximum frame size {MaxFrameLength}.",
+                    sessionId, tenant, hello.Producer, hello.MaxFrameLength),
+                OnEnd = (tenant, sessionId) => sessions.LogInformation(
+                    "Relay end accepted for session {SessionId}, tenant {Tenant}.",
+                    sessionId, tenant)
             });
         });
 
