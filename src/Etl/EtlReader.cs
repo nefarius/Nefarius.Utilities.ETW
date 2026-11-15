@@ -541,8 +541,9 @@ internal static unsafe class EtlReader
                 {
                     ushort hook = *(ushort*)(p + 6);
                     TryGetKernelGroupGuid((byte)(hook >> 8), out Guid group);
-                    WriteHeader(h, 16, (ushort)(flags | FlagClassicHeader), 0, 0, stamp, group, 0,
-                        (byte)*(ushort*)p, 0, (byte)hook);
+                    // A PERFINFO header has no thread or process. ProcessTrace reports both as -1.
+                    WriteHeader(h, 16, (ushort)(flags | FlagClassicHeader), uint.MaxValue, uint.MaxValue, stamp,
+                        group, 0, (byte)*(ushort*)p, 0, (byte)hook);
                     headerVersion = (byte)*(ushort*)p;
                     payload = p + 16;
                     payloadLength = _size - 16;
@@ -559,6 +560,12 @@ internal static unsafe class EtlReader
                     headerVersion = p[3];
                     WriteHeader(h, (ushort)_size, (ushort)(flags | FlagTraceMessage), thread, process, stamp, guid,
                         *(ushort*)(p + 4), 0, 0, 0);
+                    if (layout.HasSequence)
+                    {
+                        // ProcessTrace publishes the message sequence as ActivityId, with the count in Data1.
+                        *(uint*)(h + 64) = sequence;
+                    }
+
                     payload = p + layout.DataOffset;
                     payloadLength = _size - layout.DataOffset;
                     break;

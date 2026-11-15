@@ -89,7 +89,8 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
 
         Version = record->EventHeader.EventDescriptor.Version;
         TraceGuid = record->EventHeader.ProviderId;
-        ProviderGuid = record->EventHeader.ProviderId;
+        // TDH leaves the WPP ProviderGuid property empty. The message GUID is TraceGuid.
+        ProviderGuid = Guid.Empty;
         ThreadId = record->EventHeader.ThreadId;
         ProcessId = record->EventHeader.ProcessId;
         SequenceNum = extras.SequenceNumber;
@@ -98,7 +99,9 @@ internal unsafe partial class WppEventRecord(EventRecordReader eventRecordReader
         UserTime = 0;
         KernelTime = 0;
 
-        long fileTime = extras.FileTime;
+        // SystemTime follows the timestamp handed to the consumer. With PreserveRawTimestamps that is the
+        // raw counter, which TDH then formats as a FILETIME.
+        long fileTime = record->EventHeader.TimeStamp;
         RawSystemTime = new FILETIME
         {
             dwLowDateTime = unchecked((int)(uint)fileTime),

@@ -55,11 +55,10 @@ internal sealed class EtlTraceInfo
                     return raw;
                 }
 
-                // BootTime is the QPC origin native ETW uses when it is present. A zero BootTime is not an
-                // origin, so calibrate from the header event's raw timestamp and the session StartTime.
-                long origin = BootTime != 0
-                    ? BootTime
-                    : StartTime - (long)((Int128)HeaderRawTimestamp * 10_000_000 / PerfFreq);
+                // ProcessTrace anchors the performance counter on the logfile header. StartTime is that
+                // event's FILETIME and HeaderRawTimestamp is its counter value. BootTime is the machine boot
+                // FILETIME, not the counter origin: using it shifts every event by a constant.
+                long origin = StartTime - (long)((Int128)HeaderRawTimestamp * 10_000_000 / PerfFreq);
                 return origin + (long)((Int128)raw * 10_000_000 / PerfFreq);
         }
     }
