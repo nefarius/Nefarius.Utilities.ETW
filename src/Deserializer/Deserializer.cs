@@ -42,6 +42,8 @@ internal sealed partial class Deserializer<T>
 
     private readonly Dictionary<Guid, EventSourceManifest> _eventSourceManifestCache = new();
 
+    private readonly HashSet<Guid> _customManifestQueried = new();
+
     private EventMetadata[] _eventMetadataTable = Array.Empty<EventMetadata>();
 
     private readonly WppTraceEventParser? _wppTraceEventParser;
@@ -151,7 +153,8 @@ internal sealed partial class Deserializer<T>
 
         return !manifest.IsComplete
             ? null
-            : EventTraceOperandBuilder.Build(manifest.Schema, eventRecord->EventHeader.EventDescriptor.Id,
+            : EventTraceOperandBuilder.Build(manifest.Schema, providerGuid,
+                eventRecord->EventHeader.EventDescriptor.Id, eventRecord->EventHeader.EventDescriptor.Version,
                 metadataTableIndex);
     }
 
@@ -249,17 +252,21 @@ internal sealed partial class Deserializer<T>
         int metadataTableIndex, ref bool isSpecialKernelTraceMetaDataEvent)
     {
         IEventTraceOperand? operand;
-        Stream? customProvider = _customProviderManifest?.Invoke(eventRecord->EventHeader.ProviderId);
+        Guid providerId = eventRecord->EventHeader.ProviderId;
 
-        if (customProvider is not null)
+        // The lookup is consulted once per provider; the manifest stream is consumed and disposed by the parser.
+        if (_customProviderManifest is not null && !_eventSourceManifestCache.ContainsKey(providerId) &&
+            _customManifestQueried.Add(providerId))
         {
-            if (!_eventSourceManifestCache.TryGetValue(eventRecord->EventHeader.ProviderId,
-                    out EventSourceManifest? manifest))
+            Stream? customProvider = _customProviderManifest(providerId);
+            if (customProvider is not null)
             {
-                manifest = new EventSourceManifest(eventRecord->EventHeader.ProviderId, customProvider);
-                _eventSourceManifestCache.Add(eventRecord->EventHeader.ProviderId, manifest);
+                _eventSourceManifestCache[providerId] = new EventSourceManifest(providerId, customProvider);
             }
+        }
 
+        if (_customProviderManifest is not null && _eventSourceManifestCache.ContainsKey(providerId))
+        {
             operand = BuildOperandFromXml(eventRecord, _eventSourceManifestCache, eventRecordReader,
                 metadataTableIndex);
 

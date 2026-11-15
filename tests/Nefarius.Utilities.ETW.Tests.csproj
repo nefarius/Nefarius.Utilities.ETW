@@ -37,6 +37,12 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Content Include="manifests\**\*.man">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
         <Content Include="golden\**\*.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
