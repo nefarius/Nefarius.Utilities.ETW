@@ -51,9 +51,6 @@ internal static class PathGlobbing
                 }
 
                 string root    = NormalizeGlobRoot(arg);
-                string pattern = Path.GetFileName(arg);
-                bool   recurse = arg.Contains("**");
-                SearchOption search = recurse ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
 
                 if (!Directory.Exists(root))
                 {
@@ -61,7 +58,7 @@ internal static class PathGlobbing
                     continue;
                 }
 
-                foreach (string file in Directory.EnumerateFiles(root, pattern, search))
+                foreach (string file in SymbolPathPatterns.Enumerate(arg))
                 {
                     if (!file.EndsWith(".etl", StringComparison.OrdinalIgnoreCase)) continue;
                     string full = Path.GetFullPath(file);
