@@ -52,4 +52,9 @@ public sealed class EtwMetadataScanOptions
     ///     provider (<c>EventTraceGuid</c>) encountered in the trace.
     /// </summary>
     public Action<KernelDbgIdRsdsEventInfo>? OnKernelDbgIdRsds { get; set; }
+
+    /// <summary>
+    ///     Selects how .ETL files are read; see <see cref="EtwBackend" />. Defaults to <see cref="EtwBackend.Auto" />.
+    /// </summary>
+    public EtwBackend Backend { get; set; } = EtwBackend.Auto;
 }

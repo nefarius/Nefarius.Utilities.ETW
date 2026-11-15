@@ -13,7 +13,6 @@ namespace Nefarius.Utilities.ETW.Tests;
 ///     (<see cref="EtwMetadataScanOptions.OnDbgIdRsds" />).  Tests are written accordingly.
 /// </summary>
 [Category("EndToEnd")]
-[Platform("Win")]
 public class ScanCallbackTests
 {
     private const string EtwFilePath = @"./traces/BthPS3_0.etl";
@@ -119,7 +118,7 @@ public class ScanCallbackTests
         IReadOnlyCollection<PdbMetaData> refs = EtwUtil.EnumeratePdbReferences([EtwFilePath]);
 
         IList<string> pdbNames = refs
-            .Select(r => Path.GetFileName(r.PdbName).ToLowerInvariant())
+            .Select(r => PathHelper.GetFileName(r.PdbName).ToLowerInvariant())
             .ToList();
 
         using (Assert.EnterMultipleScope())

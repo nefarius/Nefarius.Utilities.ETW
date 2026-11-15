@@ -58,6 +58,12 @@ internal static class SessionsCommand
 
         sessions.SetAction((ParseResult result) =>
         {
+            if (!OperatingSystem.IsWindows())
+            {
+                Console.Error.WriteLine("[!] 'sessions' needs the Windows ETW session APIs and is not available on this platform.");
+                return 2;
+            }
+
             string actionRaw = result.GetValue(sessionsActionArg)!;
             bool   doAll     = result.GetValue(sessionsAllOpt);
             string prefix    = result.GetValue(sessionsPrefixOpt)!;

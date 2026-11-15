@@ -91,7 +91,6 @@ public class Tests
 
     [Test]
     [Category("EndToEnd")]
-    [Platform("Win")]
     public void BthPs3EtlTraceDecodingTest()
     {
         string json = Shared.BthPs3EtlTraceDecodeToString();
@@ -129,7 +128,6 @@ public class Tests
 
     [Test]
     [Category("EndToEnd")]
-    [Platform("Win")]
     public void BthPs3EtlTraceIncompleteContextTest()
     {
         string json = Shared.BthPs3EtlIncompleteContextDecodeToString();
@@ -164,7 +162,6 @@ public class Tests
 
     [Test]
     [Category("EndToEnd")]
-    [Platform("Win")]
     public void DsHidMiniEtlTraceDecodingTest()
     {
         string json = Shared.DsHidMiniEtlTraceDecodeToString();
@@ -200,14 +197,13 @@ public class Tests
 
     [Test]
     [Category("EndToEnd")]
-    [Platform("Win")]
     public void EnumeratePdbReferencesTest()
     {
         const string etwFilePath = @"./traces/BthPS3_0.etl";
 
         IReadOnlyCollection<PdbMetaData> refs = EtwUtil.EnumeratePdbReferences([etwFilePath]);
 
-        IList<string> pdbNames = refs.Select(r => Path.GetFileName(r.PdbName).ToLowerInvariant()).ToList();
+        IList<string> pdbNames = refs.Select(r => PathHelper.GetFileName(r.PdbName).ToLowerInvariant()).ToList();
 
         using (Assert.EnterMultipleScope())
         {
@@ -223,7 +219,6 @@ public class Tests
 
     [Test]
     [Category("Integration")]
-    [Platform("Win")]
     public async Task SymbolServerDownloadTest()
     {
         if (!string.Equals(Environment.GetEnvironmentVariable("RUN_INTEGRATION_TESTS"), "true",

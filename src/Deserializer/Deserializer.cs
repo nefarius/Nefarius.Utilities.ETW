@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using Windows.Win32.Foundation;
 
 using Nefarius.Utilities.ETW.Deserializer.CustomParsers;
+using Nefarius.Utilities.ETW.Etl;
 using Nefarius.Utilities.ETW.Deserializer.WPP;
 
 namespace Nefarius.Utilities.ETW.Deserializer;
@@ -47,6 +48,8 @@ internal sealed partial class Deserializer<T>
 
     private T _writer;
 
+    private EtlRecordExtras _currentExtras;
+
     private Deserializer(T writer)
     {
         _writer = writer;
@@ -85,13 +88,30 @@ internal sealed partial class Deserializer<T>
     /// </summary>
     internal unsafe void Deserialize(EVENT_RECORD* eventRecord)
     {
+        Deserialize(eventRecord, default);
+    }
+
+    /// <summary>
+    ///     Gets invoked for each record in the trace file(s); <paramref name="extras" /> carries the header details
+    ///     the managed ETL reader provides in place of TDH.
+    /// </summary>
+    internal unsafe void Deserialize(EVENT_RECORD* eventRecord, in EtlRecordExtras extras)
+    {
+        _currentExtras = extras;
         eventRecord->UserContext = eventRecord->UserData;
         EventRecordReader eventRecordReader = new(eventRecord);
         RuntimeEventMetadata runtimeMetadata = new(eventRecord);
 
         if (IsWppEvent(eventRecord))
         {
-            _wppTraceEventParser?.Parse(eventRecordReader, _writer, _eventMetadataTable, runtimeMetadata);
+            _wppTraceEventParser?.ParseRecord(eventRecordReader, _writer, _eventMetadataTable, runtimeMetadata,
+                _currentExtras);
+            return;
+        }
+
+        if (_currentExtras.IsManaged && eventRecord->ExtendedDataCount > 0 &&
+            TraceLoggingDecoder.TryDecode(eventRecord, eventRecordReader, _writer, runtimeMetadata))
+        {
             return;
         }
 
@@ -261,10 +281,12 @@ internal sealed partial class Deserializer<T>
 
             isSpecialKernelTraceMetaDataEvent = true;
             return EventTraceOperandBuilder.Build((TRACE_EVENT_INFO*)eventRecord->UserData, eventRecord->UserDataLength,
-                metadataTableIndex);
+                metadataTableIndex, resolveMaps: !_currentExtras.IsManaged);
         }
 
-        if ((operand = BuildOperandFromTdh(eventRecord, metadataTableIndex)) == null)
+        // The managed backend has no TDH; schemas then come from custom parsers, embedded metadata or manifests.
+        operand = _currentExtras.IsManaged ? null : BuildOperandFromTdh(eventRecord, metadataTableIndex);
+        if (operand == null)
         {
             operand = BuildOperandFromXml(eventRecord, _eventSourceManifestCache, eventRecordReader,
                 metadataTableIndex);
@@ -285,6 +307,15 @@ internal sealed partial class Deserializer<T>
     private unsafe bool CustomParserLookup(EVENT_RECORD* eventRecord, ref TraceEventKey key)
     {
         bool success;
+
+        // classic events of the EventTrace group, which TDH would describe through the WMI MOF repository
+        if (_currentExtras.IsManaged && eventRecord->EventHeader.ProviderId == CustomParserGuids.EventTraceGuid
+                                     && EventTraceParsers.TryCreate(eventRecord->EventHeader.EventDescriptor.Opcode,
+                                         out ICustomParser? eventTraceParser))
+        {
+            _actionTable.Add(key, eventTraceParser.Parse);
+            return true;
+        }
 
         // events added by KernelTraceControl.dll (i.e. Microsoft tools like WPR and PerfView)
         if (eventRecord->EventHeader.ProviderId == CustomParserGuids.KernelTraceControlImageIdGuid)
@@ -335,6 +366,13 @@ internal sealed partial class Deserializer<T>
     {
         if (CustomParserLookup(eventRecord, ref key))
         {
+            // The parsers registered for the EventTrace group are not covered by the TDH path that dispatches the
+            // first record of a kind, so dispatch it here.
+            if (_currentExtras.IsManaged && eventRecord->EventHeader.ProviderId == CustomParserGuids.EventTraceGuid)
+            {
+                _actionTable[key](eventRecordReader, _writer, _eventMetadataTable, runtimeMetadata);
+            }
+
             return;
         }
 

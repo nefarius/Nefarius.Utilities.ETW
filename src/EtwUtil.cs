@@ -10,6 +10,8 @@ using Windows.Win32.Foundation;
 
 using Nefarius.Utilities.ETW.Deserializer;
 using Nefarius.Utilities.ETW.Deserializer.WPP;
+using Nefarius.Utilities.ETW.Etl;
+using System.Runtime.Versioning;
 using Nefarius.Utilities.ETW.Exceptions;
 
 namespace Nefarius.Utilities.ETW;
@@ -91,6 +93,11 @@ public static class EtwUtil
             opts.RewriteWppProviderName
         );
 
+        if (TraceProcessor.Resolve(opts.Backend) == EtwBackend.Managed)
+        {
+            return ConvertToJsonManaged(jsonWriter, list, opts, deserializer);
+        }
+
         int count = list.Count;
         EVENT_TRACE_LOGFILEW[] fileSessions = new EVENT_TRACE_LOGFILEW[count];
         ulong[] handles = new ulong[count];
@@ -165,6 +172,53 @@ public static class EtwUtil
         return true;
     }
 
+    private static unsafe bool ConvertToJsonManaged(Utf8JsonWriter jsonWriter, List<string> files,
+        EtwJsonConverterOptions opts, Deserializer<EtwJsonWriter> deserializer)
+    {
+        bool started = false;
+
+        void EnsureStarted()
+        {
+            if (started)
+            {
+                return;
+            }
+
+            started = true;
+            jsonWriter.WriteStartObject();
+            jsonWriter.WritePropertyName("Events");
+            jsonWriter.WriteStartArray();
+        }
+
+        try
+        {
+            TraceOpenFailure? failure = TraceProcessor.ProcessFiles(files, opts.Backend, opts.PreserveRawTimestamps,
+                default, opts.ReportError,
+                (EVENT_RECORD* record, in EtlRecordExtras extras) =>
+                {
+                    EnsureStarted();
+                    deserializer.Deserialize(record, extras);
+                });
+
+            if (failure is { } f)
+            {
+                opts.ReportError?.Invoke($"ERROR: For file: {files[f.Index]} {f.Message}");
+                return false;
+            }
+        }
+        catch (EtlFormatException ex)
+        {
+            opts.ReportError?.Invoke($"ERROR: {ex.Message}");
+            return false;
+        }
+
+        EnsureStarted();
+        jsonWriter.WriteEndArray();
+        jsonWriter.WriteEndObject();
+        jsonWriter.Flush();
+        return true;
+    }
+
     /// <summary>
     ///     Converts a live real-time ETW session to a stream of JSON objects written to
     ///     <paramref name="jsonWriter" />, blocking until the session ends or
@@ -196,6 +250,7 @@ public static class EtwUtil
     ///     <paramref name="sessionName" /> is empty or whitespace.
     /// </exception>
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    [SupportedOSPlatform("windows")]
     public static bool ConvertRealtimeToJson(
         Utf8JsonWriter jsonWriter,
         string sessionName,
@@ -208,6 +263,7 @@ public static class EtwUtil
         {
             throw new ArgumentException("Session name must not be empty or whitespace.", nameof(sessionName));
         }
+        PlatformGuard.ThrowIfNotWindows();
 
         EtwJsonConverterOptions opts = new();
         options?.Invoke(opts);
@@ -390,6 +446,7 @@ public static class EtwUtil
     /// <exception cref="ArgumentException"><paramref name="sessionName" /> is empty or whitespace.</exception>
     /// <exception cref="EtwOpenTraceException">The session could not be opened by the ETW API.</exception>
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    [SupportedOSPlatform("windows")]
     public static IAsyncEnumerable<ReadOnlyMemory<byte>> EnumerateRealtimeEventsAsync(
         string sessionName,
         Action<EtwJsonConverterOptions>? options = null,
@@ -400,6 +457,7 @@ public static class EtwUtil
         {
             throw new ArgumentException("Session name must not be empty or whitespace.", nameof(sessionName));
         }
+        PlatformGuard.ThrowIfNotWindows();
 
         EtwJsonConverterOptions opts = new();
         options?.Invoke(opts);
@@ -415,6 +473,7 @@ public static class EtwUtil
     /// <exception cref="ArgumentNullException"><paramref name="sessionName" /> is <see langword="null" />.</exception>
     /// <exception cref="ArgumentException"><paramref name="sessionName" /> is empty or whitespace.</exception>
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    [SupportedOSPlatform("windows")]
     public static void StopOrphanSession(string sessionName)
     {
         ArgumentNullException.ThrowIfNull(sessionName);
@@ -422,6 +481,7 @@ public static class EtwUtil
         {
             throw new ArgumentException("Session name must not be empty or whitespace.", nameof(sessionName));
         }
+        PlatformGuard.ThrowIfNotWindows();
 
         unsafe
         {
@@ -477,8 +537,10 @@ public static class EtwUtil
     ///     the system reports more than 256 concurrent sessions and the buffer cannot be grown further.
     /// </exception>
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    [SupportedOSPlatform("windows")]
     public static IReadOnlyList<string> EnumerateSessionNames()
     {
+        PlatformGuard.ThrowIfNotWindows();
         // ETW session names are limited to 1 024 characters including the null terminator.
         const int MaxNameChars = 1024;
 
@@ -581,6 +643,12 @@ public static class EtwUtil
 
         try
         {
+            if (!isRealtime && TraceProcessor.Resolve(opts.Backend) == EtwBackend.Managed)
+            {
+                RunManagedWorker(files!, opts, deserializer, writer, cancellationToken);
+                return;
+            }
+
             for (int i = 0; i < sessionCount; ++i)
             {
                 unsafe
@@ -691,6 +759,40 @@ public static class EtwUtil
                     }
                 }
             }
+        }
+
+        writer.TryComplete();
+    }
+
+    private static unsafe void RunManagedWorker(
+        List<string> files,
+        EtwJsonConverterOptions opts,
+        Deserializer<EtwJsonChannelWriter> deserializer,
+        ChannelWriter<PooledEventBuffer> writer,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            TraceOpenFailure? failure = TraceProcessor.ProcessFiles(files, opts.Backend, opts.PreserveRawTimestamps,
+                cancellationToken, opts.ReportError,
+                (EVENT_RECORD* record, in EtlRecordExtras extras) => deserializer.Deserialize(record, extras));
+
+            if (failure is { } f)
+            {
+                EtwOpenTraceException ex = new(f.Error, files[f.Index]);
+                opts.ReportError?.Invoke("ERROR: " + ex.Message);
+                writer.TryComplete(ex);
+                return;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // cancellation ends the stream normally, like the native buffer callback does
+        }
+        catch (Exception ex)
+        {
+            writer.TryComplete(ex);
+            return;
         }
 
         writer.TryComplete();

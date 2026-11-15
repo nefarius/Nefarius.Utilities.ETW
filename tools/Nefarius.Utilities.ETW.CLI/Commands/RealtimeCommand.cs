@@ -198,6 +198,12 @@ internal static class RealtimeCommand
 
         realtime.SetAction(async (ParseResult result, CancellationToken cancellationToken) =>
         {
+            if (!OperatingSystem.IsWindows())
+            {
+                Console.Error.WriteLine("[!] 'realtime' needs the Windows ETW session APIs and is not available on this platform.");
+                return 2;
+            }
+
             Guid[] explicitProviders = result.GetValue(providerArg) ?? [];
             string keywordsRaw = result.GetValue(keywordsOpt)!;
             string matchAllRaw = result.GetValue(matchAllOpt)!;

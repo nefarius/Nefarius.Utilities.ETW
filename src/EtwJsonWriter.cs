@@ -206,6 +206,12 @@ internal readonly struct EtwJsonWriter : IEtwWriter
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void WriteNull()
+    {
+        _writer.WriteNullValue();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteBinary(byte[] value)
     {
         _writer.WriteBase64StringValue(value);

@@ -67,4 +67,13 @@ public sealed class EtwJsonConverterOptions
     ///     <a href="https://learn.microsoft.com/en-us/windows/win32/api/evntrace/ns-evntrace-event_trace_logfilea#members">DUMMYUNIONNAME.ProcessTraceMode</a>
     /// </remarks>
     public bool PreserveRawTimestamps { get; set; }
+
+    /// <summary>
+    ///     Selects how .ETL files are read. Real-time sessions always use the native Windows APIs.
+    /// </summary>
+    /// <remarks>
+    ///     The default <see cref="EtwBackend.Auto" /> uses the native Windows APIs on Windows and the managed,
+    ///     cross-platform reader everywhere else.
+    /// </remarks>
+    public EtwBackend Backend { get; set; } = EtwBackend.Auto;
 }

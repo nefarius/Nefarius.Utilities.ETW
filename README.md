@@ -58,6 +58,7 @@ private async IAsyncEnumerable<object> GetEtwStream([EnumeratorCancellation] Can
 }
 ```
 
+- Added a managed, cross-platform `.etl` reader (`EtwBackend`): `EtwUtil.ConvertToJson`, `EnumerateEventsAsync` and `EnumeratePdbReferences` now also run on Linux/macOS, including WPP decoding and TraceLogging events
 - Added realtime ETW session support via `EtwRealtimeSession` and `EtwUtil.EnumerateRealtimeEventsAsync`:
   - `EtwRealtimeSession.Create(name)` starts a user-mode ETW session (`StartTraceW`)
   - `EnableProvider` / `DisableProvider` toggle providers at runtime via `EnableTraceEx2`
@@ -160,7 +161,8 @@ See [tools/Nefarius.Utilities.ETW.CLI/README.md](tools/Nefarius.Utilities.ETW.CL
 
 ## Known limitations
 
-- Currently relies on **Windows-only** APIs so no support for other platforms
+- Reading `.etl` files works on Windows, Linux and macOS through a managed reader (`EtwBackend.Managed`, the default off Windows; set `EtwJsonConverterOptions.Backend` / `EtwMetadataScanOptions.Backend` to choose). Real-time sessions, session management and manifest value-map resolution remain **Windows-only** and throw `PlatformNotSupportedException` elsewhere
+- The managed reader does not read compressed `.etl` files (it reports a clear error) and covers the record types found in WPP, kernel image-ID and TraceLogging/manifest traces; unsupported record types are skipped with a warning via `ReportError`
 - `%!ItemEnum!`/`%!ItemFlagsEnum!` types display raw numeric values; PDB-based enum name resolution is not yet implemented
 - Kernel-mode ETW providers and the NT Kernel Logger session are not yet supported for realtime mode
 
