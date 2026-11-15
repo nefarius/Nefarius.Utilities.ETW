@@ -27,12 +27,28 @@ Configure it through the `Gateway` section of `appsettings.json` or environment 
 | `Export:TracesEndpoint` | OTLP/HTTP base URL of a trace backend such as Jaeger; each decoded event is also exported as a span (one trace per tenant and relay session). The log and trace receivers get the same headers |
 | `Export:Headers`, `QueueCapacity`, `MaxAttempts`, `InitialRetryDelay`, `MaxRetryDelay`, `RequestTimeout` | delivery, bounded queue and retry |
 | `Wpp:PdbFiles`, `Wpp:PdbDirectories`, `Wpp:TmfDirectories`, `Wpp:RewriteProviderName` | server-only WPP assets |
+| `Wpp:SymbolServer`, `Wpp:SymbolCache`, `Wpp:SymbolRequestTimeout`, `Wpp:SymbolWaitTimeout`, `Wpp:SymbolMaxQueuedRequests`, `Wpp:SymbolMaxAttempts` | optional symbol server (absolute http(s) URL), cache directory and per-request timeout for [symbol discovery](#symbol-server-discovery) |
 | `Limits:*` | body size, frame size, session counts (total and per tenant), records per request, idle timeout |
 | `RequireAuthorization` | require an authenticated user; you register the authentication scheme |
 
 It listens for OTLP/HTTP (`POST /v1/logs`, protobuf, optional gzip) on port 4318 and OTLP/gRPC on 4317, serves `/healthz`, and publishes counters under the meter `Nefarius.Utilities.ETW.OtlpGateway`.
 
 If the downstream receiver is slow or down, the gateway buffers decoded batches in a bounded queue and retries. When the queue is full it answers **before consuming any frame** with HTTP 503 and `Retry-After` (gRPC `UNAVAILABLE`), so the sender can resend the identical request; frames that were accepted are never lost to a refusal. A batch that still fails after `MaxAttempts` is dropped and counted. A rejected frame is reported through the standard OTLP `partial_success` response; a continuation of a session the gateway does not know (expired or restarted) is rejected so the client opens a new session with a hello frame.
+
+## Symbol server discovery
+
+Set `Wpp:SymbolServer` (for example `https://msdl.microsoft.com/download/symbols` or your own SymSrv) and the gateway downloads the PDBs of the traced binaries on demand, caching them in `Wpp:SymbolCache` (default: a folder below the temp directory; use a persistent volume to keep it across restarts).
+
+How it works:
+
+* The client relays raw events only. The gateway looks for the image debug-ID events in the relayed stream (`KernelTraceControl/ImageID/DbgID_RSDS`, and the legacy `MSNT_SystemTrace/EventTrace/DbgIdRSDS`), takes the PDB file name, GUID and age from them, resolves the identity through the cache and then the symbol server, validates the downloaded PDB's GUID and age, and adds it to the shared WPP decoding context.
+* Identities in a request are resolved **before that request is decoded**, so a capture that sends its image events first (as ETW rundowns do) gets its WPP messages formatted. Downloads are deduplicated, including concurrent ones.
+* **Requests wait in memory for symbols that are still resolving.** A request is held (up to `Wpp:SymbolWaitTimeout`, default 10 s, and for at most `Wpp:SymbolMaxQueuedRequests`, default 32, requests at once) until every download in flight has finished, including downloads started by other sessions. Nothing is dropped: after the timeout, or when the queue is full, the request is decoded right away with placeholders while the download continues in the background.
+* **Failures:** not found, access denied and a mismatching PDB are permanent and never retried. Timeouts, network and server errors are retried `Wpp:SymbolMaxAttempts` times (default 3) with a short backoff, then at most once a minute.
+* **Discovery is best effort.** Events that are decoded before their symbols were loaded, for instance because the image events come later in the stream, the wait timed out or the download failed, keep the `GUID=...` placeholder; nothing is buffered or replayed. Later requests use whatever has loaded by then.
+* A missing, unreachable, mismatching or malformed PDB only produces a warning (event payloads are never logged); it never fails the request.
+
+Security boundaries: the server URL is operator configuration only. Relay data contributes just a PDB leaf file name, GUID and age, never a URL, a host or a path, and names with path, URL or control characters are ignored. Only the configured server is contacted, redirects are not followed, requests time out, the number of identities per request and in total is bounded, and a download is only accepted when its embedded GUID and age match. A symbol server URL that is not an absolute http(s) URL, or a cache directory that is not writable, stops the gateway at startup. Authenticated tenants share the cache and the loaded symbols; run separate gateways if tenants must not see each other's formats.
 
 ## Testing the gateway from the command line
 

@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 
 using Nefarius.Utilities.ETW.Deserializer.WPP.TMF;
@@ -11,17 +11,9 @@ namespace Nefarius.Utilities.ETW.Deserializer.WPP;
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
 public sealed class DecodingContext
 {
-    private readonly ReadOnlyCollection<DecodingContextType> _decodingTypes;
+    private readonly object _updateLock = new();
 
-    private readonly ReadOnlyDictionary<TraceMessageFormatLookupKey, TraceMessageFormat> _lookup;
-
-    private readonly IReadOnlyCollection<Guid> _providerGuids;
-
-    /// <summary>
-    ///     Maps (MessageGuid, Id) -> friendly control name for PDB sources that declare exactly one
-    ///     unambiguous <c>WPP_DEFINE_CONTROL_GUID</c>. Populated eagerly in the constructor.
-    /// </summary>
-    private readonly IReadOnlyDictionary<TraceMessageFormatLookupKey, string> _providerNameOverrides;
+    private volatile State _state;
 
     /// <summary>
     ///     New decoding context instance.
@@ -30,55 +22,7 @@ public sealed class DecodingContext
     public DecodingContext(params IList<DecodingContextType> decodingTypes)
     {
         ArgumentNullException.ThrowIfNull(decodingTypes);
-        _decodingTypes = decodingTypes.AsReadOnly();
-
-        _lookup = decodingTypes
-            .SelectMany(t => t.TraceMessageFormats)
-            .Distinct()
-            .ToDictionary(key => new TraceMessageFormatLookupKey(key.MessageGuid, key.Id), value => value)
-            .AsReadOnly();
-
-        // Aggregate the real WPP control GUIDs across all underlying sources.
-        // TMF-only sources return an empty enumerable from ProviderGuids so they are
-        // silently skipped; only PdbFileDecodingContextType contributes entries.
-        _providerGuids = _decodingTypes
-            .SelectMany(t => t.ProviderGuids)
-            .Distinct()
-            .ToArray();
-
-        // Build the provider-name override map. Only PDB sources with exactly one non-empty control name
-        // contribute entries; zero or multiple controls are ambiguous and are skipped silently.
-        Dictionary<TraceMessageFormatLookupKey, string> overrides = [];
-
-        foreach (DecodingContextType t in _decodingTypes)
-        {
-            if (t is not PdbFileDecodingContextType pdb)
-            {
-                continue;
-            }
-
-            IReadOnlyCollection<WppTraceControl> controls = pdb.WppTraceControls;
-
-            if (controls.Count != 1)
-            {
-                continue;
-            }
-
-            string controlName = controls.Single().Name;
-
-            if (string.IsNullOrWhiteSpace(controlName))
-            {
-                continue;
-            }
-
-            foreach (TraceMessageFormat fmt in pdb.TraceMessageFormats)
-            {
-                TraceMessageFormatLookupKey key = new(fmt.MessageGuid, fmt.Id);
-                overrides.TryAdd(key, controlName);
-            }
-        }
-
-        _providerNameOverrides = overrides.AsReadOnly();
+        _state = State.Build(decodingTypes.ToList());
     }
 
     /// <summary>
@@ -87,7 +31,7 @@ public sealed class DecodingContext
     ///     <c>WPP_DEFINE_CONTROL_GUID</c> declaration found in the loaded PDB files.
     ///     The collection is empty when the context was built from TMF files only.
     /// </summary>
-    public IReadOnlyCollection<Guid> ProviderGuids => _providerGuids;
+    public IReadOnlyCollection<Guid> ProviderGuids => _state.ProviderGuids;
 
     internal TraceMessageFormat? GetTraceMessageFormatFor(Guid? messageGuid, int id)
     {
@@ -98,7 +42,7 @@ public sealed class DecodingContext
 
         TraceMessageFormatLookupKey key = new(messageGuid.Value, id);
 
-        return _lookup.GetValueOrDefault(key);
+        return _state.Lookup.GetValueOrDefault(key);
     }
 
     /// <summary>
@@ -110,7 +54,7 @@ public sealed class DecodingContext
     internal string? GetWppProviderNameOverride(TraceMessageFormat format)
     {
         TraceMessageFormatLookupKey key = new(format.MessageGuid, format.Id);
-        return _providerNameOverrides.GetValueOrDefault(key);
+        return _state.ProviderNameOverrides.GetValueOrDefault(key);
     }
 
     /// <summary>
@@ -124,8 +68,131 @@ public sealed class DecodingContext
     /// <returns>The extended <see cref="DecodingContext" /> instance.</returns>
     public DecodingContext ExtendWith(params IList<DecodingContextType> additionalDecodingTypes)
     {
-        return new DecodingContext(_decodingTypes.Concat(additionalDecodingTypes).ToList());
+        return new DecodingContext(_state.Types.Concat(additionalDecodingTypes).ToList());
     }
 
+    /// <summary>
+    ///     Atomically adds decoding sources to this instance, so decoders sharing it see them on later lookups.
+    /// </summary>
+    /// <remarks>
+    ///     Safe to call concurrently with lookups. The update is all-or-nothing: when the new sources declare a
+    ///     message that conflicts with an already loaded, different format, nothing is added and the current
+    ///     contents stay intact.
+    /// </remarks>
+    /// <param name="additionalDecodingTypes">The sources to add.</param>
+    /// <returns><see langword="true" /> when the sources were added; <see langword="false" /> when rejected.</returns>
+    public bool TryExtend(params IList<DecodingContextType> additionalDecodingTypes)
+    {
+        ArgumentNullException.ThrowIfNull(additionalDecodingTypes);
+
+        lock (_updateLock)
+        {
+            State current = _state;
+            Dictionary<TraceMessageFormatLookupKey, TraceMessageFormat> seen = new(current.Lookup);
+
+            foreach (TraceMessageFormat format in additionalDecodingTypes.SelectMany(t => t.TraceMessageFormats))
+            {
+                TraceMessageFormatLookupKey key = new(format.MessageGuid, format.Id);
+                if (seen.TryGetValue(key, out TraceMessageFormat? existing))
+                {
+                    if (!IsSameFormat(existing, format))
+                    {
+                        // Same lookup key but a different message: refuse the whole update.
+                        return false;
+                    }
+
+                    continue;
+                }
+
+                seen.Add(key, format);
+            }
+
+            _state = State.Build(current.Types.Concat(additionalDecodingTypes).ToList());
+            return true;
+        }
+    }
+
+    private static bool IsSameFormat(TraceMessageFormat a, TraceMessageFormat b) =>
+        a.MessageFormat == b.MessageFormat && a.Provider == b.Provider && a.Function == b.Function &&
+        a.Opcode == b.Opcode && a.Level == b.Level && a.Flags == b.Flags;
+
+    private sealed class State
+    {
+        private State(
+            ReadOnlyCollection<DecodingContextType> types,
+            ReadOnlyDictionary<TraceMessageFormatLookupKey, TraceMessageFormat> lookup,
+            IReadOnlyCollection<Guid> providerGuids,
+            IReadOnlyDictionary<TraceMessageFormatLookupKey, string> providerNameOverrides)
+        {
+            Types = types;
+            Lookup = lookup;
+            ProviderGuids = providerGuids;
+            ProviderNameOverrides = providerNameOverrides;
+        }
+
+        public ReadOnlyCollection<DecodingContextType> Types { get; }
+
+        public ReadOnlyDictionary<TraceMessageFormatLookupKey, TraceMessageFormat> Lookup { get; }
+
+        public IReadOnlyCollection<Guid> ProviderGuids { get; }
+
+        /// <summary>
+        ///     Maps (MessageGuid, Id) -> friendly control name for PDB sources that declare exactly one
+        ///     unambiguous <c>WPP_DEFINE_CONTROL_GUID</c>.
+        /// </summary>
+        public IReadOnlyDictionary<TraceMessageFormatLookupKey, string> ProviderNameOverrides { get; }
+
+        public static State Build(List<DecodingContextType> decodingTypes)
+        {
+            ReadOnlyCollection<DecodingContextType> types = decodingTypes.AsReadOnly();
+
+            ReadOnlyDictionary<TraceMessageFormatLookupKey, TraceMessageFormat> lookup = types
+                .SelectMany(t => t.TraceMessageFormats)
+                .Distinct()
+                .ToDictionary(key => new TraceMessageFormatLookupKey(key.MessageGuid, key.Id), value => value)
+                .AsReadOnly();
+
+            // Aggregate the real WPP control GUIDs across all underlying sources.
+            // TMF-only sources return an empty enumerable from ProviderGuids so they are
+            // silently skipped; only PdbFileDecodingContextType contributes entries.
+            Guid[] providerGuids = types
+                .SelectMany(t => t.ProviderGuids)
+                .Distinct()
+                .ToArray();
+
+            // Only PDB sources with exactly one non-empty control name contribute entries;
+            // zero or multiple controls are ambiguous and are skipped silently.
+            Dictionary<TraceMessageFormatLookupKey, string> overrides = [];
+
+            foreach (DecodingContextType t in types)
+            {
+                if (t is not PdbFileDecodingContextType pdb)
+                {
+                    continue;
+                }
+
+                IReadOnlyCollection<WppTraceControl> controls = pdb.WppTraceControls;
+
+                if (controls.Count != 1)
+                {
+                    continue;
+                }
+
+                string controlName = controls.Single().Name;
+
+                if (string.IsNullOrWhiteSpace(controlName))
+                {
+                    continue;
+                }
+
+                foreach (TraceMessageFormat fmt in pdb.TraceMessageFormats)
+                {
+                    overrides.TryAdd(new TraceMessageFormatLookupKey(fmt.MessageGuid, fmt.Id), controlName);
+                }
+            }
+
+            return new State(types, lookup, providerGuids, overrides.AsReadOnly());
+        }
+    }
     private record TraceMessageFormatLookupKey(Guid MessageGuid, int Id);
 }

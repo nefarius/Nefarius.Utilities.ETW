@@ -22,8 +22,14 @@ services:
       # Server-only WPP assets: put .pdb/.tmf files in ./wpp and uncomment the mount.
       Gateway__Wpp__PdbDirectories__0: /wpp
       Gateway__Wpp__TmfDirectories__0: /wpp
-    # volumes:
-    #   - ./wpp:/wpp:ro
+      # Optional: download PDBs for RSDS identities found in relayed events from this server.
+      # Set it in your shell or an .env file, e.g. SYMBOL_SERVER_URL=https://msdl.microsoft.com/download/symbols
+      # Empty (the default) disables discovery. Only this operator-set URL is ever contacted.
+      Gateway__Wpp__SymbolServer: ${SYMBOL_SERVER_URL:-}
+      Gateway__Wpp__SymbolCache: /symbols
+    volumes:
+      - symbols:/symbols
+      # - ./wpp:/wpp:ro
     ports:
       # Host access stays on loopback. The sender uses the Compose DNS name, not this mapping.
       - "127.0.0.1:4318:4318"
@@ -40,3 +46,7 @@ services:
       INTERVAL_MS: "1000"
     depends_on:
       - gateway
+
+volumes:
+  # Persists downloaded PDBs across gateway restarts.
+  symbols:

@@ -74,6 +74,31 @@ public sealed class GatewayOptions
 
         /// <summary>Replace the WPP provider name with the friendly control GUID name where unambiguous.</summary>
         public bool RewriteProviderName { get; set; }
+
+        /// <summary>
+        ///     Optional symbol server base URL (e.g. <c>https://msdl.microsoft.com/download/symbols</c>), operator
+        ///     configuration only. When set, PDB identities (name, GUID, age) found in relayed
+        ///     <c>DbgID_RSDS</c> events are downloaded from here before the request is decoded. Redirects are not followed.
+        /// </summary>
+        public string SymbolServer { get; set; } = string.Empty;
+
+        /// <summary>Directory caching downloaded PDBs. Empty uses a folder below the temp directory.</summary>
+        public string SymbolCache { get; set; } = string.Empty;
+
+        /// <summary>Timeout of one symbol server request.</summary>
+        public TimeSpan SymbolRequestTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+        /// <summary>
+        ///     How long a request waits in memory for symbols that are still resolving before it is decoded with
+        ///     placeholders. Resolution continues in the background either way.
+        /// </summary>
+        public TimeSpan SymbolWaitTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
+        /// <summary>Requests that may wait for symbols at once; further requests are decoded without waiting.</summary>
+        public int SymbolMaxQueuedRequests { get; set; } = 32;
+
+        /// <summary>Download attempts per symbol for transient failures (timeouts, 5xx, network errors).</summary>
+        public int SymbolMaxAttempts { get; set; } = 3;
     }
 
     public sealed class LimitOptions
