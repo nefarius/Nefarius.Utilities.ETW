@@ -1,4 +1,4 @@
-﻿using Nefarius.Utilities.ETW.Deserializer.WPP;
+using Nefarius.Utilities.ETW.Deserializer.WPP;
 
 namespace Nefarius.Utilities.ETW;
 
@@ -26,6 +26,17 @@ public sealed class EtwJsonConverterOptions
     /// <summary>
     ///     Custom manifest provider lookup.
     /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///         Called at most once per provider GUID with the provider of the event being decoded; return an
+    ///         instrumentation manifest (<c>.man</c>) stream, or <see langword="null" /> if you have none. The library
+    ///         reads and disposes the returned stream.
+    ///     </para>
+    ///     <para>
+    ///         A manifest may declare several providers; events are matched on provider GUID, event ID and version
+    ///         (an omitted version means 0). Events the manifest does not describe fall back to the default decoding.
+    ///     </para>
+    /// </remarks>
     public Func<Guid, Stream?>? CustomProviderManifest { get; set; }
 
     /// <summary>

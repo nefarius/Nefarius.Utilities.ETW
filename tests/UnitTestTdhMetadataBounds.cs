@@ -248,7 +248,7 @@ public unsafe class TdhMetadataDecodingTests
             Items = []
         };
 
-        Assert.That(EventTraceOperandBuilder.Build(manifest, 1, 0), Is.Null);
+        Assert.That(EventTraceOperandBuilder.Build(manifest, Guid.Empty, 1, 0, 0), Is.Null);
     }
 
     private unsafe delegate void PropertyFill(EVENT_PROPERTY_INFO* property);

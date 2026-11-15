@@ -111,20 +111,30 @@ internal static unsafe class EventTraceOperandBuilder
         return null;
     }
 
-    public static IEventTraceOperand? Build(instrumentationManifest manifest, ushort eventId, int metadataIndex)
+    /// <summary>
+    ///     Builds the operand for an event from an instrumentation manifest. Only the provider with the given GUID is
+    ///     considered, and the event must match both id and version (an omitted manifest version means 0).
+    /// </summary>
+    public static IEventTraceOperand? Build(instrumentationManifest manifest, Guid providerGuid, ushort eventId,
+        byte eventVersion, int metadataIndex)
     {
-        return new TraceEventOperandBuilderFromXml(manifest, eventId).Build(metadataIndex);
+        return new TraceEventOperandBuilderFromXml(manifest, providerGuid, eventId, eventVersion).Build(metadataIndex);
     }
 
     private sealed class TraceEventOperandBuilderFromXml
     {
         private readonly ushort _eventId;
         private readonly instrumentationManifest _manifest;
+        private readonly Guid _providerGuid;
+        private readonly byte _eventVersion;
 
-        public TraceEventOperandBuilderFromXml(instrumentationManifest manifest, ushort eventId)
+        public TraceEventOperandBuilderFromXml(instrumentationManifest manifest, Guid providerGuid, ushort eventId,
+            byte eventVersion)
         {
             _manifest = manifest;
+            _providerGuid = providerGuid;
             _eventId = eventId;
+            _eventVersion = eventVersion;
         }
 
         public IEventTraceOperand? Build(int eventMetadataTableIndex)
@@ -151,7 +161,11 @@ internal static unsafe class EventTraceOperandBuilder
                         }
 
                         string? providerName = providerType.name;
-                        Guid providerGuid = new(providerType.guid);
+                        if (!Guid.TryParse(providerType.guid, out Guid providerGuid) ||
+                            providerGuid != _providerGuid)
+                        {
+                            continue;
+                        }
 
                         foreach (object? providerTypeItem in providerType.Items)
                         {
@@ -163,6 +177,12 @@ internal static unsafe class EventTraceOperandBuilder
                             foreach (EventDefinitionType definitionTypeItem in definitionType.Items)
                             {
                                 if (!string.Equals(definitionTypeItem.value, _eventId.ToString("D")))
+                                {
+                                    continue;
+                                }
+
+                                if (!byte.TryParse(definitionTypeItem.version ?? "0", out byte definedVersion) ||
+                                    definedVersion != _eventVersion)
                                 {
                                     continue;
                                 }
