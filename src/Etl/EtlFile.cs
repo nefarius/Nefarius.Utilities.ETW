@@ -114,13 +114,15 @@ internal sealed unsafe class EtlFile : IDisposable
         public int Length { get; } = length;
     }
 
-    private void IndexBuffers(string path)
+    private void IndexBuffers(string path, CancellationToken cancellationToken)
     {
         long bufferSize = BufferSize;
+        cancellationToken.ThrowIfCancellationRequested();
         if (!Info.IsCompressed)
         {
             for (long start = 0; start < Length; start += bufferSize)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 _buffers.Add(new BufferSegment(_base + start, (int)Math.Min(bufferSize, Length - start)));
             }
 
@@ -142,6 +144,7 @@ internal sealed unsafe class EtlFile : IDisposable
         long decompressed = 0;
         while (position < Length)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             long remaining = Length - position;
             if (remaining < BufferHeaderSize)
             {
@@ -163,6 +166,9 @@ internal sealed unsafe class EtlFile : IDisposable
                 throw new EtlFormatException(WIN32_ERROR.ERROR_NOT_ENOUGH_MEMORY,
                     $"'{path}' decompresses to more than {MaxDecompressedBytes >> 30} GiB.");
             }
+
+            // Reserve the bookkeeping slot first so an allocated buffer can always be registered for cleanup.
+            _owned.EnsureCapacity(_owned.Count + 1);
 
             byte* buffer;
             try
@@ -218,7 +224,7 @@ internal sealed unsafe class EtlFile : IDisposable
         _file.Dispose();
     }
 
-    public static EtlFile Open(string path)
+    public static EtlFile Open(string path, CancellationToken cancellationToken = default)
     {
         MemoryMappedFile? file = null;
         MemoryMappedViewAccessor? view = null;
@@ -243,7 +249,7 @@ internal sealed unsafe class EtlFile : IDisposable
                 EtlFile result = new(file, mappedView, pointer, length, info);
                 try
                 {
-                    result.IndexBuffers(path);
+                    result.IndexBuffers(path, cancellationToken);
                 }
                 catch
                 {

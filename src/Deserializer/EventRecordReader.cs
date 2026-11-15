@@ -218,6 +218,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe sbyte ReadInt8()
     {
+        Need(sizeof(sbyte));
         sbyte value = *(sbyte*)NativeEventRecord->UserData;
         IncrementBy(ref NativeEventRecord->UserData, sizeof(sbyte));
         return value;
@@ -229,6 +230,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe byte ReadUInt8()
     {
+        Need(sizeof(byte));
         byte value = *(byte*)NativeEventRecord->UserData;
         IncrementBy(ref NativeEventRecord->UserData, sizeof(byte));
         return value;
@@ -240,6 +242,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe short ReadInt16()
     {
+        Need(sizeof(short));
         short value = *(short*)NativeEventRecord->UserData;
         IncrementBy(ref NativeEventRecord->UserData, sizeof(short));
         return value;
@@ -251,6 +254,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe ushort ReadUInt16()
     {
+        Need(sizeof(ushort));
         ushort value = *(ushort*)NativeEventRecord->UserData;
         IncrementBy(ref NativeEventRecord->UserData, sizeof(ushort));
         return value;
@@ -262,6 +266,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe int ReadInt32()
     {
+        Need(sizeof(int));
         int value = *(int*)NativeEventRecord->UserData;
         IncrementBy(ref NativeEventRecord->UserData, sizeof(int));
         return value;
@@ -273,6 +278,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe uint ReadUInt32()
     {
+        Need(sizeof(uint));
         uint value = *(uint*)NativeEventRecord->UserData;
         IncrementBy(ref NativeEventRecord->UserData, sizeof(uint));
         return value;
@@ -284,6 +290,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe long ReadInt64()
     {
+        Need(sizeof(long));
         long value = *(long*)NativeEventRecord->UserData;
         IncrementBy(ref NativeEventRecord->UserData, sizeof(long));
         return value;
@@ -295,6 +302,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe ulong ReadUInt64()
     {
+        Need(sizeof(ulong));
         ulong value = *(ulong*)NativeEventRecord->UserData;
         IncrementBy(ref NativeEventRecord->UserData, sizeof(ulong));
         return value;
@@ -306,6 +314,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe float ReadFloat()
     {
+        Need(sizeof(float));
         float value = *(float*)NativeEventRecord->UserData;
         IncrementBy(ref NativeEventRecord->UserData, sizeof(float));
         return value;
@@ -317,6 +326,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe double ReadDouble()
     {
+        Need(sizeof(double));
         double value = *(double*)NativeEventRecord->UserData;
         IncrementBy(ref NativeEventRecord->UserData, sizeof(double));
         return value;
@@ -328,6 +338,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe bool ReadBoolean()
     {
+        Need(sizeof(int));
         bool value = *(int*)NativeEventRecord->UserData != 0;
         IncrementBy(ref NativeEventRecord->UserData, sizeof(int));
         return value;
@@ -374,6 +385,17 @@ internal readonly struct EventRecordReader
         return CopyBytes((int)size);
     }
 
+    /// <summary>
+    ///     Throws when fewer than <paramref name="bytes" /> remain, so a short payload cannot be read past its end.
+    /// </summary>
+    private unsafe void Need(int bytes)
+    {
+        if (RemainingBytes < bytes)
+        {
+            throw new FormatException("Event payload is shorter than its schema.");
+        }
+    }
+
     private unsafe byte[] CopyBytes(int size)
     {
         if (size < 0 || size > RemainingBytes)
@@ -397,6 +419,7 @@ internal readonly struct EventRecordReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe Guid ReadGuid()
     {
+        Need(sizeof(Guid));
         Guid value = *(Guid*)NativeEventRecord->UserData;
         IncrementBy(ref NativeEventRecord->UserData, sizeof(Guid));
         return value;

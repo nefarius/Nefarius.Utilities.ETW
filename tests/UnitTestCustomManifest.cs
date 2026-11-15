@@ -398,6 +398,15 @@ public unsafe class CustomManifestTests
     }
 
     [Test]
+    public void Manifest_ArrayCountLargerThanThePayload_IsRejectedInsteadOfReadingPastIt()
+    {
+        byte[] payload = [.. BitConverter.GetBytes(2u), .. BitConverter.GetBytes(7u)];
+
+        Assert.Throws<FormatException>(() => DecodeSynthetic(
+            """<data name="N" inType="win:UInt32"/><data name="Items" inType="win:UInt32" count="N"/>""", payload));
+    }
+
+    [Test]
     public void Manifest_UnicodeLengthsCountCharacters()
     {
         byte[] name = Encoding.Unicode.GetBytes("abcd");

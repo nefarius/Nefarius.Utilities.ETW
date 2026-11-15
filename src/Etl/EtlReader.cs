@@ -71,9 +71,10 @@ internal static unsafe class EtlReader
         {
             for (int i = 0; i < files.Count; i++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                    opened.Add(EtlFile.Open(files[i]));
+                    opened.Add(EtlFile.Open(files[i], cancellationToken));
                 }
                 catch (EtlFormatException ex)
                 {

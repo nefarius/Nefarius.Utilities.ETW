@@ -226,6 +226,16 @@ public unsafe class EtlFixtureTests
     }
 
     [Test]
+    public void CompressedFixture_OpeningHonorsCancellation()
+    {
+        using CancellationTokenSource cts = new();
+        cts.Cancel();
+
+        Assert.Throws<OperationCanceledException>(() =>
+            EtlFile.Open("./traces/fixtures/bulk-compressed.etl", cts.Token).Dispose());
+    }
+
+    [Test]
     public void XpressLz77_RejectsExtendedMatchLengthBelowTheMinimum()
     {
         // Extended length 1 is below 15 + 7 and must not wrap into a valid match (MS-XCA 2.4.4).
