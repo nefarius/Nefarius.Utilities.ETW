@@ -26,6 +26,18 @@ public RawEtwRelayLimits Limits { get; set; }
 
 [RawEtwRelayLimits](./nefarius.utilities.etw.relay.rawetwrelaylimits.md)<br>
 
+### <a id="properties-onend"/>**OnEnd**
+
+Invoked when the session's end frame is accepted. Retries of an end frame already processed are not reported.
+
+```csharp
+public Action OnEnd { get; set; }
+```
+
+#### Property Value
+
+[Action](https://learn.microsoft.com/dotnet/api/system.action)<br>
+
 ### <a id="properties-onhello"/>**OnHello**
 
 Invoked when the session's hello frame is accepted.
