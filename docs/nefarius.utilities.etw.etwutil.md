@@ -225,6 +225,52 @@ WPP decoding in real-time mode requires a pre-built
  `options` — the file-based [EtwUtil.EnumeratePdbReferences(IEnumerable&lt;String&gt;, Action&lt;EtwMetadataScanOptions&gt;)](./nefarius.utilities.etw.etwutil.md#enumeratepdbreferencesienumerablestring-actionetwmetadatascanoptions) pre-scan cannot be
  applied to live sessions.
 
+### <a id="methods-enumeraterelayeventsasync"/>**EnumerateRelayEventsAsync(Stream, Action&lt;EtwJsonConverterOptions&gt;, RawEtwRelayOptions, CancellationToken)**
+
+Decodes a stream of raw ETW relay frames as UTF-8 JSON objects, yielding each decoded event as it arrives.
+ Decoding, including WPP formatting, happens in this process; the sender only copies raw records.
+
+```csharp
+public static IAsyncEnumerable<ReadOnlyMemory<Byte>> EnumerateRelayEventsAsync(Stream input, Action<EtwJsonConverterOptions> options, RawEtwRelayOptions relayOptions, CancellationToken cancellationToken)
+```
+
+#### Parameters
+
+`input` [Stream](https://learn.microsoft.com/dotnet/api/system.io.stream)<br>
+A stream of back-to-back relay frames, e.g. an authenticated HTTP request body. The stream is read only as
+ fast as the result is enumerated.
+
+`options` [Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[EtwJsonConverterOptions](./nefarius.utilities.etw.etwjsonconverteroptions.md)><br>
+Decoding options. Set [EtwJsonConverterOptions.WppDecodingContext](./nefarius.utilities.etw.etwjsonconverteroptions.md#wppdecodingcontext) to resolve WPP events from
+ PDB/TMF files that exist only on the receiving side.
+
+`relayOptions` [RawEtwRelayOptions](./nefarius.utilities.etw.relay.rawetwrelayoptions.md)<br>
+Frame limits and notifications for hello and loss frames.
+
+`cancellationToken` [CancellationToken](https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken)<br>
+Cancels the read.
+
+#### Returns
+
+An [IAsyncEnumerable](https://learn.microsoft.com/dotnet/api/system.collections.generic.iasyncenumerable-1)<T> of raw UTF-8 JSON buffers, one per event, in the same shape as
+ [EtwUtil.EnumerateEventsAsync(IEnumerable&lt;String&gt;, Action&lt;EtwJsonConverterOptions&gt;, CancellationToken)](./nefarius.utilities.etw.etwutil.md#enumerateeventsasyncienumerablestring-actionetwjsonconverteroptions-cancellationtoken). The enumeration ends after the end frame or when the stream ends.
+
+#### Exceptions
+
+[ArgumentNullException](https://learn.microsoft.com/dotnet/api/system.argumentnullexception)<br>
+`input` is `null`.
+
+[RawEtwProtocolException](./nefarius.utilities.etw.relay.rawetwprotocolexception.md)<br>
+The input violates the protocol or the limits.
+
+**Remarks:**
+
+Each [ReadOnlyMemory<byte>](https://learn.microsoft.com/dotnet/api/system.readonlymemory-1) is backed by a pooled buffer that is
+ valid only until the next iteration step; copy it before advancing.
+
+Authentication, authorization and transport security are the caller's concern: pass in a stream whose
+ origin has already been authorized.
+
 ### <a id="methods-enumeratesessionnames"/>**EnumerateSessionNames()**
 
 Returns the names of all currently running ETW trace sessions.

@@ -54,6 +54,12 @@
 
 - [DbgIdRsdsEventInfo](./nefarius.utilities.etw.events.dbgidrsdseventinfo.md)
 
+- [EtwEvent](./nefarius.utilities.etw.events.etwevent.md)
+
+- [EtwValue](./nefarius.utilities.etw.events.etwvalue.md)
+
+- [EtwValueKind](./nefarius.utilities.etw.events.etwvaluekind.md)
+
 - [ImageIdEventInfo](./nefarius.utilities.etw.events.imageideventinfo.md)
 
 - [ImageIdFileVersionEventInfo](./nefarius.utilities.etw.events.imageidfileversioneventinfo.md)
@@ -75,6 +81,36 @@
 - [TdhGetPropertySizeException](./nefarius.utilities.etw.exceptions.tdhgetpropertysizeexception.md)
 
 - [TdhGetWppPropertyException](./nefarius.utilities.etw.exceptions.tdhgetwpppropertyexception.md)
+
+## Namespace Nefarius.Utilities.ETW.Relay
+
+- [RawEtwExtendedData](./nefarius.utilities.etw.relay.rawetwextendeddata.md)
+
+- [RawEtwFrame](./nefarius.utilities.etw.relay.rawetwframe.md)
+
+- [RawEtwFrameCodec](./nefarius.utilities.etw.relay.rawetwframecodec.md)
+
+- [RawEtwFrameDisposition](./nefarius.utilities.etw.relay.rawetwframedisposition.md)
+
+- [RawEtwFrameType](./nefarius.utilities.etw.relay.rawetwframetype.md)
+
+- [RawEtwHello](./nefarius.utilities.etw.relay.rawetwhello.md)
+
+- [RawEtwLoss](./nefarius.utilities.etw.relay.rawetwloss.md)
+
+- [RawEtwProtocolError](./nefarius.utilities.etw.relay.rawetwprotocolerror.md)
+
+- [RawEtwProtocolException](./nefarius.utilities.etw.relay.rawetwprotocolexception.md)
+
+- [RawEtwRecord](./nefarius.utilities.etw.relay.rawetwrecord.md)
+
+- [RawEtwRelayDecoder](./nefarius.utilities.etw.relay.rawetwrelaydecoder.md)
+
+- [RawEtwRelayLimits](./nefarius.utilities.etw.relay.rawetwrelaylimits.md)
+
+- [RawEtwRelayOptions](./nefarius.utilities.etw.relay.rawetwrelayoptions.md)
+
+- [RawEtwTimestampKind](./nefarius.utilities.etw.relay.rawetwtimestampkind.md)
 
 ## Namespace Nefarius.Utilities.ETW.Symbols
 
