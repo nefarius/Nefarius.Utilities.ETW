@@ -80,7 +80,7 @@ public unsafe class EtlFixtureTests
     }
 
     [Test]
-    public void ClassicKernelFixture_ContainsEventsTheManagedReaderStillSkips()
+    public void ClassicKernelFixture_IsReadByTheManagedReader()
     {
         Inventory inv = Count("kernel-classic", EtwBackend.Managed);
 
@@ -89,7 +89,6 @@ public unsafe class EtlFixtureTests
             Assert.That(inv.Failure, Is.Null);
             Assert.That(inv.Of(ProcessGroup), Is.EqualTo(93));
             Assert.That(inv.Of(ThreadGroup), Is.GreaterThan(0));
-            Assert.That(inv.Total, Is.GreaterThan(5000));
         }
     }
 
@@ -146,15 +145,83 @@ public unsafe class EtlFixtureTests
         }
     }
 
-    [Test]
-    [Platform("Win")]
-    public void NativeReader_SeesKernelRecordsTheManagedReaderCurrentlySkips()
+    /// <summary>
+    ///     Every header field and the payload of every record, so the backends can be compared record by record.
+    /// </summary>
+    private static List<string> Records(string name, EtwBackend backend)
     {
-        Inventory native = Count("kernel-classic", EtwBackend.Native);
+        List<string> records = [];
+        TraceOpenFailure? failure = TraceProcessor.ProcessFiles([$"./traces/fixtures/{name}.etl"], backend, false,
+            default, null, (EVENT_RECORD* r, in EtlRecordExtras _) =>
+            {
+                EVENT_HEADER h = r->EventHeader;
+                records.Add(string.Join('|', h.TimeStamp, h.ProviderId, h.EventDescriptor.Id, h.EventDescriptor.Version,
+                    h.EventDescriptor.Opcode, h.EventDescriptor.Level, h.ProcessId, h.ThreadId,
+                    // Only the NO_CPUTIME bit: ProcessTrace also sets header size and flags the managed reader
+                    // does not mirror.
+                    h.Flags & 0x0010, r->UserDataLength, Convert.ToHexString(new ReadOnlySpan<byte>(r->UserData, r->UserDataLength))));
+            });
+        Assert.That(failure, Is.Null);
+        records.Sort(StringComparer.Ordinal);
+        return records;
+    }
+
+    [Test]
+    public void CompactSystemHeaders_AreDecoded()
+    {
         Inventory managed = Count("kernel-classic", EtwBackend.Managed);
 
-        // Compact system headers (type 4) are skipped by the managed reader until they are decoded.
-        Assert.That(native.Total - managed.Total, Is.EqualTo(3));
-        Assert.That(managed.Warnings, Has.Some.Contains("compact"));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(managed.Total, Is.EqualTo(5317));
+            Assert.That(managed.Of(ThreadGroup), Is.EqualTo(909));
+            Assert.That(managed.Warnings, Is.Empty);
+        }
+    }
+
+    [Test]
+    public void UnknownRecordHeader_ReportsWhereTheRestOfTheBufferWasDropped()
+    {
+        string path = Path.GetTempFileName();
+        try
+        {
+            byte[] bytes = File.ReadAllBytes("./traces/fixtures/kernel-classic.etl");
+            const int bufferOffset = 65536 + 72;
+            bytes[bufferOffset + 2] = 0x7F; // header type that does not exist
+
+            File.WriteAllBytes(path, bytes);
+            List<string> warnings = [];
+            long total = 0;
+            TraceOpenFailure? failure = TraceProcessor.ProcessFiles([path], EtwBackend.Managed, false, default,
+                warnings.Add, (EVENT_RECORD* _, in EtlRecordExtras _) => total++);
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(failure, Is.Null);
+                Assert.That(total, Is.LessThan(5317));
+                Assert.That(warnings, Has.Some.Contains("0x7F").And.Contains("buffer 1").And.Contains("offset 72")
+                    .And.Contains("dropped"));
+            }
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Test]
+    [Platform("Win")]
+    public void ClassicKernelRecords_MatchTheNativeReaderFieldByField()
+    {
+        List<string> managed = Records("kernel-classic", EtwBackend.Managed);
+        List<string> native = Records("kernel-classic", EtwBackend.Native);
+
+        List<string> differences = managed.Zip(native, (m, n) => (m, n)).Where(p => p.m != p.n)
+            .Select(p => $"managed {Head(p.m)} / native {Head(p.n)}").Take(5).ToList();
+
+        Assert.That(managed.Count, Is.EqualTo(native.Count));
+        Assert.That(differences, Is.Empty);
+
+        static string Head(string record) => record[..Math.Min(record.Length, 140)];
     }
 }
