@@ -231,6 +231,12 @@ internal sealed class MetadataScanner
 
     private unsafe void HandleDbgIdRsds(EventRecordReader reader, EVENT_RECORD* eventRecord)
     {
+        // ImageBase, ProcessId, signature GUID, and age precede the filename.
+        if (reader.RemainingBytes < sizeof(ulong) + sizeof(uint) + sizeof(Guid) + sizeof(uint))
+        {
+            return;
+        }
+
         ulong imageBase = reader.ReadUInt64();
         uint processId = reader.ReadUInt32();
         Guid guidSig = reader.ReadGuid();
@@ -263,6 +269,14 @@ internal sealed class MetadataScanner
             return;
         }
 
+        int pointerBytes = (eventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_32_BIT_HEADER) != 0
+            ? sizeof(uint)
+            : sizeof(ulong);
+        if (reader.RemainingBytes < pointerBytes + sizeof(uint) + pointerBytes + sizeof(uint))
+        {
+            return;
+        }
+
         ulong imageBase = reader.ReadPointer();
         uint imageSize = reader.ReadUInt32();
         reader.ReadPointer(); // skip extra pointer present in the layout
@@ -284,6 +298,11 @@ internal sealed class MetadataScanner
     private unsafe void HandleImageIdFileVersion(EventRecordReader reader, EVENT_RECORD* eventRecord)
     {
         if (_options.OnImageIdFileVersion is null)
+        {
+            return;
+        }
+
+        if (reader.RemainingBytes < sizeof(uint) + sizeof(uint))
         {
             return;
         }
@@ -323,6 +342,12 @@ internal sealed class MetadataScanner
 
     private unsafe void HandleKernelDbgIdRsds(EventRecordReader reader, EVENT_RECORD* eventRecord)
     {
+        // A valid record holds a 16-byte GUID and a 4-byte age before the filename.
+        if (reader.RemainingBytes < sizeof(Guid) + sizeof(uint))
+        {
+            return;
+        }
+
         Guid pdbGuid = reader.ReadGuid();
         uint age = reader.ReadUInt32();
         string pdbName = reader.ReadAnsiString();
