@@ -72,8 +72,9 @@ public sealed class RawEtwRelayLimits
     public bool RequireCrc { get; init; }
 
     /// <summary>
-    ///     Maximum distinct (provider, id, version, opcode) keys whose parsers one session retains. Further new keys are
-    ///     rejected. Default: 8192.
+    ///     Maximum distinct wire keys one session accepts, and the maximum parsers it retains. Parsers installed from
+    ///     embedded kernel metadata count toward that parser ceiling, and a repeated metadata target reuses the parser
+    ///     already compiled for it. Further new keys are rejected. Default: 8192.
     /// </summary>
     public int MaxCachedEventKeys { get; init; } = 8192;
 

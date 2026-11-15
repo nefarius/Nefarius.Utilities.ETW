@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Text;
 using System.Text.Json;
 
+using Nefarius.Utilities.ETW.Deserializer.CustomParsers;
 using Nefarius.Utilities.ETW.Deserializer.WPP;
 using Nefarius.Utilities.ETW.Events;
 using Nefarius.Utilities.ETW.Etl;
@@ -828,6 +829,88 @@ public class RawEtwRelayTests
             decoder.Process(RawEtwFrameCodec.Encode(Event(2, other)), _ => { }));
         Assert.That(ex!.Error, Is.EqualTo(RawEtwProtocolError.InvalidLength));
     }
+
+    [Test]
+    public unsafe void EmbeddedSchema_ReusesAParserAndRejectsTargetsPastTheCacheLimit()
+    {
+        Guid provider = new("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        using RawEtwRelayDecoder decoder = new(null, new RawEtwRelayOptions
+        {
+            Limits = new RawEtwRelayLimits { MaxCachedEventKeys = 2 }
+        });
+        Feed(decoder, Hello());
+
+        // An incomplete schema is not cached, so it does not spend a parser slot.
+        Feed(decoder, Event(1, MetadataRecord([1, 2, 3, 4])));
+
+        List<EtwEvent> events = [];
+        Feed(decoder, Event(2, MetadataRecord(EmbeddedSchema(provider, 7, 1))), events);
+        Feed(decoder, Event(3, MetadataRecord(EmbeddedSchema(provider, 8, 1))), events);
+        Feed(decoder, Event(4, MetadataRecord(EmbeddedSchema(provider, 7, 1))), events);
+
+        RawEtwProtocolException ex = Assert.Throws<RawEtwProtocolException>(() =>
+            Feed(decoder, Event(5, MetadataRecord(EmbeddedSchema(provider, 9, 1)))));
+        Assert.That(ex!.Error, Is.EqualTo(RawEtwProtocolError.InvalidLength));
+
+        // The key that was accepted is still decoded after the ceiling was hit.
+        Feed(decoder, Event(6, DataRecord(provider, 7, 1)), events);
+        Assert.That(events.Single().Name, Does.Contain("EventID(7)"));
+        Assert.That(decoder.NextSequence, Is.EqualTo(7UL));
+    }
+
+    [Test]
+    public unsafe void EmbeddedSchema_ReplacesAPlaceholderParser()
+    {
+        Guid provider = new("bbbbbbbb-cccc-dddd-eeee-ffffffffffff");
+        using RawEtwRelayDecoder decoder = new();
+        Feed(decoder, Hello());
+
+        List<EtwEvent> events = [];
+        Feed(decoder, Event(1, DataRecord(provider, 7, 1)), events);
+        Assert.That(events.Single().Name, Does.StartWith("UnknownProvider("));
+
+        Feed(decoder, Event(2, MetadataRecord(EmbeddedSchema(provider, 7, 1))));
+        events.Clear();
+        Feed(decoder, Event(3, DataRecord(provider, 7, 1)), events);
+        Assert.That(events.Single().Name, Does.Contain("EventID(7)"));
+    }
+
+    private static unsafe byte[] EmbeddedSchema(Guid provider, ushort id, byte version)
+    {
+        byte[] raw = new byte[sizeof(TRACE_EVENT_INFO)];
+        fixed (byte* pointer = raw)
+        {
+            TRACE_EVENT_INFO* info = (TRACE_EVENT_INFO*)pointer;
+            info->ProviderGuid = provider;
+            info->EventGuid = Guid.Empty;
+            info->EventDescriptor.Id = id;
+            info->EventDescriptor.Version = version;
+            info->PropertyCount = 0;
+            info->TopLevelPropertyCount = 0;
+        }
+
+        return raw;
+    }
+
+    private static RawEtwRecord MetadataRecord(byte[] schema) => new()
+    {
+        Flags = 0,
+        TimeStamp = 133_500_000_000_000_000,
+        ProviderId = CustomParserGuids.KernelTraceControlMetaDataGuid,
+        Opcode = 32,
+        PointerSize = 8,
+        Payload = schema
+    };
+
+    private static RawEtwRecord DataRecord(Guid provider, ushort id, byte version) => new()
+    {
+        Flags = 0,
+        TimeStamp = 133_500_000_000_000_000,
+        ProviderId = provider,
+        Id = id,
+        Version = version,
+        PointerSize = 8
+    };
 
     [Test]
     public unsafe void StackTraces_IgnoreNullAndShortItems()

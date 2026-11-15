@@ -322,6 +322,25 @@ public class GatewayTests
     }
 
     [Test]
+    public async Task Export_ShutdownDuringRetryDeliversTheBatch()
+    {
+        await using TestGateway gateway = await TestGateway.StartAsync(new()
+        {
+            ["Gateway:Export:InitialRetryDelay"] = "00:00:05",
+            ["Gateway:Export:MaxAttempts"] = "5"
+        });
+        gateway.Sink.FailRetryable(1);
+
+        await gateway.PostAsync(Frames.Request(Session, Frames.Hello(Session), Frames.Event(1)));
+        await gateway.Sink.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await Task.Delay(50);
+
+        await gateway.StopAsync();
+
+        Assert.That(gateway.Sink.Records, Has.Count.EqualTo(1));
+    }
+
+    [Test]
     public async Task Export_DropsBatchesThatAreRejectedDownstreamAndKeepsGoing()
     {
         await using TestGateway gateway = await TestGateway.StartAsync(new()

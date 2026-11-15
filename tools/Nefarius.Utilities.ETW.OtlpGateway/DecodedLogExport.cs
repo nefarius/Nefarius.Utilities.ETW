@@ -234,7 +234,14 @@ public sealed class DecodedLogExporter(
     /// <inheritdoc />
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        await base.StopAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await base.StopAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // The worker kept the in-flight batch and then let its cancellation out. Deliver that batch below.
+        }
 
         // A delivery cancelled by shutdown kept its batch. Send it, then whatever is still queued, until the
         // shutdown budget runs out. A batch already confirmed delivered is not in this list, so it is not sent twice.
@@ -302,26 +309,26 @@ public sealed class DecodedLogExporter(
         {
             try
             {
-                await sink.SendAsync(batch, token).ConfigureAwait(false);
-                metrics.BatchesExported.Add(1);
-                return;
+                try
+                {
+                    await sink.SendAsync(batch, token).ConfigureAwait(false);
+                    metrics.BatchesExported.Add(1);
+                    return;
+                }
+                catch (SinkRetryableException ex) when (attempt < export.MaxAttempts)
+                {
+                    logger.LogWarning("Export attempt {Attempt} failed: {Message}. Retrying in {Delay}.", attempt,
+                        ex.Message, delay);
+                    await Task.Delay(delay, token).ConfigureAwait(false);
+                    delay = TimeSpan.FromTicks(Math.Min(delay.Ticks * 2, export.MaxRetryDelay.Ticks));
+                }
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
-                // Confirmed deliveries return before this point, so retaining the batch does not send it twice.
-                lock (_interruptedGate)
-                {
-                    _interrupted.Add((sink, batch));
-                }
-
-                return;
-            }
-            catch (SinkRetryableException ex) when (attempt < export.MaxAttempts)
-            {
-                logger.LogWarning("Export attempt {Attempt} failed: {Message}. Retrying in {Delay}.", attempt,
-                    ex.Message, delay);
-                await Task.Delay(delay, token).ConfigureAwait(false);
-                delay = TimeSpan.FromTicks(Math.Min(delay.Ticks * 2, export.MaxRetryDelay.Ticks));
+                // The send and the wait between attempts both land here. Keep the batch before the cancellation
+                // leaves this method, so shutdown can deliver it. A confirmed send has already returned.
+                RetainForShutdown(sink, batch);
+                throw;
             }
             catch (Exception ex)
             {
@@ -329,6 +336,14 @@ public sealed class DecodedLogExporter(
                 logger.LogError(ex, "A decoded batch was dropped after {Attempts} attempt(s).", attempt);
                 return;
             }
+        }
+    }
+
+    private void RetainForShutdown(IDecodedLogSink sink, DecodedBatch batch)
+    {
+        lock (_interruptedGate)
+        {
+            _interrupted.Add((sink, batch));
         }
     }
 }

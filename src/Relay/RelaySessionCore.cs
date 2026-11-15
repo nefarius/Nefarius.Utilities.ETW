@@ -38,7 +38,10 @@ internal sealed unsafe class RelaySessionCore<TWriter> : IDisposable where TWrit
             converterOptions.WppDecodingContext,
             converterOptions.OnWppFormatMissing,
             converterOptions.RewriteWppProviderName,
-            _limits.MaxManifestBytes);
+            _limits.MaxManifestBytes,
+            _limits.MaxCachedEventKeys,
+            () => throw new RawEtwProtocolException(RawEtwProtocolError.InvalidLength,
+                $"The session already caches {_limits.MaxCachedEventKeys} event keys."));
     }
 
     /// <summary>The session identifier from the hello frame, or <see langword="null" /> before it.</summary>
@@ -135,7 +138,7 @@ internal sealed unsafe class RelaySessionCore<TWriter> : IDisposable where TWrit
                 {
                     _deserializer.Deserialize(record, extras);
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                catch (Exception ex) when (ex is not OperationCanceledException and not RawEtwProtocolException)
                 {
                     throw new RawEtwProtocolException(RawEtwProtocolError.DecodeFailed,
                         $"Event frame {frame.Sequence} could not be decoded: {ex.Message}", ex);
@@ -170,7 +173,10 @@ internal sealed unsafe class RelaySessionCore<TWriter> : IDisposable where TWrit
 
     /// <summary>
     ///     Counts a new (provider, id, version, opcode) key against <see cref="RawEtwRelayLimits.MaxCachedEventKeys" />.
-    ///     The deserializer caches a parser per key for the life of the session; this stops that cache growing without a bound.
+    ///     The deserializer applies that same ceiling to parser registrations, including a target key embedded in a
+    ///     kernel metadata event, and it reuses the parser it already compiled for a repeated target. One session is
+    ///     applied one frame at a time, so this check cannot race another registration. A key past the limit is
+    ///     rejected and nothing further is cached.
     /// </summary>
     private void ReserveEventKey(RawEtwRecord record)
     {

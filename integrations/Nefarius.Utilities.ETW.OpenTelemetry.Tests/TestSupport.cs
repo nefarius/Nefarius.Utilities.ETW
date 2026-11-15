@@ -263,6 +263,8 @@ internal sealed class TestGateway : IAsyncDisposable
         return gateway;
     }
 
+    public Task StopAsync() => _app.StopAsync();
+
     public async Task<(HttpResponseMessage Response, ExportLogsServiceResponse? Body)> PostAsync(
         ExportLogsServiceRequest request, string? user = null, bool gzip = false)
     {
