@@ -225,6 +225,51 @@ WPP decoding in real-time mode requires a pre-built
  `options` — the file-based [EtwUtil.EnumeratePdbReferences(IEnumerable&lt;String&gt;, Action&lt;EtwMetadataScanOptions&gt;)](./nefarius.utilities.etw.etwutil.md#enumeratepdbreferencesienumerablestring-actionetwmetadatascanoptions) pre-scan cannot be
  applied to live sessions.
 
+### <a id="methods-enumeraterealtimerelayframesasync"/>**EnumerateRealtimeRelayFramesAsync(String, Action&lt;RawEtwRelayProducerOptions&gt;, CancellationToken)**
+
+Captures a real-time ETW session and produces raw relay frames: a hello frame, one event frame per
+ captured record, loss frames for events ETW dropped, and an end frame. Nothing is decoded, so no symbols are
+ needed on the capturing machine.
+
+```csharp
+public static IAsyncEnumerable<Byte[]> EnumerateRealtimeRelayFramesAsync(string sessionName, Action<RawEtwRelayProducerOptions> options, CancellationToken cancellationToken)
+```
+
+#### Parameters
+
+`sessionName` [String](https://learn.microsoft.com/dotnet/api/system.string)<br>
+The name of an existing real-time session to attach to.
+
+`options` [Action](https://learn.microsoft.com/dotnet/api/system.action-1)<[RawEtwRelayProducerOptions](./nefarius.utilities.etw.relay.rawetwrelayproduceroptions.md)><br>
+Optional callback to configure the producer.
+
+`cancellationToken` [CancellationToken](https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken)<br>
+Stops the capture. Frames already captured are still delivered, followed by the end frame, and then the
+ enumeration throws [OperationCanceledException](https://learn.microsoft.com/dotnet/api/system.operationcanceledexception).
+
+#### Returns
+
+Complete encoded frames in sequence order.
+
+#### Exceptions
+
+[ArgumentNullException](https://learn.microsoft.com/dotnet/api/system.argumentnullexception)<br>
+`sessionName` is `null`.
+
+[ArgumentException](https://learn.microsoft.com/dotnet/api/system.argumentexception)<br>
+`sessionName` is empty or whitespace.
+
+[EtwOpenTraceException](./nefarius.utilities.etw.exceptions.etwopentraceexception.md)<br>
+The session could not be opened by the ETW API.
+
+**Remarks:**
+
+Records are copied inside the ETW callback, so no native pointer leaves the library. A bounded channel
+ couples the capture thread to the consumer and applies backpressure.
+
+Disposing the enumerator early cannot deliver an end frame, but still closes the trace handle. The ETW
+ session itself belongs to its creator and is not stopped here.
+
 ### <a id="methods-enumeraterelayeventsasync"/>**EnumerateRelayEventsAsync(Stream, Action&lt;EtwJsonConverterOptions&gt;, RawEtwRelayOptions, CancellationToken)**
 
 Decodes a stream of raw ETW relay frames as UTF-8 JSON objects, yielding each decoded event as it arrives.

@@ -110,6 +110,8 @@
 
 - [RawEtwRelayOptions](./nefarius.utilities.etw.relay.rawetwrelayoptions.md)
 
+- [RawEtwRelayProducerOptions](./nefarius.utilities.etw.relay.rawetwrelayproduceroptions.md)
+
 - [RawEtwTimestampKind](./nefarius.utilities.etw.relay.rawetwtimestampkind.md)
 
 ## Namespace Nefarius.Utilities.ETW.Symbols
