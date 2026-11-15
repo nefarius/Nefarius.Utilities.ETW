@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Nefarius.Utilities.ETW.Deserializer.CustomParsers;
 
 /// <summary>
@@ -14,7 +16,7 @@ internal static class EventTraceParsers
 
     public const byte PartitionInfoExtensionV2Opcode = 80;
 
-    public static bool TryCreate(byte opcode, out ICustomParser? parser)
+    public static bool TryCreate(byte opcode, [NotNullWhen(true)] out ICustomParser? parser)
     {
         parser = opcode switch
         {

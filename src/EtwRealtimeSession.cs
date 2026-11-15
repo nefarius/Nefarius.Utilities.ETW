@@ -50,7 +50,7 @@ public sealed class EtwRealtimeSession : IDisposable
     /// <param name="sessionName">
     ///     A unique name for the session (case-insensitive). If a session with this name
     ///     already exists, an <see cref="EtwStartTraceException" /> is thrown with
-    ///     <see cref="WIN32_ERROR.ERROR_ALREADY_EXISTS" />; call
+    ///     <see cref="Windows.Win32.Foundation.WIN32_ERROR.ERROR_ALREADY_EXISTS" />; call
     ///     <see cref="EtwUtil.StopOrphanSession" /> first to remove the orphan.
     /// </param>
     /// <param name="configure">Optional delegate to adjust <see cref="EtwRealtimeSessionOptions" />.</param>
@@ -59,8 +59,8 @@ public sealed class EtwRealtimeSession : IDisposable
     /// <exception cref="ArgumentException"><paramref name="sessionName" /> is empty or whitespace.</exception>
     /// <exception cref="EtwStartTraceException">
     ///     <c>StartTrace</c> failed — inspect <see cref="System.ComponentModel.Win32Exception.NativeErrorCode" />.
-    ///     Common causes: <see cref="WIN32_ERROR.ERROR_ACCESS_DENIED" /> (run as administrator),
-    ///     <see cref="WIN32_ERROR.ERROR_ALREADY_EXISTS" /> (orphan session still running).
+    ///     Common causes: <see cref="Windows.Win32.Foundation.WIN32_ERROR.ERROR_ACCESS_DENIED" /> (run as administrator),
+    ///     <see cref="Windows.Win32.Foundation.WIN32_ERROR.ERROR_ALREADY_EXISTS" /> (orphan session still running).
     /// </exception>
     public static EtwRealtimeSession Create(string sessionName, Action<EtwRealtimeSessionOptions>? configure = null)
     {

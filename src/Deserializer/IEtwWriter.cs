@@ -1,4 +1,4 @@
-﻿namespace Nefarius.Utilities.ETW.Deserializer;
+namespace Nefarius.Utilities.ETW.Deserializer;
 
 internal interface IEtwWriter
 {
@@ -20,7 +20,7 @@ internal interface IEtwWriter
 
     void WriteAnsiString(string value);
 
-    void WriteUnicodeString(string value);
+    void WriteUnicodeString(string? value);
 
     void WriteInt8(sbyte value);
 

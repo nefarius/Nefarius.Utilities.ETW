@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using System.Reflection;
 
 namespace Nefarius.Utilities.ETW.Deserializer;
@@ -20,7 +20,8 @@ internal static class EventTraceOperandExpressionBuilder
         params Expression[] arguments)
     {
         Type[] parameterTypes = arguments.Select(t => t.Type).ToArray();
-        MethodInfo? methodInfo = instance.Type.GetMethod(methodName, parameterTypes);
+        MethodInfo methodInfo = instance.Type.GetMethod(methodName, parameterTypes)
+            ?? throw new MissingMethodException(instance.Type.FullName, methodName);
         return Expression.Call(instance, methodInfo, arguments);
     }
 }

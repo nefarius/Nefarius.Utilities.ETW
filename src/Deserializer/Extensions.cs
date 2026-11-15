@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using System.Reflection;
 
 using Windows.Win32.System.Diagnostics.Etw;
@@ -366,6 +366,7 @@ internal static class Extensions
 
     private static MethodInfo GetMethodInfo(Type type, string name, params Type[] parameterType)
     {
-        return type.GetMethod(name, parameterType);
+        return type.GetMethod(name, parameterType)
+            ?? throw new MissingMethodException(type.FullName, name);
     }
 }

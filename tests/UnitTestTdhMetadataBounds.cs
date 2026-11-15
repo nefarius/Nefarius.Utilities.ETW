@@ -178,6 +178,106 @@ public unsafe class TdhMetadataDecodingTests
         }, accepted => Assert.That(accepted, Is.True));
     }
 
+    [Test]
+    public void ANamedMapThatCannotBeResolvedStaysAbsent()
+    {
+        byte[] name = Encoding.Unicode.GetBytes("Status\0");
+        int headerBytes = sizeof(TRACE_EVENT_INFO);
+        byte[] raw = new byte[headerBytes + name.Length];
+        name.CopyTo(raw, headerBytes);
+        fixed (byte* pointer = raw)
+        {
+            TRACE_EVENT_INFO* info = (TRACE_EVENT_INFO*)pointer;
+            info->PropertyCount = 1;
+            info->TopLevelPropertyCount = 1;
+            EVENT_PROPERTY_INFO* property = (EVENT_PROPERTY_INFO*)&info->EventPropertyInfoArray;
+            property->NameOffset = (uint)headerBytes;
+            property->Anonymous1.nonStructType.MapNameOffset = (uint)headerBytes;
+
+            IEventTraceOperand operand = EventTraceOperandBuilder.Build(info, (uint)raw.Length, 0, resolveMaps: false);
+            PropertyMetadata metadata = operand.Metadata.Properties.Single();
+
+            Assert.That(metadata.Map, Is.Null);
+            Assert.That(metadata.IsMapValue, Is.False);
+        }
+    }
+
+    [Test]
+    public void AnUnresolvedVariableArraySizeIsRejectedWhenRead()
+    {
+        IEventTracePropertyOperand item = BuildSingleProperty(property =>
+        {
+            property->Flags = PROPERTY_FLAGS.PropertyParamCount;
+            property->Anonymous2.countPropertyIndex = 5;
+        });
+
+        Assert.That(item.IsVariableArray, Is.True);
+        Assert.Throws<InvalidOperationException>(() => _ = item.VariableArraySize);
+    }
+
+    [Test]
+    public void AnUnresolvedVariableLengthSizeIsRejectedWhenRead()
+    {
+        IEventTracePropertyOperand item = BuildSingleProperty(property =>
+        {
+            property->Flags = PROPERTY_FLAGS.PropertyParamLength;
+            property->Anonymous3.lengthPropertyIndex = 5;
+        });
+
+        Assert.That(item.IsVariableLength, Is.True);
+        Assert.Throws<InvalidOperationException>(() => _ = item.VariableLengthSize);
+    }
+
+    [Test]
+    public void AResolvedVariableArraySizePointsAtTheEarlierProperty()
+    {
+        List<IEventTracePropertyOperand> operands = BuildProperties(2, (info, properties) =>
+        {
+            properties[1].Flags = PROPERTY_FLAGS.PropertyParamCount;
+            properties[1].Anonymous2.countPropertyIndex = 0;
+        });
+
+        Assert.That(operands[1].VariableArraySize, Is.SameAs(operands[0]));
+    }
+
+    [Test]
+    public void AManifestWithoutTheRequestedEventReturnsNoOperand()
+    {
+        instrumentationManifest manifest = new()
+        {
+            Items = []
+        };
+
+        Assert.That(EventTraceOperandBuilder.Build(manifest, 1, 0), Is.Null);
+    }
+
+    private unsafe delegate void PropertyFill(EVENT_PROPERTY_INFO* property);
+
+    private unsafe delegate void PropertiesFill(TRACE_EVENT_INFO* info, EVENT_PROPERTY_INFO* properties);
+
+    private static unsafe IEventTracePropertyOperand BuildSingleProperty(PropertyFill fill)
+    {
+        return BuildProperties(1, (_, properties) => fill(properties)).Single();
+    }
+
+    private static unsafe List<IEventTracePropertyOperand> BuildProperties(
+        int propertyCount,
+        PropertiesFill fill)
+    {
+        int size = sizeof(TRACE_EVENT_INFO) + Math.Max(0, propertyCount - 1) * sizeof(EVENT_PROPERTY_INFO);
+        byte[] raw = new byte[size];
+        fixed (byte* pointer = raw)
+        {
+            TRACE_EVENT_INFO* info = (TRACE_EVENT_INFO*)pointer;
+            info->PropertyCount = (uint)propertyCount;
+            info->TopLevelPropertyCount = (uint)propertyCount;
+            EVENT_PROPERTY_INFO* properties = (EVENT_PROPERTY_INFO*)&info->EventPropertyInfoArray;
+            fill(info, properties);
+            IEventTraceOperand operand = EventTraceOperandBuilder.Build(info, (uint)size, 0);
+            return operand.EventPropertyOperands.ToList();
+        }
+    }
+
     private unsafe delegate void SchemaFill(TRACE_EVENT_INFO* info, EVENT_PROPERTY_INFO* properties);
 
     private static unsafe void WithSchema(

@@ -167,7 +167,7 @@ internal sealed class EtwJsonChannelWriter : IEtwWriter
     public void WriteAnsiString(string value) => _jsonWriter.WriteStringValue(value);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void WriteUnicodeString(string value) => _jsonWriter.WriteStringValue(value);
+    public void WriteUnicodeString(string? value) => _jsonWriter.WriteStringValue(value);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteInt8(sbyte value) => _jsonWriter.WriteNumberValue(value);
