@@ -27,8 +27,8 @@ contributors.*
   - Support for the [WPP extended format specification strings](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/what-are-the-wpp-extended-format-specification-strings-)
     (`%!FUNC!`, `%!LEVEL!`, `%!FLAGS!`, `%!IPADDR!`, `%!TIMESTAMP!`, `%!delta!`, `%!due!`, `%!GUID!`,
     `%!CLSID!`/`%!LIBID!`/`%!IID!`, `%!PORT!`, `%!STATUS!`, `%!WINERROR!`, `%!HRESULT!`,
-    `%!NDIS_STATUS!`, `%!NDIS_OID!`, `%!sid!`, bitset/list enumerations, and more); the only exceptions are
-    `%!ItemEnum!`/`%!ItemFlagsEnum!`, which print raw values (see [Known limitations](#known-limitations))
+    `%!NDIS_STATUS!`, `%!NDIS_OID!`, `%!sid!`, bitset/list enumerations, and more); known exceptions are
+    `%!ItemEnum!`/`%!ItemFlagsEnum!` (raw values), `%!CLSID!` (no registry name lookup) and `%!LINE!` (rendered empty) (see [Known limitations](#known-limitations))
   - `USEPREFIX`/`USESUFFIX` trace message prefixes are automatically expanded — the `%0` standard-prefix
     sentinel and `%!FUNC!`/`%!LEVEL!` context markers are resolved from the TMF metadata at decode time
 - Added `EtwUtil.EnumeratePdbReferences` for lightweight pre-scanning of ETL files to collect all PDB metadata
@@ -165,6 +165,7 @@ See [tools/Nefarius.Utilities.ETW.CLI/README.md](tools/Nefarius.Utilities.ETW.CL
 - Reading `.etl` files works on Windows, Linux and macOS through a managed reader (`EtwBackend.Managed`, the default off Windows; set `EtwJsonConverterOptions.Backend` / `EtwMetadataScanOptions.Backend` to choose). Real-time sessions, session management and manifest value-map resolution remain **Windows-only** and throw `PlatformNotSupportedException` elsewhere
 - The managed reader does not read compressed `.etl` files (it reports a clear error) and covers the record types found in WPP, kernel image-ID and TraceLogging/manifest traces; unsupported record types are skipped with a warning via `ReportError`
 - `%!ItemEnum!`/`%!ItemFlagsEnum!` types display raw numeric values; PDB-based enum name resolution is not yet implemented
+- `%!CLSID!` prints the GUID without a registry name lookup and `%!LINE!` is rendered as an empty string
 - Creating an NT Kernel Logger / system-logger session is not supported by `EtwRealtimeSession`; registered kernel-mode providers work in realtime mode
 
 ## Documentation
