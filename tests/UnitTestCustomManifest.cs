@@ -85,6 +85,10 @@ public unsafe class CustomManifestTests
     [TestCase("DsHidMini.man", "ba65b162-c05c-4bd7-b75d-db8d030daf7f")]
     [TestCase("HidHide.man", "6DA3FFA4-AB7D-40E2-B50C-C4B41BBA36E3")]
     [TestCase("HidHide.man", "D9F22586-7514-4164-BB9B-5C67D5BD2BC7")]
+    [TestCase("HidHideCLI.man", "E3DF118F-1AFC-4630-9F03-6C6F73848738")]
+    [TestCase("HidHideCLI.man", "54C5B24F-321D-46B0-BD2E-79FDF7BAB7AC")]
+    [TestCase("HidHideClient.man", "1E545280-184F-4954-B1E4-9BF8898F2571")]
+    [TestCase("HidHideClient.man", "3BEA3F5D-F523-467E-912D-E01DCF6DADCF")]
     public void EveryDefinedEventBuildsAnOperand(string file, string providerGuid)
     {
         Guid provider = Guid.Parse(providerGuid);
@@ -121,6 +125,29 @@ public unsafe class CustomManifestTests
             Assert.That(trace.Name, Does.StartWith("Nefarius-Drivers-HidHide/Log"));
             Assert.That(trace.Properties.Select(p => p.Name),
                 Is.EqualTo(new[] { "FileName", "LineNumber", "FunctionName", "MessageW", "MessageA" }));
+        }
+    }
+
+    [TestCase("HidHideCLI.man", "E3DF118F-1AFC-4630-9F03-6C6F73848738", "54C5B24F-321D-46B0-BD2E-79FDF7BAB7AC")]
+    [TestCase("HidHideClient.man", "1E545280-184F-4954-B1E4-9BF8898F2571", "3BEA3F5D-F523-467E-912D-E01DCF6DADCF")]
+    public void HidHideTools_OverlappingEventIdsResolveToTheirOwnProvider(string file, string generalGuid,
+        string traceGuid)
+    {
+        Guid general = Guid.Parse(generalGuid);
+        Guid trace = Guid.Parse(traceGuid);
+        instrumentationManifest manifest = Load(file, general);
+
+        EventMetadata fromGeneral = Build(manifest, general, 49);
+        EventMetadata fromTrace = Build(manifest, trace, 49);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(fromGeneral.ProviderGuid, Is.EqualTo(general));
+            Assert.That(fromGeneral.Name, Does.Contain("/General"));
+            Assert.That(fromTrace.ProviderGuid, Is.EqualTo(trace));
+            Assert.That(fromTrace.Name, Does.Contain("/Log"));
+            Assert.That(EventTraceOperandBuilder.Build(manifest, general, 1, 0, 0), Is.Null);
+            Assert.That(EventTraceOperandBuilder.Build(manifest, trace, 1, 0, 0), Is.Not.Null);
         }
     }
 
