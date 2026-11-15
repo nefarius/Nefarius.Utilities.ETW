@@ -99,9 +99,18 @@ public class BackendParityTests
                     return;
                 }
 
-                for (int i = 0; i < expected.GetArrayLength(); i++)
+                int index = 0;
+                JsonElement.ArrayEnumerator expectedItems = expected.EnumerateArray();
+                JsonElement.ArrayEnumerator actualItems = actual.EnumerateArray();
+                while (expectedItems.MoveNext() && actualItems.MoveNext())
                 {
-                    Compare(expected[i], actual[i], $"{path}[{i}]", differences);
+                    if (differences.Count >= MaxReportedDifferences)
+                    {
+                        return;
+                    }
+
+                    Compare(expectedItems.Current, actualItems.Current, $"{path}[{index}]", differences);
+                    index++;
                 }
 
                 break;
