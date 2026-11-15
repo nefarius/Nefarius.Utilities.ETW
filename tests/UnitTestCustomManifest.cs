@@ -112,19 +112,28 @@ public unsafe class CustomManifestTests
         Guid provider = Guid.Parse(providerGuid);
         instrumentationManifest manifest = Load(file, provider);
 
-        int resolved = 0;
-        for (ushort id = 0; id < 100; id++)
-        {
-            Assert.DoesNotThrow(() =>
-            {
-                if (EventTraceOperandBuilder.Build(manifest, provider, id, 0, 0) is not null)
-                {
-                    resolved++;
-                }
-            });
-        }
+        List<(ushort Id, byte Version)> declared = manifest.Items
+            .OfType<InstrumentationType>()
+            .SelectMany(i => i.Items.OfType<EventsType>())
+            .SelectMany(e => e.Items.OfType<ProviderType>())
+            .Where(p => Guid.TryParse(p.guid, out Guid g) && g == provider)
+            .SelectMany(p => p.Items.OfType<DefinitionType>())
+            .SelectMany(d => d.Items)
+            .Select(e => (ushort.Parse(e.value), byte.Parse(e.version ?? "0")))
+            .ToList();
 
-        Assert.That(resolved, Is.GreaterThan(0));
+        Assert.That(declared, Is.Not.Empty);
+
+        using (Assert.EnterMultipleScope())
+        {
+            foreach ((ushort id, byte version) in declared)
+            {
+                IEventTraceOperand? operand = null;
+                Assert.DoesNotThrow(() => operand = EventTraceOperandBuilder.Build(manifest, provider, id, version, 0),
+                    $"event {id} v{version}");
+                Assert.That(operand, Is.Not.Null, $"event {id} v{version} was not resolved");
+            }
+        }
     }
 
     [Test]
