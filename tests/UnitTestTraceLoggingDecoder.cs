@@ -320,6 +320,28 @@ public unsafe class TraceLoggingDecoderTests
         }
     }
 
+    [TestCase(double.NaN)]
+    [TestCase(double.PositiveInfinity)]
+    [TestCase(double.NegativeInfinity)]
+    public void CustomSerialization_NonFiniteDecoderResultsAreRejectedBeforeAnyJson(double result)
+    {
+        byte[] typeInfo = [0xE1];
+        byte[] schema = Schema("C", Field("Blob", 14 | 0x60, 1, 0, 0xE1));
+
+        foreach (object boxed in new object[] { result, (float)result })
+        {
+            TraceLoggingCustomDecoders.Register(typeInfo, (_, _) => boxed);
+            try
+            {
+                Assert.That(Written(schema, [0, 0]), Is.Zero);
+            }
+            finally
+            {
+                TraceLoggingCustomDecoders.Unregister(typeInfo);
+            }
+        }
+    }
+
     [Test]
     public void CustomSerialization_TruncatedTypeInfoIsRejected()
     {
