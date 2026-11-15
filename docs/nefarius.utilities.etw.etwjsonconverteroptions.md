@@ -13,6 +13,23 @@ Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/sys
 
 ## Properties
 
+### <a id="properties-backend"/>**Backend**
+
+Selects how .ETL files are read. Real-time sessions always use the native Windows APIs.
+
+```csharp
+public EtwBackend Backend { get; set; }
+```
+
+#### Property Value
+
+[EtwBackend](./nefarius.utilities.etw.etwbackend.md)<br>
+
+**Remarks:**
+
+The default [EtwBackend.Auto](./nefarius.utilities.etw.etwbackend.md#auto) uses the native Windows APIs on Windows and the managed,
+ cross-platform reader everywhere else.
+
 ### <a id="properties-customprovidermanifest"/>**CustomProviderManifest**
 
 Custom manifest provider lookup.

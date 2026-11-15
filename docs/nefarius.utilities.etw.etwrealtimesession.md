@@ -11,7 +11,7 @@ public sealed class EtwRealtimeSession : System.IDisposable
 
 Inheritance [Object](https://learn.microsoft.com/dotnet/api/system.object) → [EtwRealtimeSession](./nefarius.utilities.etw.etwrealtimesession.md)<br>
 Implements [IDisposable](https://learn.microsoft.com/dotnet/api/system.idisposable)<br>
-Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullablecontextattribute), [NullableAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullableattribute)
+Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullablecontextattribute), [NullableAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.compilerservices.nullableattribute), [SupportedOSPlatformAttribute](https://learn.microsoft.com/dotnet/api/system.runtime.versioning.supportedosplatformattribute)
 
 **Remarks:**
 

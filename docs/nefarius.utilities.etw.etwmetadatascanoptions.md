@@ -13,6 +13,18 @@ Attributes [NullableContextAttribute](https://learn.microsoft.com/dotnet/api/sys
 
 ## Properties
 
+### <a id="properties-backend"/>**Backend**
+
+Selects how .ETL files are read; see [EtwBackend](./nefarius.utilities.etw.etwbackend.md). Defaults to [EtwBackend.Auto](./nefarius.utilities.etw.etwbackend.md#auto).
+
+```csharp
+public EtwBackend Backend { get; set; }
+```
+
+#### Property Value
+
+[EtwBackend](./nefarius.utilities.etw.etwbackend.md)<br>
+
 ### <a id="properties-ondbgidrsds"/>**OnDbgIdRsds**
 
 Invoked for every `KernelTraceControl/ImageID/DbgID_RSDS` event (opcode 36, provider

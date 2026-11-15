@@ -2,6 +2,8 @@
 
 ## Namespace Nefarius.Utilities.ETW
 
+- [EtwBackend](./nefarius.utilities.etw.etwbackend.md)
+
 - [EtwClockResolution](./nefarius.utilities.etw.etwclockresolution.md)
 
 - [EtwJsonConverterOptions](./nefarius.utilities.etw.etwjsonconverteroptions.md)
