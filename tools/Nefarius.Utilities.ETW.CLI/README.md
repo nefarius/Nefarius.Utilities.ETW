@@ -582,7 +582,7 @@ All column tokens listed above are available as identifiers directly in the expr
 
 - Currently relies on **Windows-only** APIs so no support for other platforms.
 - `%!ItemEnum!`/`%!ItemFlagsEnum!` types show enumerator names when the enum type is found in a supplied PDB; otherwise (TMF sources, missing type) the raw value is shown.
-- Kernel-mode ETW providers and the NT Kernel Logger session are not yet supported.
+- The CLI does not create kernel sessions (NT Kernel Logger or system logger); attach to an existing session by name, or create one through the library API.
 
 ## Links
 
