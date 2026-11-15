@@ -1,0 +1,8 @@
+# Review pull requests whose base is a stacked branch, not only master.
+# Each entry is an unanchored regular expression. ".*" matches every base.
+# https://docs.coderabbit.ai/configuration/auto-review
+reviews:
+  auto_review:
+    enabled: true
+    base_branches:
+      - ".*"
