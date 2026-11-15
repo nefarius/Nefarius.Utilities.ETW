@@ -18,7 +18,7 @@ internal unsafe delegate void EtlRecordCallback(EVENT_RECORD* record, in EtlReco
 /// <remarks>
 ///     Supported record header types: SYSTEM_TRACE (32/64, including the compact variants), PERFINFO (32/64), TRACE_MESSAGE (WPP), EVENT_HEADER
 ///     (32/64, without extended data), FULL_HEADER and INSTANCE (32/64). Anything else is skipped and reported once
-///     per header type. Compressed traces are rejected when the file is opened.
+///     per header type. Compressed traces are decompressed buffer by buffer when the file is opened.
 /// </remarks>
 internal static unsafe class EtlReader
 {
@@ -112,16 +112,15 @@ internal static unsafe class EtlReader
         for (int f = 0; f < files.Count; f++)
         {
             EtlFile file = files[f];
-            for (long b = 0; b < file.BufferCount; b++)
+            for (int b = 0; b < file.Buffers.Count; b++)
             {
                 if ((++scanned & 63) == 0)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                 }
 
-                long start = b * file.BufferSize;
-                long length = Math.Min(file.BufferSize, file.Length - start);
-                BufferCursor? cursor = BufferCursor.TryCreate(file, f, b, file.Pointer + start, (int)length);
+                EtlFile.BufferSegment segment = file.Buffers[b];
+                BufferCursor? cursor = BufferCursor.TryCreate(file, f, b, segment.Pointer, segment.Length);
                 if (cursor is not null && cursor.Advance(Warn))
                 {
                     queue.Enqueue(cursor, cursor.Key);

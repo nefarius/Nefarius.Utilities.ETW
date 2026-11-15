@@ -93,13 +93,136 @@ public unsafe class EtlFixtureTests
     }
 
     [Test]
-    public void CompressedFixture_IsRejectedByTheManagedReader()
+    public void CompressedFixture_IsReadByTheManagedReader()
     {
-        Inventory inv = Count("bulk-compressed", EtwBackend.Managed);
+        Inventory compressed = Count("bulk-compressed", EtwBackend.Managed);
+        Inventory plain = Count("bulk-uncompressed", EtwBackend.Managed);
 
-        Assert.That(inv.Failure, Is.Not.Null);
-        Assert.That(inv.Failure!.Value.Error, Is.EqualTo(WIN32_ERROR.ERROR_NOT_SUPPORTED));
-        Assert.That(inv.Total, Is.Zero);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(compressed.Failure, Is.Null);
+            Assert.That(compressed.Warnings, Is.Empty);
+            Assert.That(compressed.Total, Is.EqualTo(plain.Total));
+            Assert.That(compressed.Of(TraceLoggingProvider), Is.EqualTo(402));
+        }
+    }
+
+    [Test]
+    public void CompressedAndUncompressedFixtures_CarryTheSamePayloads()
+    {
+        static List<string> Payloads(string name)
+        {
+            List<string> payloads = [];
+            TraceProcessor.ProcessFiles([$"./traces/fixtures/{name}.etl"], EtwBackend.Managed, false, default, null,
+                (EVENT_RECORD* r, in EtlRecordExtras _) =>
+                {
+                    if (r->EventHeader.ProviderId == TraceLoggingProvider && r->UserDataLength > 0)
+                    {
+                        payloads.Add(Convert.ToHexString(new ReadOnlySpan<byte>(r->UserData, r->UserDataLength)));
+                    }
+                });
+            payloads.Sort(StringComparer.Ordinal);
+            return payloads;
+        }
+
+        List<string> compressed = Payloads("bulk-compressed");
+        Assert.That(compressed, Is.Not.Empty);
+        Assert.That(compressed, Is.EqualTo(Payloads("bulk-uncompressed")));
+    }
+
+    private static TraceOpenFailure? OpenModified(Action<byte[]> modify, out long delivered)
+    {
+        byte[] bytes = File.ReadAllBytes("./traces/fixtures/bulk-compressed.etl");
+        modify(bytes);
+        string path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllBytes(path, bytes);
+            long count = 0;
+            TraceOpenFailure? failure = TraceProcessor.ProcessFiles([path], EtwBackend.Managed, false, default, null,
+                (EVENT_RECORD* _, in EtlRecordExtras _) => count++);
+            delivered = count;
+            return failure;
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Test]
+    public void CompressedFixture_WithCorruptData_IsRejectedBeforeAnyRecordIsDelivered()
+    {
+        // Overwrite the flags and literals of the first compressed buffer with an impossible back reference.
+        TraceOpenFailure? failure = OpenModified(b =>
+        {
+            for (int i = 65536 + 72; i < 65536 + 72 + 64; i++)
+            {
+                b[i] = 0xFF;
+            }
+        }, out long delivered);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(failure, Is.Not.Null);
+            Assert.That(failure!.Value.Error, Is.EqualTo(WIN32_ERROR.ERROR_INVALID_DATA));
+            Assert.That(delivered, Is.Zero);
+        }
+    }
+
+    [Test]
+    public void CompressedFixture_WithOversizedBufferRecord_IsRejected()
+    {
+        TraceOpenFailure? failure = OpenModified(b => BitConverter.TryWriteBytes(b.AsSpan(65536), uint.MaxValue),
+            out long delivered);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(failure, Is.Not.Null);
+            Assert.That(failure!.Value.Error, Is.EqualTo(WIN32_ERROR.ERROR_INVALID_DATA));
+            Assert.That(delivered, Is.Zero);
+        }
+    }
+
+    [Test]
+    public void CompressedFixture_Truncated_IsRejected()
+    {
+        string path = Path.GetTempFileName();
+        try
+        {
+            byte[] bytes = File.ReadAllBytes("./traces/fixtures/bulk-compressed.etl");
+            File.WriteAllBytes(path, bytes.AsSpan(0, bytes.Length - 100).ToArray());
+
+            TraceOpenFailure? failure = TraceProcessor.ProcessFiles([path], EtwBackend.Managed, false, default, null,
+                (EVENT_RECORD* _, in EtlRecordExtras _) => Assert.Fail("A truncated compressed file must not be read."));
+
+            Assert.That(failure, Is.Not.Null);
+            Assert.That(failure!.Value.Error, Is.EqualTo(WIN32_ERROR.ERROR_INVALID_DATA));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Test]
+    public void XpressLz77_DecodesLiteralsOverlappingMatchesAndRejectsBadReferences()
+    {
+        // Flags 0x40000000 (little endian): a literal 'a', then a match with offset 1 and length 3 + 4. The match
+        // word is ((offset - 1) << 3) | (length - 3).
+        byte[] input = [0x00, 0x00, 0x00, 0x40, (byte)'a', 0x04, 0x00];
+        byte[] output = new byte[16];
+
+        bool ok = XpressLz77.TryDecompress(input, output, out int written);
+        Assert.That(ok, Is.True);
+        Assert.That(output.AsSpan(0, written).ToArray(), Is.EqualTo("aaaaaaaa"u8.ToArray()));
+
+        // A match that reaches before the start of the output is invalid.
+        byte[] bad = [0x00, 0x00, 0x00, 0x80, 0x08, 0x00];
+        Assert.That(XpressLz77.TryDecompress(bad, output, out _), Is.False);
+
+        // The output must not be exceeded.
+        Assert.That(XpressLz77.TryDecompress(input, new byte[4], out _), Is.False);
     }
 
     [Test]
@@ -128,6 +251,14 @@ public unsafe class EtlFixtureTests
             Assert.That(managed.Total, Is.EqualTo(native.Total));
             Assert.That(managed.ByProvider, Is.EquivalentTo(native.ByProvider));
         }
+    }
+
+    [Test]
+    [Platform("Win")]
+    public void CompressedRecords_MatchTheNativeReaderFieldByField()
+    {
+        Assert.That(Records("bulk-compressed", EtwBackend.Managed),
+            Is.EqualTo(Records("bulk-compressed", EtwBackend.Native)));
     }
 
     [Test]

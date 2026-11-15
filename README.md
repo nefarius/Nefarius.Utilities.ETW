@@ -162,7 +162,7 @@ See [tools/Nefarius.Utilities.ETW.CLI/README.md](tools/Nefarius.Utilities.ETW.CL
 ## Known limitations
 
 - Reading `.etl` files works on Windows, Linux and macOS through a managed reader (`EtwBackend.Managed`, the default off Windows; set `EtwJsonConverterOptions.Backend` / `EtwMetadataScanOptions.Backend` to choose). Real-time sessions, session management and manifest value-map resolution remain **Windows-only** and throw `PlatformNotSupportedException` elsewhere
-- The managed reader does not read compressed `.etl` files (it reports a clear error) and covers the record types found in WPP, kernel image-ID and TraceLogging/manifest traces; unsupported record types are skipped with a warning via `ReportError`
+- The managed reader reads compressed (`EVENT_TRACE_COMPRESSED_MODE`, Xpress LZ77) `.etl` files by decompressing every buffer into memory first, and covers the record types found in WPP, kernel and TraceLogging/manifest traces; unsupported record types are skipped with a warning via `ReportError`
 - `%!ItemEnum!`/`%!ItemFlagsEnum!` types display raw numeric values; PDB-based enum name resolution is not yet implemented
 - Kernel-mode ETW providers and the NT Kernel Logger session are not yet supported for realtime mode
 
