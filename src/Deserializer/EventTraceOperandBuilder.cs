@@ -6,9 +6,10 @@ namespace Nefarius.Utilities.ETW.Deserializer;
 
 internal static unsafe class EventTraceOperandBuilder
 {
-    public static IEventTraceOperand Build(TRACE_EVENT_INFO* traceEventInfo, uint infoSize, int metadataIndex)
+    public static IEventTraceOperand Build(TRACE_EVENT_INFO* traceEventInfo, uint infoSize, int metadataIndex,
+        bool resolveMaps = true)
     {
-        return new EventTraceOperandBuilderFromTDH(traceEventInfo, infoSize).Build(metadataIndex);
+        return new EventTraceOperandBuilderFromTDH(traceEventInfo, infoSize, resolveMaps).Build(metadataIndex);
     }
 
     /// <summary>
@@ -235,12 +236,14 @@ internal static unsafe class EventTraceOperandBuilder
         private readonly List<IEventTracePropertyOperand> _flatPropertyList = new();
         private readonly TRACE_EVENT_INFO* _traceEventInfo;
         private readonly uint _infoSize;
+        private readonly bool _resolveMaps;
         private int _propertyLimit;
 
-        public EventTraceOperandBuilderFromTDH(TRACE_EVENT_INFO* traceEventInfo, uint infoSize)
+        public EventTraceOperandBuilderFromTDH(TRACE_EVENT_INFO* traceEventInfo, uint infoSize, bool resolveMaps)
         {
             this._traceEventInfo = traceEventInfo;
             this._infoSize = infoSize;
+            _resolveMaps = resolveMaps;
         }
 
         public IEventTraceOperand Build(int eventMetadataTableIndex)
@@ -293,7 +296,8 @@ internal static unsafe class EventTraceOperandBuilder
         /// </summary>
         private Dictionary<uint, string>? ReadMap(string mapName)
         {
-            if (!OperatingSystem.IsWindows())
+            // Managed decoding must not consult TDH, including on Windows. A null map leaves the property as a raw value.
+            if (!_resolveMaps || !OperatingSystem.IsWindows())
             {
                 return null;
             }

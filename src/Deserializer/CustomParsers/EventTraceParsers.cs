@@ -28,6 +28,11 @@ internal static class EventTraceParsers
         return parser is not null;
     }
 
+    private static unsafe int PointerBytes(EventRecordReader reader)
+    {
+        return (reader.NativeEventRecord->EventHeader.Flags & PInvoke.EVENT_HEADER_FLAG_32_BIT_HEADER) != 0 ? 4 : 8;
+    }
+
     private static PropertyMetadata Prop(_TDH_IN_TYPE inType, _TDH_OUT_TYPE outType, string name,
         bool isStruct = false, int children = 0)
     {
@@ -118,6 +123,14 @@ internal static class EventTraceParsers
             RuntimeEventMetadata runtimeMetadata)
             where T : IEtwWriter
         {
+            int pointerBytes = PointerBytes(reader);
+            // Fixed prefix through BuffersLost: integers before the pointers, both pointers, the 172-byte
+            // timezone block (32-WCHAR names), alignment, and the trailing timestamps and counters.
+            if (reader.RemainingBytes < 56 + pointerBytes * 2 + 172 + 4 + 24 + 8)
+            {
+                return;
+            }
+
             writer.WriteEventBegin(EventMetadata, runtimeMetadata);
 
             WriteUInt32(writer, BufferSize, reader.ReadUInt32());
@@ -154,7 +167,7 @@ internal static class EventTraceParsers
             writer.WritePropertyEnd();
 
             writer.WritePropertyBegin(StandardName);
-            writer.WriteUnicodeString(reader.ReadUnicodeString(32));
+            writer.WriteUnicodeString(reader.ReadUnicodeString(64).TrimEnd('\0'));
             writer.WritePropertyEnd();
 
             writer.WritePropertyBegin(StandardDate);
@@ -166,7 +179,7 @@ internal static class EventTraceParsers
             writer.WritePropertyEnd();
 
             writer.WritePropertyBegin(DaylightName);
-            writer.WriteUnicodeString(reader.ReadUnicodeString(32));
+            writer.WriteUnicodeString(reader.ReadUnicodeString(64).TrimEnd('\0'));
             writer.WritePropertyEnd();
 
             writer.WritePropertyBegin(DaylightDate);
@@ -237,6 +250,12 @@ internal static class EventTraceParsers
             RuntimeEventMetadata runtimeMetadata)
             where T : IEtwWriter
         {
+            // ImageBase, ProcessId, Guid, and Age. The file name is a bounded terminator scan.
+            if (reader.RemainingBytes < PointerBytes(reader) + 4 + 16 + 4)
+            {
+                return;
+            }
+
             writer.WriteEventBegin(EventMetadata, runtimeMetadata);
 
             writer.WritePropertyBegin(ImageBase);

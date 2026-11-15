@@ -16,6 +16,24 @@ public class StreamingTests
     // -----------------------------------------------------------------------
 
     [Test]
+    public async Task NativeBackend_StreamsTheErrorInsteadOfKillingTheProcess()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Ignore("Native backend is available.");
+        }
+
+        Assert.ThrowsAsync<PlatformNotSupportedException>(async () =>
+        {
+            await foreach (ReadOnlyMemory<byte> _ in EtwUtil.EnumerateEventsAsync(
+                               ["./traces/BthPS3_0.etl"],
+                               opts => opts.Backend = EtwBackend.Native))
+            {
+            }
+        });
+    }
+
+    [Test]
     [Category("EndToEnd")]
     public async Task StreamingEnumerationYieldsEventsTest()
     {

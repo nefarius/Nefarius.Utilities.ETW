@@ -624,12 +624,6 @@ public static class EtwUtil
         bool isRealtime = realtimeSessionName is not null;
         int sessionCount = isRealtime ? 1 : files!.Count;
 
-        if (!isRealtime && TraceProcessor.Resolve(opts.Backend) == EtwBackend.Managed)
-        {
-            RunManagedWorker(files!, opts, deserializer, writer, cancellationToken);
-            return;
-        }
-
         EVENT_TRACE_LOGFILEW[] sessions = new EVENT_TRACE_LOGFILEW[sessionCount];
         ulong[] handles = new ulong[sessionCount];
         int[] openTraceErrors = new int[sessionCount];
@@ -640,6 +634,12 @@ public static class EtwUtil
 
         try
         {
+            if (!isRealtime && TraceProcessor.Resolve(opts.Backend) == EtwBackend.Managed)
+            {
+                RunManagedWorker(files!, opts, deserializer, writer, cancellationToken);
+                return;
+            }
+
             for (int i = 0; i < sessionCount; ++i)
             {
                 unsafe

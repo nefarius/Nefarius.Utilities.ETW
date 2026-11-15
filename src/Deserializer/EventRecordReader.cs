@@ -47,13 +47,16 @@ internal readonly struct EventRecordReader
         long maxLength = NativeEventRecord->UserDataLength -
                          ((byte*)NativeEventRecord->UserData - (byte*)NativeEventRecord->UserContext);
 
-        while (!(ptr[length] == 0 && ptr[length + 1] == 0) && length < maxLength)
+        // A terminator is a UTF-16 code unit. Stepping one byte at a time treats the
+        // 00 00 formed by 'A' (41 00) and U+0100 (00 01) as the end of the string.
+        while (length + 1 < maxLength && (ptr[length] != 0 || ptr[length + 1] != 0))
         {
-            ++length;
+            length += 2;
         }
 
-        string value = new((char*)NativeEventRecord->UserData, 0, (length + 1) / 2);
-        IncrementBy(ref NativeEventRecord->UserData, (value.Length + 1) * 2); // +2 (via the multiplication)
+        bool terminated = length + 1 < maxLength;
+        string value = new((char*)NativeEventRecord->UserData, 0, length / 2);
+        IncrementBy(ref NativeEventRecord->UserData, length + (terminated ? 2 : 0));
         return value;
     }
 
@@ -103,7 +106,7 @@ internal readonly struct EventRecordReader
         byte* ptr = (byte*)NativeEventRecord->UserData;
         long maxLength = NativeEventRecord->UserDataLength -
                          ((byte*)NativeEventRecord->UserData - (byte*)NativeEventRecord->UserContext);
-        while (ptr[length] != 0 && length < maxLength)
+        while (length < maxLength && ptr[length] != 0)
         {
             ++length;
         }
@@ -114,7 +117,8 @@ internal readonly struct EventRecordReader
             arr[i] = (char)*ptr++;
         }
 
-        IncrementBy(ref NativeEventRecord->UserData, length + 1); // +1 for null terminator
+        bool terminated = length < maxLength;
+        IncrementBy(ref NativeEventRecord->UserData, length + (terminated ? 1 : 0));
         return new string(arr);
     }
 
