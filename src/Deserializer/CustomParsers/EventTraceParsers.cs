@@ -247,8 +247,8 @@ internal static class EventTraceParsers
             RuntimeEventMetadata runtimeMetadata)
             where T : IEtwWriter
         {
-            // ImageBase, ProcessId, Guid, and Age. The file name is a bounded terminator scan.
-            if (reader.RemainingBytes < PointerBytes(reader) + 4 + 16 + 4)
+            // Guid and Age. The file name is a bounded terminator scan.
+            if (reader.RemainingBytes < 16 + 4)
             {
                 return;
             }
