@@ -413,8 +413,23 @@ internal static unsafe class TraceLoggingDecoder
             throw new FormatException("A TraceLogging custom decoder failed.", ex);
         }
 
+        if (decoded is float and not float.NaN and not float.PositiveInfinity and not float.NegativeInfinity)
+        {
+            return decoded;
+        }
+
+        if (decoded is double and not double.NaN and not double.PositiveInfinity and not double.NegativeInfinity)
+        {
+            return decoded;
+        }
+
+        if (decoded is float or double)
+        {
+            throw new FormatException("A TraceLogging custom decoder returned a non-finite number.");
+        }
+
         if (decoded is null or string or byte[] or bool or sbyte or byte or short or ushort or int or uint or long
-            or ulong or float or double or Guid or DateTime)
+            or ulong or Guid or DateTime)
         {
             return decoded;
         }
