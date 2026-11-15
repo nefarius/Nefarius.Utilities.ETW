@@ -25,13 +25,13 @@ public class BackendParityTests
 
     public static IEnumerable<TestCaseData> Cases()
     {
-        yield return new TestCaseData("BthPS3_0", "./traces/BthPS3_0.etl", false, false).SetName("BthPS3_0");
+        yield return new TestCaseData("BthPS3_0", "./traces/BthPS3_0.etl", false, false).SetName("{m}(BthPS3_0)");
         yield return new TestCaseData("BthPS3_0_rewrite", "./traces/BthPS3_0.etl", true, false)
-            .SetName("BthPS3_0_rewrite");
-        yield return new TestCaseData("BthPS3_0_raw", "./traces/BthPS3_0.etl", false, true).SetName("BthPS3_0_raw");
-        yield return new TestCaseData("DsHidMini", "./traces/DsHidMini.etl", false, false).SetName("DsHidMini");
+            .SetName("{m}(BthPS3_0_rewrite)");
+        yield return new TestCaseData("BthPS3_0_raw", "./traces/BthPS3_0.etl", false, true).SetName("{m}(BthPS3_0_raw)");
+        yield return new TestCaseData("DsHidMini", "./traces/DsHidMini.etl", false, false).SetName("{m}(DsHidMini)");
         yield return new TestCaseData("DsHidMini_rewrite", "./traces/DsHidMini.etl", true, false)
-            .SetName("DsHidMini_rewrite");
+            .SetName("{m}(DsHidMini_rewrite)");
     }
 
     private static string Convert(string path, bool rewrite, bool raw, EtwBackend backend)
