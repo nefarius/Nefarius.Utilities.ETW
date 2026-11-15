@@ -11,6 +11,9 @@ internal static class Program
         // Interrupts are handled by the command itself: Ctrl+C reaches both ends of a pipeline, and the relay has to
         // keep reading until its producer has written the end frame.
         InvocationConfiguration configuration = new() { ProcessTerminationTimeout = null };
-        return await root.Parse(args).InvokeAsync(configuration);
+        ParseResult parsed = root.Parse(args);
+        int code = await parsed.InvokeAsync(configuration);
+        // The parser reports its own diagnostics; usage failures are exit code 2, like the command's own checks.
+        return parsed.Errors.Count > 0 ? 2 : code;
     }
 }

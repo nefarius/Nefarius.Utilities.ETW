@@ -86,7 +86,10 @@ public class ProcessTests
         await _serving;
     }
 
-    private async Task<(int Code, string Stderr)> RunTool(byte[] stdin, params string[] args)
+    private async Task<(int Code, string Stderr)> RunTool(byte[] stdin, params string[] args) =>
+        await RunTool(stdin, true, args);
+
+    private async Task<(int Code, string Stderr)> RunTool(byte[] stdin, bool emptyStdout, params string[] args)
     {
         string dll = Path.Combine(AppContext.BaseDirectory, "etwrelay.dll");
         Assert.That(File.Exists(dll), Is.True, $"{dll} must be copied next to the tests.");
@@ -115,8 +118,13 @@ public class ProcessTests
 
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(60));
         await process.WaitForExitAsync(timeout.Token);
-        Assert.That(await stdout, Is.Empty, "Diagnostics belong on stderr; stdout stays clean.");
-        return (process.ExitCode, await stderr);
+        string output = await stdout;
+        if (emptyStdout)
+        {
+            Assert.That(output, Is.Empty, "Diagnostics belong on stderr; stdout stays clean.");
+        }
+
+        return (process.ExitCode, (await stderr) + output);
     }
 
     private List<byte[]> DeliveredFrames()
@@ -169,6 +177,18 @@ public class ProcessTests
         {
             Assert.That(code, Is.EqualTo(2));
             Assert.That(stderr, Does.Contain("[!]"));
+        });
+    }
+
+    [Test]
+    public async Task UnknownOption_ExitsTwoAndKeepsTheParserDiagnostic()
+    {
+        (int code, string stderr) = await RunTool([], false, "--not-an-option");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(code, Is.EqualTo(2));
+            Assert.That(stderr, Does.Contain("--not-an-option"));
         });
     }
 

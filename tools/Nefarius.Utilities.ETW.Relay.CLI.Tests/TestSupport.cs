@@ -208,8 +208,13 @@ internal sealed class TinyReadStream(byte[] data) : Stream
 internal sealed class PipeLikeStream : Stream
 {
     private readonly Channel<byte[]> _channel = Channel.CreateUnbounded<byte[]>();
+    private readonly object _gate = new();
     private byte[] _current = [];
     private int _offset;
+    private long _pushed;
+    private long _delivered;
+    private int _waiting;
+    private TaskCompletionSource _caughtUp = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public override bool CanRead => true;
     public override bool CanSeek => false;
@@ -222,7 +227,33 @@ internal sealed class PipeLikeStream : Stream
         set => throw new NotSupportedException();
     }
 
-    public void Push(byte[] bytes) => _channel.Writer.TryWrite(bytes);
+    public void Push(byte[] bytes)
+    {
+        lock (_gate)
+        {
+            _pushed += bytes.Length;
+            if (_caughtUp.Task.IsCompleted)
+            {
+                _caughtUp = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+        }
+
+        if (!_channel.Writer.TryWrite(bytes))
+        {
+            throw new InvalidOperationException("The stream is already complete.");
+        }
+    }
+
+    /// <summary>
+    ///     Completes once every pushed byte has been read and the consumer is blocked waiting for the next one.
+    /// </summary>
+    public Task WaitUntilNextReadBlocks()
+    {
+        lock (_gate)
+        {
+            return _pushed > 0 && _delivered >= _pushed && _waiting > 0 ? Task.CompletedTask : _caughtUp.Task;
+        }
+    }
 
     public void Complete() => _channel.Writer.TryComplete();
 
@@ -230,9 +261,25 @@ internal sealed class PipeLikeStream : Stream
     {
         while (_offset >= _current.Length)
         {
-            if (!await _channel.Reader.WaitToReadAsync(cancellationToken))
+            lock (_gate)
             {
-                return 0;
+                _waiting++;
+                SignalIfCaughtUp();
+            }
+
+            try
+            {
+                if (!await _channel.Reader.WaitToReadAsync(cancellationToken))
+                {
+                    return 0;
+                }
+            }
+            finally
+            {
+                lock (_gate)
+                {
+                    _waiting--;
+                }
             }
 
             _channel.Reader.TryRead(out byte[]? next);
@@ -243,7 +290,21 @@ internal sealed class PipeLikeStream : Stream
         int n = Math.Min(buffer.Length, _current.Length - _offset);
         _current.AsMemory(_offset, n).CopyTo(buffer);
         _offset += n;
+        lock (_gate)
+        {
+            _delivered += n;
+            SignalIfCaughtUp();
+        }
+
         return n;
+    }
+
+    private void SignalIfCaughtUp()
+    {
+        if (_pushed > 0 && _delivered >= _pushed && _waiting > 0)
+        {
+            _caughtUp.TrySetResult();
+        }
     }
 
     public override int Read(byte[] buffer, int offset, int count) =>

@@ -385,8 +385,9 @@ public class RunnerTests
             Run.RunAsync(Run.Settings(), pipe, handler, abort.Token);
 
         pipe.Push(Frames.Concat(Frames.Session(Guid.NewGuid(), 2, end: false)));
-        await Task.Delay(200);
-        await abort.CancelAsync(); // the pipe never closes: the producer is gone
+        // Cancel only once those frames are queued and the reader is blocked on the next one.
+        await pipe.WaitUntilNextReadBlocks().WaitAsync(TimeSpan.FromSeconds(5));
+        await abort.CancelAsync();
 
         (int code, RelayRunner runner, _) = await running.WaitAsync(TimeSpan.FromSeconds(15));
 
@@ -395,5 +396,68 @@ public class RunnerTests
             Assert.That(code, Is.EqualTo(0));
             Assert.That(runner.FramesSent, Is.EqualTo(3));
         });
+    }
+
+    [Test]
+    public void Abort_WhileDeliveryIsStuck_IsADeliveryFailure()
+    {
+        PipeLikeStream pipe = new();
+        using CancellationTokenSource abort = new();
+        HangFirstHandler handler = new();
+
+        Task<(int Code, RelayRunner Runner, List<TimeSpan> Delays)> running =
+            Run.RunAsync(Run.Settings(), pipe, handler, abort.Token);
+
+        pipe.Push(Frames.Concat(Frames.Session(Guid.NewGuid(), 1, end: false)));
+        Assert.That(pipe.WaitUntilNextReadBlocks().Wait(TimeSpan.FromSeconds(5)), Is.True);
+        abort.Cancel();
+
+        // The sender gets a few seconds of grace, then the unfinished request is a failure.
+        DeliveryException? ex = Assert.ThrowsAsync<DeliveryException>(async () => await running);
+        Assert.That(ex!.Message, Does.Contain("Interrupted"));
+    }
+
+    [Test]
+    public void MalformedAcknowledgement_IsNotTreatedAsDelivered()
+    {
+        RecordingHandler handler = new((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent([0x80])
+        }));
+
+        DeliveryException? ex = Assert.ThrowsAsync<DeliveryException>(async () =>
+            await Run.RunAsync(Run.Settings(), Binary(Frames.Session(Guid.NewGuid(), 1)), handler));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handler.Requests, Has.Count.EqualTo(1));
+            Assert.That(ex!.Message, Does.Contain("acknowledgement"));
+        });
+    }
+
+    [Test]
+    public void UnreadableRejectionBody_StaysAPermanentFailure()
+    {
+        RecordingHandler handler = new((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new ThrowingContent()
+        }));
+
+        Assert.ThrowsAsync<DeliveryException>(async () =>
+            await Run.RunAsync(Run.Settings(), Binary(Frames.Session(Guid.NewGuid(), 1)), handler));
+
+        Assert.That(handler.Requests, Has.Count.EqualTo(1));
+    }
+
+    private sealed class ThrowingContent : HttpContent
+    {
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) =>
+            throw new IOException("body unavailable");
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
     }
 }

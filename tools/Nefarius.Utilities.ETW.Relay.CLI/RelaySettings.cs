@@ -80,6 +80,14 @@ internal sealed class RelaySettings
             throw new UsageException("--endpoint must not embed credentials; use --header over https.");
         }
 
+        // A query is kept for https endpoints. On http it would travel in clear text, and names like
+        // "api_key" are not covered by the header check, so any query is refused there.
+        if (baseUri.Scheme == "http" && !string.IsNullOrEmpty(baseUri.Query) && baseUri.Query != "?")
+        {
+            throw new UsageException(
+                "--endpoint cannot carry a query string over http://; it would be sent in clear text. Use https://.");
+        }
+
         if (baseUri.Scheme == "http")
         {
             string? credential = headers.Select(h => h.Key).FirstOrDefault(IsCredentialHeader);
@@ -90,15 +98,16 @@ internal sealed class RelaySettings
             }
         }
 
-        string trimmed = baseUri.GetLeftPart(UriPartial.Path).TrimEnd('/');
-        return new Uri(trimmed.EndsWith("/v1/logs", StringComparison.OrdinalIgnoreCase)
-            ? trimmed
-            : trimmed + "/v1/logs");
+        UriBuilder builder = new(baseUri);
+        string path = builder.Path.TrimEnd('/');
+        builder.Path = path.EndsWith("/v1/logs", StringComparison.OrdinalIgnoreCase) ? path : path + "/v1/logs";
+        return builder.Uri;
     }
 
     public static bool IsCredentialHeader(string name) =>
         name.Equals("Authorization", StringComparison.OrdinalIgnoreCase) ||
         name.Equals("Proxy-Authorization", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("Cookie", StringComparison.OrdinalIgnoreCase) ||
         name.Contains("api-key", StringComparison.OrdinalIgnoreCase) ||
         name.Contains("apikey", StringComparison.OrdinalIgnoreCase) ||
         name.Contains("token", StringComparison.OrdinalIgnoreCase) ||

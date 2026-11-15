@@ -34,7 +34,7 @@ PowerShell 7.4 passes bytes unchanged between **native commands** (`PSNativeComm
 
 If `etwrelay` reports an invalid first frame it explains this and names the two fixes.
 
-Press **Ctrl+C once** to stop: `etwutils` ends the session cleanly with an end frame and `etwrelay` keeps delivering until its input closes (at most 10 seconds). Press it again to stop immediately.
+Press **Ctrl+C once** to stop: `etwutils` ends the session cleanly with an end frame and `etwrelay` keeps delivering until its input closes (at most 10 seconds). Press it again to stop immediately; frames still queued then count as a delivery failure (exit code 1).
 
 You can also relay a recording: `etwrelay --input frames.bin`.
 
@@ -80,7 +80,7 @@ Diagnostics go to standard error only; standard output stays empty.
 ## Security
 
 - Raw frames carry event payloads exactly as captured and may contain sensitive data. Use `https://` endpoints outside a trusted network.
-- Credential-like headers (`Authorization`, `Proxy-Authorization`, and names containing `api-key`, `apikey`, `token`, `secret` or `password`) are **refused** for `http://` endpoints. Credentials in the URL are refused as well.
+- Credential-like headers (`Authorization`, `Proxy-Authorization`, `Cookie`, and names containing `api-key`, `apikey`, `token`, `secret` or `password`) are **refused** for `http://` endpoints. Credentials in the URL are refused as well, including any query string on an `http://` endpoint. Redirects are not followed, so a credential header cannot be sent on to another host.
 - Input is bounded before anything is allocated: a frame's declared length is checked against `--max-frame-bytes`, and a Base64 line is rejected as soon as it exceeds what such a frame needs.
 - The relay session id is taken from the hello frame; `--resource etw.relay.session_id=…` is rejected.
 

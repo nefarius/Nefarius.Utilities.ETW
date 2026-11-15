@@ -29,8 +29,19 @@ internal sealed class OtlpSender : IDisposable
         _log = log;
         _delay = delay ?? Task.Delay;
         // The per-request timeout is applied with a token so that it can be told apart from a shutdown.
-        _http = handler is null ? new HttpClient() : new HttpClient(handler, false);
-        _http.Timeout = Timeout.InfiniteTimeSpan;
+        // Redirects are off: a 3xx must not carry credential headers to another host.
+        HttpMessageHandler transport = handler ?? new SocketsHttpHandler();
+        switch (transport)
+        {
+            case HttpClientHandler http:
+                http.AllowAutoRedirect = false;
+                break;
+            case SocketsHttpHandler sockets:
+                sockets.AllowAutoRedirect = false;
+                break;
+        }
+
+        _http = new HttpClient(transport, disposeHandler: handler is null) { Timeout = Timeout.InfiniteTimeSpan };
     }
 
     public void Dispose() => _http.Dispose();
@@ -64,18 +75,45 @@ internal sealed class OtlpSender : IDisposable
             using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(_settings.RequestTimeout);
 
+            HttpResponseMessage response;
             try
             {
                 using HttpRequestMessage request = CreateRequest(body);
-                using HttpResponseMessage response = await _http
-                    .SendAsync(request, HttpCompletionOption.ResponseContentRead, timeout.Token)
+                response = await _http
+                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token)
                     .ConfigureAwait(false);
+            }
+            catch (HttpRequestException ex)
+            {
+                failure = $"gateway unreachable ({ex.Message})";
+                goto retry;
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                failure = $"request timed out after {_settings.RequestTimeout.TotalSeconds:0.#}s";
+                goto retry;
+            }
 
+            using (response)
+            {
+                // The status decides the outcome. A body that cannot be read afterwards must not turn a
+                // permanent rejection into a retry, or a success into an assumed success.
                 int status = (int)response.StatusCode;
                 if (response.IsSuccessStatusCode)
                 {
-                    CheckPartialSuccess(await response.Content.ReadAsByteArrayAsync(timeout.Token)
-                        .ConfigureAwait(false));
+                    byte[] payload;
+                    try
+                    {
+                        payload = await response.Content.ReadAsByteArrayAsync(timeout.Token).ConfigureAwait(false);
+                    }
+                    catch (Exception ex) when (ex is HttpRequestException or IOException or OperationCanceledException)
+                    {
+                        throw new DeliveryException(
+                            "The gateway accepted the request but its acknowledgement could not be read: " +
+                            ex.Message);
+                    }
+
+                    CheckPartialSuccess(payload);
                     return;
                 }
 
@@ -86,20 +124,23 @@ internal sealed class OtlpSender : IDisposable
                 }
                 else
                 {
-                    string text = await ReadBodySnippetAsync(response, timeout.Token).ConfigureAwait(false);
+                    string text = string.Empty;
+                    try
+                    {
+                        text = await ReadBodySnippetAsync(response, timeout.Token).ConfigureAwait(false);
+                    }
+                    catch (Exception ex) when (ex is HttpRequestException or IOException or OperationCanceledException)
+                    {
+                        // The rejection itself stands.
+                    }
+
                     throw new DeliveryException(
                         $"The gateway rejected the request with {status} {response.ReasonPhrase}" +
                         (text.Length > 0 ? $": {text}" : ".") + " This is not retried.");
                 }
             }
-            catch (HttpRequestException ex)
-            {
-                failure = $"gateway unreachable ({ex.Message})";
-            }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-            {
-                failure = $"request timed out after {_settings.RequestTimeout.TotalSeconds:0.#}s";
-            }
+
+            retry:
 
             if (attempt >= _settings.MaxRetries)
             {
@@ -180,10 +221,11 @@ internal sealed class OtlpSender : IDisposable
         {
             response = ExportLogsServiceResponse.Parser.ParseFrom(body);
         }
-        catch (InvalidProtocolBufferException)
+        catch (InvalidProtocolBufferException ex)
         {
-            // Some collectors answer with an unrelated body. The status already said the data arrived.
-            return;
+            throw new DeliveryException(
+                "The gateway returned a success status whose body is not a valid OTLP acknowledgement: " +
+                ex.Message);
         }
 
         if (response.PartialSuccess is { RejectedLogRecords: > 0 } rejected)

@@ -134,9 +134,12 @@ public class SettingsTests
                 Is.EqualTo("http://h:4318/v1/logs"));
             Assert.That(RelaySettings.BuildEndpoint("https://h/otlp/v1/logs", NoHeaders).AbsoluteUri,
                 Is.EqualTo("https://h/otlp/v1/logs"));
+            Assert.That(RelaySettings.BuildEndpoint("https://h:4318/ingest?keep=1", NoHeaders).AbsoluteUri,
+                Is.EqualTo("https://h:4318/ingest/v1/logs?keep=1"));
         });
     }
 
+    [TestCase("Cookie")]
     [TestCase("Authorization")]
     [TestCase("proxy-authorization")]
     [TestCase("X-Api-Key")]
@@ -159,6 +162,7 @@ public class SettingsTests
     [TestCase("ftp://h")]
     [TestCase("not a url")]
     [TestCase("http://user:pw@h")]
+    [TestCase("http://h:4318/?api_key=secret")]
     public void BadEndpoints_AreRefused(string endpoint) =>
         Assert.Throws<UsageException>(() => RelaySettings.BuildEndpoint(endpoint, NoHeaders));
 

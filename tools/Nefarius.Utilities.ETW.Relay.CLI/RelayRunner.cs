@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Threading.Channels;
 
 using Nefarius.Utilities.ETW.OpenTelemetry;
@@ -82,8 +83,9 @@ internal sealed class RelayRunner(RelaySettings settings, OtlpSender sender, Tex
         }
         catch (OperationCanceledException) when (abort.IsCancellationRequested)
         {
-            // Grace period over: what was not delivered is abandoned.
+            // The grace period ended before the queued frames were acknowledged.
             log.WriteLine("[*] Interrupted before everything was delivered.");
+            throw new DeliveryException("Interrupted before everything was delivered.");
         }
 
         // A blocked console read cannot always be cancelled, and the sender has finished anyway.
@@ -155,7 +157,7 @@ internal sealed class RelayRunner(RelaySettings settings, OtlpSender sender, Tex
         List<byte[]> batch = [];
         Guid batchSession = Guid.Empty;
         long batchBytes = 0;
-        DateTime deadline = default;
+        long deadline = 0;
         Item? carry = null;
 
         while (true)
@@ -175,7 +177,7 @@ internal sealed class RelayRunner(RelaySettings settings, OtlpSender sender, Tex
                 }
                 else
                 {
-                    TimeSpan remaining = deadline - DateTime.UtcNow;
+                    TimeSpan remaining = Stopwatch.GetElapsedTime(Stopwatch.GetTimestamp(), deadline);
                     using CancellationTokenSource wait = CancellationTokenSource.CreateLinkedTokenSource(token);
                     wait.CancelAfter(remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero);
                     try
@@ -213,7 +215,8 @@ internal sealed class RelayRunner(RelaySettings settings, OtlpSender sender, Tex
             if (batch.Count == 0)
             {
                 batchSession = item.Session;
-                deadline = DateTime.UtcNow + settings.FlushInterval;
+                deadline = Stopwatch.GetTimestamp() +
+                           (long)(settings.FlushInterval.TotalSeconds * Stopwatch.Frequency);
             }
 
             batch.Add(item.Frame);

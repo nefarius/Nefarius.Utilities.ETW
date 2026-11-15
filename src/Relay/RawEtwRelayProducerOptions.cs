@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace Nefarius.Utilities.ETW.Relay;
 
 /// <summary>
@@ -27,7 +29,22 @@ public sealed class RawEtwRelayProducerOptions
     internal void Validate()
     {
         ArgumentNullException.ThrowIfNull(Producer);
-        ArgumentOutOfRangeException.ThrowIfLessThan(MaxFrameLength, (uint)RawEtwFrameCodec.PrefixLength + 1);
+
+        // The receiver rejects a description longer than this, measured in UTF-8 bytes (its default is 256).
+        int producerBytes = Encoding.UTF8.GetByteCount(Producer);
+        int producerLimit = RawEtwRelayLimits.Default.MaxProducerStringBytes;
+        if (producerBytes > producerLimit)
+        {
+            throw new ArgumentException(
+                $"Producer description is {producerBytes} UTF-8 bytes; a relay receiver accepts at most {producerLimit}.",
+                nameof(Producer));
+        }
+
+        // Same sizing as RawEtwFrameCodec: prefix, hello header, and the description padded to 8 bytes.
+        // A smaller limit makes the hello frame undeliverable, so the session can never be established.
+        uint helloLength = (uint)(RawEtwFrameCodec.PrefixLength + RawEtwFrameCodec.HelloHeaderLength +
+                                   ((producerBytes + 7) & ~7));
+        ArgumentOutOfRangeException.ThrowIfLessThan(MaxFrameLength, helloLength);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(MaxFrameLength, (uint)RawEtwRelayLimits.AbsoluteMaxFrameLength);
     }
 }

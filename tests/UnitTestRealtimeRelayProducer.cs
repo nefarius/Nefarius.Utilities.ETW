@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Security.Principal;
 
@@ -24,7 +25,32 @@ public class RealtimeRelayProducerArgumentTests
     [Test]
     public void FrameLimitTooSmall_Throws() =>
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            EtwUtil.EnumerateRealtimeRelayFramesAsync("s", o => o.MaxFrameLength = 8));
+            EtwUtil.EnumerateRealtimeRelayFramesAsync("s", o =>
+            {
+                o.Producer = "producer"; // 8 bytes, padded to 8: the hello frame is 72 bytes
+                o.MaxFrameLength = 71;
+            }));
+
+    [Test]
+    public void FrameLimitCoveringTheHello_IsAccepted() =>
+        Assert.DoesNotThrow(() =>
+            EtwUtil.EnumerateRealtimeRelayFramesAsync("s", o =>
+            {
+                o.Producer = "producer";
+                o.MaxFrameLength = 72;
+            }));
+
+    [Test]
+    public void ProducerDescription_IsLimitedByUtf8Bytes()
+    {
+        // 'é' is one character and two UTF-8 bytes, so the 256-byte receiver limit is 128 of them.
+        Assert.DoesNotThrow(() =>
+            EtwUtil.EnumerateRealtimeRelayFramesAsync("s", o => o.Producer = new string('é', 128)));
+
+        ArgumentException? ex = Assert.Throws<ArgumentException>(() =>
+            EtwUtil.EnumerateRealtimeRelayFramesAsync("s", o => o.Producer = new string('é', 129)));
+        Assert.That(ex!.Message, Does.Contain("258"));
+    }
 
     [Test]
     public void FrameLimitAboveAbsoluteMaximum_Throws() =>
@@ -85,24 +111,44 @@ public class RealtimeRelayProducerTests
         Guid sessionId = Guid.NewGuid();
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(30));
         List<RawEtwFrame> frames = [];
+        int events = 0;
         bool cancelled = false;
+        TaskCompletionSource hello = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        try
+        Task consume = Task.Run(async () =>
         {
-            await foreach (byte[] bytes in EtwUtil.EnumerateRealtimeRelayFramesAsync(SessionName,
-                               o => o.SessionId = sessionId, cts.Token))
+            try
             {
-                frames.Add(RawEtwFrameCodec.Decode(bytes));
-                if (frames.Count(f => f.Type == RawEtwFrameType.Event) >= 5)
+                await foreach (byte[] bytes in EtwUtil.EnumerateRealtimeRelayFramesAsync(SessionName,
+                                   o => o.SessionId = sessionId, cts.Token))
                 {
-                    cts.Cancel();
+                    RawEtwFrame frame = RawEtwFrameCodec.Decode(bytes);
+                    frames.Add(frame);
+                    if (frame.Type == RawEtwFrameType.Hello)
+                    {
+                        hello.TrySetResult();
+                    }
+
+                    if (frame.Type == RawEtwFrameType.Event && Interlocked.Increment(ref events) >= 5)
+                    {
+                        await cts.CancelAsync();
+                    }
                 }
             }
-        }
-        catch (OperationCanceledException)
+            catch (OperationCanceledException)
+            {
+                cancelled = true;
+            }
+        });
+
+        // Activity starts only once the session is established, and it is what produces the events we count.
+        await hello.Task.WaitAsync(cts.Token);
+        while (Volatile.Read(ref events) < 5 && !cts.IsCancellationRequested)
         {
-            cancelled = true;
+            await SpawnProcessAsync();
         }
+
+        await consume;
 
         using (Assert.EnterMultipleScope())
         {
@@ -124,14 +170,32 @@ public class RealtimeRelayProducerTests
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(30));
         int received = 0;
+        TaskCompletionSource hello = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await foreach (byte[] _ in EtwUtil.EnumerateRealtimeRelayFramesAsync(SessionName, cancellationToken: cts.Token))
+        Task consume = Task.Run(async () =>
         {
-            if (++received >= 3)
+            await foreach (byte[] bytes in EtwUtil.EnumerateRealtimeRelayFramesAsync(SessionName,
+                               cancellationToken: cts.Token))
             {
-                break;
+                if (RawEtwFrameCodec.Decode(bytes).Type == RawEtwFrameType.Hello)
+                {
+                    hello.TrySetResult();
+                }
+
+                if (Interlocked.Increment(ref received) >= 3)
+                {
+                    break;
+                }
             }
+        });
+
+        await hello.Task.WaitAsync(cts.Token);
+        while (Volatile.Read(ref received) < 3 && !cts.IsCancellationRequested)
+        {
+            await SpawnProcessAsync();
         }
+
+        await consume.WaitAsync(cts.Token);
 
         // A second consumer can attach only if the first released its handle.
         await foreach (byte[] _ in EtwUtil.EnumerateRealtimeRelayFramesAsync(SessionName, cancellationToken: cts.Token))
@@ -140,5 +204,15 @@ public class RealtimeRelayProducerTests
         }
 
         Assert.That(received, Is.EqualTo(3));
+    }
+
+    private static async Task SpawnProcessAsync()
+    {
+        using Process process = Process.Start(new ProcessStartInfo("cmd.exe", "/c exit")
+        {
+            CreateNoWindow = true,
+            UseShellExecute = false
+        })!;
+        await process.WaitForExitAsync();
     }
 }
