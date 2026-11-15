@@ -86,9 +86,9 @@ public static class SymbolStore
         {
             string url = $"{configuration.ServerUrl!.TrimEnd('/')}/{reference.IndexPrefix}";
             string temporaryPath = $"{cacheFilePath}.{Guid.NewGuid():N}.tmp";
+            string identityDirectory = Path.GetDirectoryName(cacheFilePath)!;
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(cacheFilePath)!);
                 using HttpResponseMessage response = await httpClient
                     .GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                     .ConfigureAwait(false);
@@ -116,20 +116,14 @@ public static class SymbolStore
                 }
 
                 response.EnsureSuccessStatusCode();
-                await using (FileStream temporary = new(
-                                 temporaryPath,
-                                 FileMode.Create,
-                                 FileAccess.Write,
-                                 FileShare.None,
-                                 65536,
-                                 useAsync: true))
+                // Only a successful response is worth a cache directory. Failures must not leave it behind.
+                await using (FileStream temporary = OpenDownload(temporaryPath, identityDirectory))
                 {
                     await response.Content.CopyToAsync(temporary, cancellationToken).ConfigureAwait(false);
                 }
 
                 if (!MatchesReference(temporaryPath, reference))
                 {
-                    DeleteIfExists(temporaryPath);
                     return new ResolvedPdb
                     {
                         Reference = reference,
@@ -150,12 +144,10 @@ public static class SymbolStore
             }
             catch (OperationCanceledException)
             {
-                DeleteIfExists(temporaryPath);
                 throw;
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                DeleteIfExists(temporaryPath);
                 return new ResolvedPdb
                 {
                     Reference = reference,
@@ -163,6 +155,15 @@ public static class SymbolStore
                     Failure = PdbResolutionFailure.DownloadFailed,
                     Detail = $"{ex.GetType().Name}: {ex.Message}"
                 };
+            }
+            finally
+            {
+                // The cache slot may already hold a different PDB, so its presence must not keep this attempt's file.
+                DeleteIfExists(temporaryPath);
+                if (!File.Exists(cacheFilePath))
+                {
+                    RemoveEmptyIdentityDirectory(identityDirectory, configuration.CacheDirectory);
+                }
             }
         }
 
@@ -235,6 +236,70 @@ public static class SymbolStore
         }
 
         return Directory.EnumerateFiles(directory, "*.pdb", SearchOption.AllDirectories);
+    }
+
+    /// <summary>
+    ///     Creates the identity directory and opens the temporary file. Retries when a concurrent failed transfer
+    ///     removes the still-empty directory between the two calls.
+    /// </summary>
+    private static FileStream OpenDownload(string temporaryPath, string identityDirectory)
+    {
+        const int attempts = 3;
+        for (int attempt = 1; ; attempt++)
+        {
+            Directory.CreateDirectory(identityDirectory);
+            try
+            {
+                return new FileStream(
+                    temporaryPath, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true);
+            }
+            catch (DirectoryNotFoundException) when (attempt < attempts)
+            {
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Removes an identity directory left by a failed transfer, and its PDB-name parent when that is empty too.
+    ///     Stops at the cache root and never deletes a directory that still holds a file.
+    /// </summary>
+    private static void RemoveEmptyIdentityDirectory(string identityDirectory, string cacheDirectory)
+    {
+        string stop = Path.GetFullPath(cacheDirectory)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string? current = identityDirectory;
+
+        while (!string.IsNullOrEmpty(current))
+        {
+            string full = Path.GetFullPath(current)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (full.Equals(stop, StringComparison.OrdinalIgnoreCase) ||
+                !full.StartsWith(stop + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
+                !Directory.Exists(full))
+            {
+                return;
+            }
+
+            try
+            {
+                if (Directory.EnumerateFileSystemEntries(full).Any())
+                {
+                    return;
+                }
+
+                Directory.Delete(full);
+            }
+            catch (IOException)
+            {
+                return;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return;
+            }
+
+            current = Path.GetDirectoryName(full);
+        }
     }
 
     private static void DeleteIfExists(string path)
