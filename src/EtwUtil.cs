@@ -11,6 +11,7 @@ using Windows.Win32.Foundation;
 using Nefarius.Utilities.ETW.Deserializer;
 using Nefarius.Utilities.ETW.Deserializer.WPP;
 using Nefarius.Utilities.ETW.Etl;
+using System.Runtime.Versioning;
 using Nefarius.Utilities.ETW.Exceptions;
 
 namespace Nefarius.Utilities.ETW;
@@ -249,6 +250,7 @@ public static class EtwUtil
     ///     <paramref name="sessionName" /> is empty or whitespace.
     /// </exception>
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    [SupportedOSPlatform("windows")]
     public static bool ConvertRealtimeToJson(
         Utf8JsonWriter jsonWriter,
         string sessionName,
@@ -261,6 +263,7 @@ public static class EtwUtil
         {
             throw new ArgumentException("Session name must not be empty or whitespace.", nameof(sessionName));
         }
+        PlatformGuard.ThrowIfNotWindows();
 
         EtwJsonConverterOptions opts = new();
         options?.Invoke(opts);
@@ -443,6 +446,7 @@ public static class EtwUtil
     /// <exception cref="ArgumentException"><paramref name="sessionName" /> is empty or whitespace.</exception>
     /// <exception cref="EtwOpenTraceException">The session could not be opened by the ETW API.</exception>
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    [SupportedOSPlatform("windows")]
     public static IAsyncEnumerable<ReadOnlyMemory<byte>> EnumerateRealtimeEventsAsync(
         string sessionName,
         Action<EtwJsonConverterOptions>? options = null,
@@ -453,6 +457,7 @@ public static class EtwUtil
         {
             throw new ArgumentException("Session name must not be empty or whitespace.", nameof(sessionName));
         }
+        PlatformGuard.ThrowIfNotWindows();
 
         EtwJsonConverterOptions opts = new();
         options?.Invoke(opts);
@@ -468,6 +473,7 @@ public static class EtwUtil
     /// <exception cref="ArgumentNullException"><paramref name="sessionName" /> is <see langword="null" />.</exception>
     /// <exception cref="ArgumentException"><paramref name="sessionName" /> is empty or whitespace.</exception>
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    [SupportedOSPlatform("windows")]
     public static void StopOrphanSession(string sessionName)
     {
         ArgumentNullException.ThrowIfNull(sessionName);
@@ -475,6 +481,7 @@ public static class EtwUtil
         {
             throw new ArgumentException("Session name must not be empty or whitespace.", nameof(sessionName));
         }
+        PlatformGuard.ThrowIfNotWindows();
 
         unsafe
         {
@@ -530,8 +537,10 @@ public static class EtwUtil
     ///     the system reports more than 256 concurrent sessions and the buffer cannot be grown further.
     /// </exception>
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    [SupportedOSPlatform("windows")]
     public static IReadOnlyList<string> EnumerateSessionNames()
     {
+        PlatformGuard.ThrowIfNotWindows();
         // ETW session names are limited to 1 024 characters including the null terminator.
         const int MaxNameChars = 1024;
 

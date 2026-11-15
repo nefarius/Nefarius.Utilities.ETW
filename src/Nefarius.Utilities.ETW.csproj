@@ -12,6 +12,8 @@
         <Description>Summary. README takes priority over this but nice to have.</Description>
         <NoWarn Condition="'$(CI)' == 'true'">CS1591;CS8618;CS8600;CS8601;CS8603;CS8604;CS8765;CS0219;CS8625;CS8625;CS8714</NoWarn>
         <NoWarn>CS8765;CS1591;CS8600</NoWarn>
+        <!-- Windows-only calls are gated at runtime by the backend selection and PlatformGuard. -->
+        <NoWarn>$(NoWarn);CA1416</NoWarn>
     </PropertyGroup>
     
     <PropertyGroup>
