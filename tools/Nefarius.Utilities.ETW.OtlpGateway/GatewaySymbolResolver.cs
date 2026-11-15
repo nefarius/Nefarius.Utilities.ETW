@@ -326,8 +326,9 @@ public sealed class GatewaySymbolResolver : IDisposable
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            _logger.LogWarning(ex, "Symbols for {Pdb} ({Guid}, age {Age}) could not be loaded.",
-                name, identity.Guid, identity.Age);
+            _logger.LogWarning(ex,
+                "Symbols for {Pdb} ({Guid}, age {Age}) could not be loaded after {Attempts} attempt(s).",
+                name, identity.Guid, identity.Age, attempts);
             entry.MarkFailed(_time.GetUtcNow() + FailureRetryDelay);
         }
         finally

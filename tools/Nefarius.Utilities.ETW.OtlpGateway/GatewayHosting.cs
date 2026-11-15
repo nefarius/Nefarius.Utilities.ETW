@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Security.Claims;
+using System.Text;
 
 using Google.Protobuf;
 
@@ -190,7 +191,7 @@ public static class GatewayExtensions
                 SessionIdleTimeout = options.Limits.SessionIdleTimeout,
                 OnHello = (tenant, sessionId, hello) => sessions.LogInformation(
                     "Relay hello accepted for session {SessionId}, tenant {Tenant}, producer {Producer}, maximum frame size {MaxFrameLength}.",
-                    sessionId, tenant, hello.Producer, hello.MaxFrameLength),
+                    sessionId, tenant, EscapeForLog(hello.Producer), hello.MaxFrameLength),
                 OnEnd = (tenant, sessionId) => sessions.LogInformation(
                     "Relay end accepted for session {SessionId}, tenant {Tenant}.",
                     sessionId, tenant)
@@ -305,6 +306,33 @@ public static class GatewayExtensions
         }
 
         return buffer.ToArray();
+    }
+
+    /// <summary>
+    ///     Keeps untrusted text on one log line. Carriage returns, line feeds, and other terminal control characters are
+    ///     escaped.
+    /// </summary>
+    private static string EscapeForLog(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        StringBuilder escaped = new(value.Length);
+        foreach (char c in value)
+        {
+            if (char.IsControl(c) || c is '\u2028' or '\u2029')
+            {
+                escaped.Append($"\\u{(ushort)c:X4}");
+            }
+            else
+            {
+                escaped.Append(c);
+            }
+        }
+
+        return escaped.ToString();
     }
 
     private sealed class CompositeConventionBuilder(params IEndpointConventionBuilder[] builders)

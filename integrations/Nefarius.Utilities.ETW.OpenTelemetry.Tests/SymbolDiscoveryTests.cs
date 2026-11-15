@@ -469,6 +469,7 @@ public class SymbolDiscoveryTests
         Assert.That(failure.Exception, Is.Not.Null);
         Assert.That(failure.Message, Does.Contain(identity.PdbName));
         Assert.That(failure.Message, Does.Contain(identity.Guid.ToString()));
+        Assert.That(failure.Message, Does.Contain("could not be loaded after 1 attempt"));
         Assert.That(server.Requests, Is.Empty);
     }
 
