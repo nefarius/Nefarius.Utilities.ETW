@@ -3,6 +3,7 @@ namespace Nefarius.Utilities.ETW.CLI;
 /// <summary>
 ///     Minimal P/Invoke surface for enabling ANSI/VT escape sequences on Windows.
 /// </summary>
+[System.Runtime.Versioning.SupportedOSPlatform("windows")]
 internal static class NativeConsole
 {
     [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]

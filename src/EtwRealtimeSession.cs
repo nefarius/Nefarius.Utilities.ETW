@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 using Nefarius.Utilities.ETW.Exceptions;
 
@@ -22,6 +23,7 @@ namespace Nefarius.Utilities.ETW;
 ///         <see cref="Flush" />, and <see cref="Dispose" /> may be called from any thread.
 ///     </para>
 /// </remarks>
+[SupportedOSPlatform("windows")]
 public sealed class EtwRealtimeSession : IDisposable
 {
     private readonly string _sessionName;
@@ -67,6 +69,7 @@ public sealed class EtwRealtimeSession : IDisposable
         {
             throw new ArgumentException("Session name must not be empty or whitespace.", nameof(sessionName));
         }
+        PlatformGuard.ThrowIfNotWindows();
 
         EtwRealtimeSessionOptions opts = new();
         configure?.Invoke(opts);
