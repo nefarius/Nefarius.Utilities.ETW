@@ -1,4 +1,6 @@
-﻿namespace Nefarius.Utilities.ETW.Deserializer;
+using System.Runtime.CompilerServices;
+
+namespace Nefarius.Utilities.ETW.Deserializer;
 
 internal readonly struct RuntimeEventMetadata
 {
@@ -75,6 +77,72 @@ internal readonly struct RuntimeEventMetadata
         }
     }
 
+    public byte EventVersion
+    {
+        get
+        {
+            unsafe
+            {
+                return _eventRecord->EventHeader.EventDescriptor.Version;
+            }
+        }
+    }
+
+    public byte Channel
+    {
+        get
+        {
+            unsafe
+            {
+                return _eventRecord->EventHeader.EventDescriptor.Channel;
+            }
+        }
+    }
+
+    public byte Level
+    {
+        get
+        {
+            unsafe
+            {
+                return _eventRecord->EventHeader.EventDescriptor.Level;
+            }
+        }
+    }
+
+    public byte Opcode
+    {
+        get
+        {
+            unsafe
+            {
+                return _eventRecord->EventHeader.EventDescriptor.Opcode;
+            }
+        }
+    }
+
+    public ushort Task
+    {
+        get
+        {
+            unsafe
+            {
+                return _eventRecord->EventHeader.EventDescriptor.Task;
+            }
+        }
+    }
+
+    public ulong Keyword
+    {
+        get
+        {
+            unsafe
+            {
+                return _eventRecord->EventHeader.EventDescriptor.Keyword;
+            }
+        }
+    }
+
     public Guid ActivityId
     {
         get
@@ -104,11 +172,16 @@ internal readonly struct RuntimeEventMetadata
             unsafe
             {
                 EVENT_HEADER_EXTENDED_DATA_ITEM* extendedData = _eventRecord->ExtendedData;
+                if (extendedData == null)
+                {
+                    return Guid.Empty;
+                }
+
                 for (int i = 0; i < _eventRecord->ExtendedDataCount; ++i)
                 {
                     if (extendedData[i].ExtType == PInvoke.EVENT_HEADER_EXT_TYPE_RELATED_ACTIVITYID)
                     {
-                        if (extendedData[i].DataSize < 16)
+                        if (extendedData[i].DataSize < 16 || extendedData[i].DataPtr == 0)
                         {
                             return Guid.Empty;
                         }
@@ -139,32 +212,30 @@ internal readonly struct RuntimeEventMetadata
         unsafe
         {
             EVENT_HEADER_EXTENDED_DATA_ITEM* extendedData = _eventRecord->ExtendedData;
+            if (extendedData == null)
+            {
+                matchId = 0;
+                return null;
+            }
+
+            // The items are only read, never modified: a record may be inspected more than once, and relayed
+            // records are untrusted.
             for (int i = 0; i < _eventRecord->ExtendedDataCount; ++i)
             {
+                ushort size = extendedData[i].DataSize;
+                byte* data = (byte*)extendedData[i].DataPtr;
+                if (data == null || size < sizeof(ulong))
+                {
+                    continue;
+                }
+
                 switch (extendedData[i].ExtType)
                 {
                     case (ushort)PInvoke.EVENT_HEADER_EXT_TYPE_STACK_TRACE32:
-                        {
-                            if (extendedData[i].DataSize < sizeof(ulong))
-                            {
-                                break;
-                            }
-
-                            int numberOfInstructionPointers = (extendedData[i].DataSize - sizeof(ulong)) / sizeof(uint);
-                            return GetStacks32(numberOfInstructionPointers, ref extendedData[i], out matchId);
-                        }
+                        return GetStacks32((size - sizeof(ulong)) / sizeof(uint), data, out matchId);
 
                     case (ushort)PInvoke.EVENT_HEADER_EXT_TYPE_STACK_TRACE64:
-                        {
-                            if (extendedData[i].DataSize < sizeof(ulong))
-                            {
-                                break;
-                            }
-
-                            int numberOfInstructionPointers =
-                                (extendedData[i].DataSize - sizeof(ulong)) / sizeof(ulong);
-                            return GetStacks64(numberOfInstructionPointers, ref extendedData[i], out matchId);
-                        }
+                        return GetStacks64((size - sizeof(ulong)) / sizeof(ulong), data, out matchId);
                 }
             }
 
@@ -173,39 +244,32 @@ internal readonly struct RuntimeEventMetadata
         }
     }
 
-    private static unsafe ulong[] GetStacks64(int numberOfInstructionPointers,
-        ref EVENT_HEADER_EXTENDED_DATA_ITEM extendedData, out ulong matchId)
+    private static unsafe ulong[] GetStacks64(int numberOfInstructionPointers, byte* data, out ulong matchId)
     {
         ulong[] retArr = new ulong[numberOfInstructionPointers];
-        matchId = *(ulong*)extendedData.DataPtr;
+        matchId = Unsafe.ReadUnaligned<ulong>(data);
 
-        extendedData.DataPtr += sizeof(ulong);
-
-        ulong* dataPtr = (ulong*)extendedData.DataPtr;
-
+        byte* dataPtr = data + sizeof(ulong);
         for (int j = 0; j < numberOfInstructionPointers; ++j)
         {
-            retArr[j] = *dataPtr;
-            dataPtr++;
+            retArr[j] = Unsafe.ReadUnaligned<ulong>(dataPtr);
+            dataPtr += sizeof(ulong);
         }
 
         return retArr;
     }
 
-    private static unsafe ulong[] GetStacks32(int numberOfInstructionPointers,
-        ref EVENT_HEADER_EXTENDED_DATA_ITEM extendedData, out ulong matchId)
+    private static unsafe ulong[] GetStacks32(int numberOfInstructionPointers, byte* data, out ulong matchId)
     {
         ulong[] retArr = new ulong[numberOfInstructionPointers];
-        matchId = *(ulong*)extendedData.DataPtr;
+        matchId = Unsafe.ReadUnaligned<ulong>(data);
 
-        extendedData.DataPtr += sizeof(ulong);
-
-        int* dataPtr = (int*)extendedData.DataPtr;
-
+        byte* dataPtr = data + sizeof(ulong);
         for (int j = 0; j < numberOfInstructionPointers; ++j)
         {
-            retArr[j] = (ulong)*dataPtr;
-            dataPtr++;
+            // sign extension is what the previous implementation did and is kept for output compatibility
+            retArr[j] = (ulong)Unsafe.ReadUnaligned<int>(dataPtr);
+            dataPtr += sizeof(uint);
         }
 
         return retArr;

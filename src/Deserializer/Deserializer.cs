@@ -36,6 +36,10 @@ internal sealed partial class Deserializer<T>
     private readonly Dictionary<TraceEventKey, Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata>>
         _actionTable = new();
 
+    private readonly HashSet<TraceEventKey> _metadataParsers = new();
+
+    private readonly HashSet<TraceEventKey> _explicitParsers = new();
+
     private readonly Func<Guid, Stream?>? _customProviderManifest;
 
     private readonly List<EventMetadata> _eventMetadataTableList = new();
@@ -47,6 +51,14 @@ internal sealed partial class Deserializer<T>
     private EventMetadata[] _eventMetadataTable = Array.Empty<EventMetadata>();
 
     private readonly WppTraceEventParser? _wppTraceEventParser;
+
+    private readonly int _manifestByteLimit;
+
+    private readonly int _eventKeyLimit;
+
+    private readonly Action? _onEventKeyLimit;
+
+    private int _manifestBytes;
 
     private T _writer;
 
@@ -60,9 +72,15 @@ internal sealed partial class Deserializer<T>
     public Deserializer(T writer, Func<Guid, Stream?>? customProviderManifest,
         DecodingContext? decodingContext = null,
         Action<Guid, ushort, uint>? onWppFormatMissing = null,
-        bool rewriteWppProviderName = false) : this(writer)
+        bool rewriteWppProviderName = false,
+        int manifestByteLimit = int.MaxValue,
+        int eventKeyLimit = int.MaxValue,
+        Action? onEventKeyLimit = null) : this(writer)
     {
         _customProviderManifest = customProviderManifest;
+        _manifestByteLimit = manifestByteLimit;
+        _eventKeyLimit = eventKeyLimit;
+        _onEventKeyLimit = onEventKeyLimit;
 
         // Without a context WPP events are still emitted, with the "No format information found." placeholder, and
         // onWppFormatMissing fires, instead of the events silently disappearing.
@@ -138,12 +156,14 @@ internal sealed partial class Deserializer<T>
     }
 
     private static unsafe IEventTraceOperand? BuildOperandFromXml(EVENT_RECORD* eventRecord,
-        Dictionary<Guid, EventSourceManifest> cache, EventRecordReader eventRecordReader, int metadataTableIndex)
+        Dictionary<Guid, EventSourceManifest> cache, EventRecordReader eventRecordReader, int metadataTableIndex,
+        ref int manifestBytes, int manifestByteLimit)
     {
         Guid providerGuid = eventRecord->EventHeader.ProviderId;
         if (!cache.TryGetValue(providerGuid, out EventSourceManifest? manifest))
         {
-            manifest = CreateEventSourceManifest(providerGuid, cache, eventRecord, eventRecordReader);
+            manifest = CreateEventSourceManifest(providerGuid, cache, eventRecord, eventRecordReader, ref manifestBytes,
+                manifestByteLimit);
         }
 
         if (manifest == null)
@@ -206,7 +226,8 @@ internal sealed partial class Deserializer<T>
     }
 
     private static unsafe EventSourceManifest? CreateEventSourceManifest(Guid providerGuid,
-        Dictionary<Guid, EventSourceManifest> cache, EVENT_RECORD* eventRecord, EventRecordReader eventRecordReader)
+        Dictionary<Guid, EventSourceManifest> cache, EVENT_RECORD* eventRecord, EventRecordReader eventRecordReader,
+        ref int manifestBytes, int manifestByteLimit)
     {
         // EventSource Schema events have the following signature:
         // { byte Format, byte MajorVersion, byte MinorVersion, byte Magic, ushort TotalChunks, ushort ChunkNumber } == 8 bytes, followed by the XML schema
@@ -227,6 +248,12 @@ internal sealed partial class Deserializer<T>
             return null;
         }
 
+        string schemaChunk = eventRecordReader.ReadAnsiString();
+        if ((long)manifestBytes + schemaChunk.Length > manifestByteLimit)
+        {
+            throw new InvalidOperationException("The session manifest cache is full.");
+        }
+
         if (!cache.TryGetValue(providerGuid, out EventSourceManifest? manifest))
         {
             manifest = new EventSourceManifest(eventRecord->EventHeader.ProviderId, format, majorVersion, minorVersion,
@@ -242,7 +269,7 @@ internal sealed partial class Deserializer<T>
             cache[providerGuid] = manifest;
         }
 
-        string schemaChunk = eventRecordReader.ReadAnsiString();
+        manifestBytes += schemaChunk.Length;
         manifest.AddChunk(schemaChunk);
 
         return manifest;
@@ -268,7 +295,7 @@ internal sealed partial class Deserializer<T>
         if (_customProviderManifest is not null && _eventSourceManifestCache.ContainsKey(providerId))
         {
             operand = BuildOperandFromXml(eventRecord, _eventSourceManifestCache, eventRecordReader,
-                metadataTableIndex);
+                metadataTableIndex, ref _manifestBytes, _manifestByteLimit);
 
             if (operand is not null)
             {
@@ -286,6 +313,15 @@ internal sealed partial class Deserializer<T>
                 return null;
             }
 
+            // A repeated metadata record reuses the schema parser. A custom parser registered for the same key
+            // stays in place. A placeholder left by an earlier data event is replaced below.
+            TRACE_EVENT_INFO* embedded = (TRACE_EVENT_INFO*)eventRecord->UserData;
+            TraceEventKey target = MetadataTargetKey(embedded);
+            if (_metadataParsers.Contains(target) || _explicitParsers.Contains(target))
+            {
+                return null;
+            }
+
             isSpecialKernelTraceMetaDataEvent = true;
             return EventTraceOperandBuilder.Build((TRACE_EVENT_INFO*)eventRecord->UserData, eventRecord->UserDataLength,
                 metadataTableIndex, resolveMaps: !_currentExtras.IsManaged);
@@ -296,7 +332,7 @@ internal sealed partial class Deserializer<T>
         if (operand == null)
         {
             operand = BuildOperandFromXml(eventRecord, _eventSourceManifestCache, eventRecordReader,
-                metadataTableIndex);
+                metadataTableIndex, ref _manifestBytes, _manifestByteLimit);
         }
 
         if (operand == null && eventRecord->EventHeader.EventDescriptor.Id != 65534) // don't show manifest events
@@ -320,7 +356,7 @@ internal sealed partial class Deserializer<T>
                                      && EventTraceParsers.TryCreate(eventRecord->EventHeader.EventDescriptor.Opcode,
                                          out ICustomParser? eventTraceParser))
         {
-            _actionTable.Add(key, eventTraceParser.Parse);
+            AddParser(key, eventTraceParser.Parse);
             return true;
         }
 
@@ -330,15 +366,15 @@ internal sealed partial class Deserializer<T>
             switch (eventRecord->EventHeader.EventDescriptor.Opcode)
             {
                 case 0:
-                    _actionTable.Add(key, new KernelTraceControlImageIdParser().Parse);
+                    AddParser(key, new KernelTraceControlImageIdParser().Parse);
                     success = true;
                     break;
                 case 36:
-                    _actionTable.Add(key, new KernelTraceControlDbgIdParser().Parse);
+                    AddParser(key, new KernelTraceControlDbgIdParser().Parse);
                     success = true;
                     break;
                 case 64:
-                    _actionTable.Add(key, new KernelTraceControlImageIdFileVersionParser().Parse);
+                    AddParser(key, new KernelTraceControlImageIdFileVersionParser().Parse);
                     success = true;
                     break;
                 default:
@@ -351,7 +387,7 @@ internal sealed partial class Deserializer<T>
         {
             if (eventRecord->EventHeader.EventDescriptor.Opcode == 32)
             {
-                _actionTable.Add(key, new KernelStackWalkEventParser().Parse);
+                AddParser(key, new KernelStackWalkEventParser().Parse);
                 success = true;
             }
             else
@@ -391,6 +427,24 @@ internal sealed partial class Deserializer<T>
             return;
         }
 
+        TraceEventKey registrationKey = key;
+        if (isSpecialKernelTraceMetaDataEvent)
+        {
+            registrationKey = MetadataTargetKey((TRACE_EVENT_INFO*)eventRecord->UserContext);
+            if (_metadataParsers.Contains(registrationKey) || _explicitParsers.Contains(registrationKey))
+            {
+                return;
+            }
+        }
+
+        // Replacing a placeholder does not grow the cache. A new key still has to fit under the session ceiling.
+        bool replacing = _actionTable.ContainsKey(registrationKey);
+        if (!replacing && _actionTable.Count >= _eventKeyLimit)
+        {
+            _onEventKeyLimit?.Invoke();
+            throw new InvalidOperationException("The session event-key cache is full.");
+        }
+
         _eventMetadataTableList.Add(operand.Metadata);
         _eventMetadataTable = _eventMetadataTableList.ToArray();
 
@@ -417,23 +471,54 @@ internal sealed partial class Deserializer<T>
         Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata> action =
             (Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata>)expression.Compile(false);
 
-        if (isSpecialKernelTraceMetaDataEvent)
+        if (replacing)
         {
-            TRACE_EVENT_INFO* e = (TRACE_EVENT_INFO*)eventRecord->UserContext;
-            _actionTable.AddOrUpdate(
-                new TraceEventKey(e->ProviderGuid,
-                    e->EventGuid == Guid.Empty ? e->EventDescriptor.Id : e->EventDescriptor.Opcode,
-                    e->EventDescriptor.Version),
-                action);
+            _actionTable[registrationKey] = action;
         }
         else
         {
-            // insert a new parser for this type so the next event of this kind gets dissected faster
-            _actionTable.Add(key, action);
+            _actionTable.Add(registrationKey, action);
+        }
+
+        if (isSpecialKernelTraceMetaDataEvent)
+        {
+            _metadataParsers.Add(registrationKey);
+        }
+
+        if (!isSpecialKernelTraceMetaDataEvent)
+        {
             // invoke the parser we just built on this event
             action(eventRecordReader, _writer, _eventMetadataTable, runtimeMetadata);
         }
     }
+
+    /// <summary>
+    ///     Registers a parser that carries no separate metadata row. A full cache refuses the registration instead of
+    ///     growing.
+    /// </summary>
+    private void AddParser(TraceEventKey key,
+        Action<EventRecordReader, T, EventMetadata[], RuntimeEventMetadata> action)
+    {
+        if (_actionTable.ContainsKey(key))
+        {
+            return;
+        }
+
+        if (_actionTable.Count >= _eventKeyLimit)
+        {
+            _onEventKeyLimit?.Invoke();
+            throw new InvalidOperationException("The session event-key cache is full.");
+        }
+
+        _actionTable.Add(key, action);
+        _explicitParsers.Add(key);
+    }
+
+    /// <summary>The event identity a kernel metadata record installs a parser for.</summary>
+    private static unsafe TraceEventKey MetadataTargetKey(TRACE_EVENT_INFO* info) =>
+        new(info->ProviderGuid,
+            info->EventGuid == Guid.Empty ? info->EventDescriptor.Id : info->EventDescriptor.Opcode,
+            info->EventDescriptor.Version);
 
     [GeneratedRegex("[:\\/*?\"<>|\"-]")]
     private static partial Regex InvalidCharactersRegex();

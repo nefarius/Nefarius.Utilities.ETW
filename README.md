@@ -160,12 +160,29 @@ dotnet tool install -g Nefarius.Utilities.ETW.CLI
 
 See [tools/Nefarius.Utilities.ETW.CLI/README.md](tools/Nefarius.Utilities.ETW.CLI/README.md) for full installation instructions, command reference, and examples.
 
+## Raw ETW relay and OpenTelemetry gateway
+
+Capture clients that must not hold .pdb/.tmf files can forward raw EVENT_RECORDs to a trusted server that decodes them (WPP included) with this library. The wire format is language-neutral and easy to produce from C/C++.
+
+```csharp
+await foreach (ReadOnlyMemory<byte> json in EtwUtil.EnumerateRelayEventsAsync(authenticatedBody,
+    o => o.WppDecodingContext = new DecodingContext(PdbFileDecodingContextType.CreateFrom("server-only.pdb"))))
+{
+}
+```
+
+An optional OpenTelemetry adapter and a standalone decoding gateway (OTLP in, decoded standard OTLP Logs out) are included; OpenTelemetry is not required by the core package.
+
+- [Raw ETW relay: wire format, C/C++ producer, limits and hosting contract](docs/guides/raw-etw-relay.md)
+- [OpenTelemetry integration and decoding gateway](docs/guides/opentelemetry-gateway.md)
+
 ## Known limitations
 
 - Reading `.etl` files works on Windows, Linux and macOS through a managed reader (`EtwBackend.Managed`, the default off Windows; set `EtwJsonConverterOptions.Backend` / `EtwMetadataScanOptions.Backend` to choose). Real-time sessions and session management remain **Windows-only**. Manifest-described events decode on every platform, including structs, fixed and variable array counts, fixed and variable lengths, declared out-types and value/bit maps (maps are kept in the property metadata; JSON output keeps the raw values) and throw `PlatformNotSupportedException` elsewhere
 - The managed reader reads compressed (`EVENT_TRACE_COMPRESSED_MODE`, Xpress LZ77) `.etl` files by decompressing every buffer into memory first, and covers the record types found in WPP, kernel and TraceLogging/manifest traces; unsupported record types are skipped with a warning via `ReportError`
 - `%!ItemEnum!`/`%!ItemFlagsEnum!` types are shown with enumerator names when the enum type (named in the TMF as `ItemEnum(Name)`) is found in a PDB type stream; from TMF files, or when the type is missing, the raw value is shown. Without a `WppDecodingContext`, WPP events are still emitted with the "No format information found." message and `OnWppFormatMissing` fires
 - `%!CLSID!` prints the GUID without a registry name lookup and `%!LINE!` is rendered as an empty string
+- Relayed records are never decoded with TDH, so manifest-described events need a custom manifest on the server; raw (QPC) timestamps are not supported by the relay, and one relay decoder or session must be driven by a single thread at a time
 - The CLI does not create kernel sessions; use the library API (`SystemLogger` / `NtKernelLoggerName`) or attach to an existing session by name
 
 ## Documentation

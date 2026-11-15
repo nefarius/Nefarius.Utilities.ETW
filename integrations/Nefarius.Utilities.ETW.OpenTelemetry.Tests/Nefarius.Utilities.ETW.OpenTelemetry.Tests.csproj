@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <IsPackable>false</IsPackable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Grpc.Net.Client" Version="2.85.0" />
+        <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.8" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+        <PackageReference Include="NUnit" Version="4.6.1" />
+        <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\Nefarius.Utilities.ETW.csproj" />
+        <ProjectReference Include="..\Nefarius.Utilities.ETW.OpenTelemetry\Nefarius.Utilities.ETW.OpenTelemetry.csproj" />
+        <ProjectReference Include="..\..\tools\Nefarius.Utilities.ETW.OtlpGateway\Nefarius.Utilities.ETW.OtlpGateway.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="..\..\tests\traces\BthPS3_0.etl" Link="traces\BthPS3_0.etl">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="..\..\tests\symbols\*.pdb" Link="symbols\%(Filename)%(Extension)">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
+</Project>

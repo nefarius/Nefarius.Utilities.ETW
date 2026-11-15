@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+        <RootNamespace>Nefarius.Utilities.ETW.OpenTelemetry</RootNamespace>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+        <PackageId>Nefarius.Utilities.ETW.OpenTelemetry</PackageId>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/nefarius/Nefarius.Utilities.ETW</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/nefarius/Nefarius.Utilities.ETW</PackageProjectUrl>
+        <Description>Optional OpenTelemetry (OTLP Logs) integration for Nefarius.Utilities.ETW: carries raw ETW relay frames in OTLP and turns decoded ETW and WPP events into structured OTLP log records.</Description>
+        <PackageTags>etw;wpp;opentelemetry;otlp</PackageTags>
+        <MinVerTagPrefix>v</MinVerTagPrefix>
+
+        <!-- The generated protobuf code is not documented. -->
+        <NoWarn>$(NoWarn);CS1591;CS8981</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Google.Protobuf" Version="3.36.2" />
+        <PackageReference Include="Grpc.Core.Api" Version="2.85.0" />
+        <PackageReference Include="Grpc.Tools" Version="2.85.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="MinVer" Version="8.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Protobuf Include="protos\**\*.proto" ProtoRoot="protos" GrpcServices="Both" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\Nefarius.Utilities.ETW.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Nefarius.Utilities.ETW.OpenTelemetry.Tests" />
+    </ItemGroup>
+
+</Project>
