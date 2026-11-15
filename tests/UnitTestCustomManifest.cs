@@ -15,6 +15,7 @@ public unsafe class CustomManifestTests
 {
     private static readonly Guid BthPs3Provider = new("37dcd579-e844-4c80-9c8b-a10850b6fac6");
     private static readonly Guid BthPs3PsmProvider = new("586aa8b1-53a6-404f-9b3e-14483e514a2c");
+    private static readonly Guid OsrUsbFx2Provider = new("69cd60e3-430f-4da4-b1b3-e3bdaf945875");
     private static readonly Guid DsHidMiniProvider = new("ba65b162-c05c-4bd7-b75d-db8d030daf7f");
     private static readonly Guid HidHideLogProvider = new("6DA3FFA4-AB7D-40E2-B50C-C4B41BBA36E3");
     private static readonly Guid HidHideTraceProvider = new("D9F22586-7514-4164-BB9B-5C67D5BD2BC7");
@@ -80,6 +81,23 @@ public unsafe class CustomManifestTests
         }
     }
 
+    [Test]
+    public void OsrUsbFx2_CustomTasksAndOpcodesResolve()
+    {
+        instrumentationManifest manifest = Load("osrusbfx2.man", OsrUsbFx2Provider);
+
+        EventMetadata readStart = Build(manifest, OsrUsbFx2Provider, 1);
+        EventMetadata readFail = Build(manifest, OsrUsbFx2Provider, 3);
+
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(readStart.Name, Is.EqualTo("OSRUSBFX2/read/Start"));
+            Assert.That(readStart.Properties.Select(p => p.Name), Is.EqualTo(new[] { "Device", "Length" }));
+            Assert.That(readFail.Name, Is.EqualTo("OSRUSBFX2/read/fail"));
+        }
+    }
+
+    [TestCase("osrusbfx2.man", "69cd60e3-430f-4da4-b1b3-e3bdaf945875")]
     [TestCase("BthPS3.man", "37dcd579-e844-4c80-9c8b-a10850b6fac6")]
     [TestCase("BthPS3PSM.man", "586aa8b1-53a6-404f-9b3e-14483e514a2c")]
     [TestCase("DsHidMini.man", "ba65b162-c05c-4bd7-b75d-db8d030daf7f")]
