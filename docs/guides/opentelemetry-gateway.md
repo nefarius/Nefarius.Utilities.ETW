@@ -77,4 +77,4 @@ Sessions are isolated per tenant. The default `IGatewayTenantResolver` uses the 
 
 See also: [Raw ETW relay protocol](raw-etw-relay.md).
 
-See [examples/jaeger](../../examples/jaeger) for a Docker Compose stack with a sample sender, the gateway and Jaeger.
+See [examples/jaeger](../../examples/jaeger) for a Docker Compose stack with a sample sender and the gateway. Decoded events go to the Aspire Dashboard as native OTLP Logs, and the same events are projected as spans for Jaeger.

@@ -1,10 +1,22 @@
-# Example stack: capture client -> decoding gateway -> Jaeger
+# Example stack: capture client -> decoding gateway -> Aspire (logs) and Jaeger (traces)
 #
 #   docker compose -f examples/jaeger/docker-compose.yml up --build
 #
-# then open http://localhost:16686 and search service "relay-sample-sender".
+# then open http://localhost:18888 for the decoded logs and
+# http://localhost:16686 for the span view (service "relay-sample-sender").
 
 services:
+  aspire:
+    # Standalone Aspire Dashboard: UI on 18888, OTLP/HTTP on 18890 (all interfaces).
+    # Anonymous access is for this trusted local demo only.
+    # Pin a specific version for anything beyond a demo.
+    image: mcr.microsoft.com/aspire/dashboard:latest
+    environment:
+      ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
+    ports:
+      # Host access stays on loopback. The gateway uses the Compose DNS name, not this mapping.
+      - "127.0.0.1:18888:18888"
+
   jaeger:
     # Jaeger v2 all-in-one: OTLP receiver (4317/4318), in-memory storage, UI on 16686.
     # Pin a specific version for anything beyond a demo.
@@ -17,6 +29,8 @@ services:
       context: ../..
       dockerfile: examples/jaeger/gateway.Dockerfile
     environment:
+      # Decoded events as native OTLP Logs. The gateway posts to {Endpoint}/v1/logs.
+      Gateway__Export__Endpoint: http://aspire:18890
       # Jaeger stores traces only, so the gateway also exports every decoded event as a span.
       Gateway__Export__TracesEndpoint: http://jaeger:4318
       # Server-only WPP assets: put .pdb/.tmf files in ./wpp and uncomment the mount.
@@ -34,6 +48,7 @@ services:
       # Host access stays on loopback. The sender uses the Compose DNS name, not this mapping.
       - "127.0.0.1:4318:4318"
     depends_on:
+      - aspire
       - jaeger
 
   sender:
