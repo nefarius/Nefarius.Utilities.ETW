@@ -251,7 +251,8 @@ internal sealed class RelayRunner(RelaySettings settings, OtlpSender sender, Tex
 
     /// <summary>
     ///     Waits for the next frame. Returns false when the input is finished. An idle open session is refreshed by
-    ///     resending its latest acknowledged request; the gateway treats those bytes as a duplicate.
+    ///     replaying its latest acknowledged frames. A leading hello is left out of that replay: it would open a new
+    ///     session after a gateway restart and the following events would be exported again.
     /// </summary>
     private async Task<bool> WaitForFrameAsync(ChannelReader<Item> reader, CancellationToken token)
     {
@@ -292,11 +293,13 @@ internal sealed class RelayRunner(RelaySettings settings, OtlpSender sender, Tex
 
         FramesSent += batch.Count;
         Batches++;
-        if (armHeartbeat && settings.HeartbeatInterval > TimeSpan.Zero)
+        if (armHeartbeat && settings.HeartbeatInterval > TimeSpan.Zero &&
+            TryCreateHeartbeat(session, batch, body, out byte[]? heartbeat))
         {
-            // The serialized body is already bounded by the batch limits and must be resent unchanged: rebuilding it
-            // would make a gzip stream look like a different request.
-            _heartbeat = body;
+            // A batch that does not start with hello is replayed from the bytes just sent, so a gzip stream stays
+            // identical. A leading hello is omitted; the remaining frames are what a live session can accept as
+            // duplicates, and what a restarted gateway rejects instead of exporting again.
+            _heartbeat = heartbeat;
             _heartbeatSession = session;
             _heartbeatDue = NextHeartbeatDue();
         }
@@ -310,6 +313,29 @@ internal sealed class RelayRunner(RelaySettings settings, OtlpSender sender, Tex
 
     private long NextHeartbeatDue() =>
         Stopwatch.GetTimestamp() + (long)(settings.HeartbeatInterval.TotalSeconds * Stopwatch.Frequency);
+
+    /// <summary>
+    ///     Builds the idle replay. Returns false when the only frame is a hello, which cannot refresh a live session
+    ///     without also being able to create one.
+    /// </summary>
+    private bool TryCreateHeartbeat(Guid session, List<byte[]> batch, byte[] sentBody, out byte[]? heartbeat)
+    {
+        if (RawEtwFrameCodec.Decode(batch[0], _limits).Type != RawEtwFrameType.Hello)
+        {
+            heartbeat = sentBody;
+            return true;
+        }
+
+        if (batch.Count == 1)
+        {
+            heartbeat = null;
+            return false;
+        }
+
+        heartbeat = sender.Serialize(RelayLogRecords.CreateRequest(session,
+            batch.Skip(1).Select(static frame => (ReadOnlyMemory<byte>)frame), settings.Resources));
+        return true;
+    }
 
     private readonly record struct Item(Guid Session, byte[] Frame, bool IsEnd);
 }

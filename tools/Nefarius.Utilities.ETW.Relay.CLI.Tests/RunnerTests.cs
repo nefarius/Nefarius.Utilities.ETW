@@ -2,6 +2,10 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 
+using Nefarius.Utilities.ETW.OpenTelemetry;
+
+using OpenTelemetry.Proto.Collector.Logs.V1;
+
 namespace Nefarius.Utilities.ETW.Relay.CLI.Tests;
 
 public class RunnerTests
@@ -146,7 +150,7 @@ public class RunnerTests
     // ---------------------------------------------------------------------------------------------------------------
 
     [Test]
-    public async Task IdleOpenSession_ResendsTheLastAcknowledgedBatchUnchanged()
+    public async Task IdleOpenSession_ReplaysEventsWithoutTheHello()
     {
         PipeLikeStream pipe = new();
         RecordingHandler handler = new();
@@ -154,20 +158,22 @@ public class RunnerTests
             Run.Settings(b =>
             {
                 b.Gzip = true;
-                b.FlushInterval = TimeSpan.FromMilliseconds(40);
+                b.BatchFrames = 2;
+                b.FlushInterval = TimeSpan.FromHours(1);
                 b.HeartbeatInterval = TimeSpan.FromMilliseconds(120);
             }), pipe, handler);
 
-        pipe.Push(Frames.Hello(Guid.NewGuid()));
+        pipe.Push(Frames.Concat([Frames.Hello(Guid.NewGuid()), Frames.Event(1)]));
         await WaitUntil(() => handler.Requests.Count >= 2, TimeSpan.FromSeconds(5));
 
         CapturedRequest[] sent = handler.Requests.Take(2).ToArray();
         Assert.Multiple(() =>
         {
-            Assert.That(sent[1].Body, Is.EqualTo(sent[0].Body));
+            Assert.That(sent[0].FrameBytes(), Has.Count.EqualTo(2));
+            Assert.That(sent[1].Body, Is.Not.EqualTo(sent[0].Body));
             Assert.That(sent[1].ContentEncoding, Is.EqualTo("gzip"));
             Assert.That(sent[1].FrameBytes().Select(Convert.ToBase64String),
-                Is.EqualTo(sent[0].FrameBytes().Select(Convert.ToBase64String)));
+                Is.EqualTo(sent[0].FrameBytes().Skip(1).Select(Convert.ToBase64String)));
         });
 
         pipe.Complete();
@@ -175,7 +181,7 @@ public class RunnerTests
         Assert.Multiple(() =>
         {
             Assert.That(code, Is.EqualTo(0));
-            Assert.That(runner.FramesSent, Is.EqualTo(1));
+            Assert.That(runner.FramesSent, Is.EqualTo(2));
             Assert.That(runner.Batches, Is.GreaterThanOrEqualTo(2));
         });
     }
@@ -304,11 +310,12 @@ public class RunnerTests
 
         Task running = Run.RunAsync(Run.Settings(b =>
         {
-            b.FlushInterval = TimeSpan.FromMilliseconds(40);
+            b.BatchFrames = 2;
+            b.FlushInterval = TimeSpan.FromHours(1);
             b.HeartbeatInterval = TimeSpan.FromMilliseconds(80);
         }), pipe, handler);
 
-        pipe.Push(Frames.Hello(Guid.NewGuid()));
+        pipe.Push(Frames.Concat([Frames.Hello(Guid.NewGuid()), Frames.Event(1)]));
         Task finished = await Task.WhenAny(running, Task.Delay(TimeSpan.FromSeconds(5)));
         pipe.Complete();
         Assert.That(finished, Is.SameAs(running));
@@ -318,9 +325,71 @@ public class RunnerTests
         {
             Assert.That(ex!.Message, Does.Contain("session is unknown"));
             Assert.That(handler.Requests, Has.Count.EqualTo(2));
-            Assert.That(handler.Requests[1].Body, Is.EqualTo(handler.Requests[0].Body));
+            Assert.That(handler.Requests[1].Body, Is.Not.EqualTo(handler.Requests[0].Body));
+            Assert.That(handler.Requests[1].FrameBytes().Select(Convert.ToBase64String),
+                Is.EqualTo(handler.Requests[0].FrameBytes().Skip(1).Select(Convert.ToBase64String)));
         });
     }
+
+    [Test]
+    public async Task HeartbeatAfterGatewayRestart_IsRejectedAndExportsNoEvents()
+    {
+        PipeLikeStream pipe = new();
+        RelayLogProcessor gateway = new();
+        bool restarted = false;
+        int firstExports = 0;
+        int replayExports = -1;
+        RecordingHandler handler = new((_, request) =>
+        {
+            ExportLogsServiceRequest message = request.Parse();
+            RelayLogResult result = gateway.Process("anonymous", message);
+            if (!restarted)
+            {
+                firstExports = ExportedEvents(result.Decoded);
+                gateway.Dispose();
+                gateway = new RelayLogProcessor();
+                restarted = true;
+                return Task.FromResult(RecordingHandler.Ok());
+            }
+
+            replayExports = ExportedEvents(result.Decoded);
+            return Task.FromResult(RecordingHandler.Rejected(result.Error ?? "rejected"));
+        });
+
+        Task running = Run.RunAsync(Run.Settings(b =>
+        {
+            b.BatchFrames = 2;
+            b.FlushInterval = TimeSpan.FromHours(1);
+            b.HeartbeatInterval = TimeSpan.FromMilliseconds(80);
+        }), pipe, handler);
+
+        try
+        {
+            pipe.Push(Frames.Concat([Frames.Hello(Guid.NewGuid()), Frames.Event(1)]));
+            Task finished = await Task.WhenAny(running, Task.Delay(TimeSpan.FromSeconds(5)));
+            Assert.That(finished, Is.SameAs(running));
+            DeliveryException? ex = Assert.ThrowsAsync<DeliveryException>(async () => await running);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(firstExports, Is.GreaterThan(0), "The normal flush must still export its event.");
+                Assert.That(replayExports, Is.EqualTo(0));
+                Assert.That(ex!.Message, Does.Contain("session is unknown"));
+                Assert.That(handler.Requests, Has.Count.EqualTo(2));
+                Assert.That(handler.Requests[0].FrameBytes(), Has.Count.EqualTo(2));
+                Assert.That(handler.Requests[1].FrameBytes().Select(Convert.ToBase64String),
+                    Is.EqualTo(handler.Requests[0].FrameBytes().Skip(1).Select(Convert.ToBase64String)));
+            });
+        }
+        finally
+        {
+            pipe.Complete();
+            gateway.Dispose();
+        }
+    }
+
+    private static int ExportedEvents(ExportLogsServiceRequest request) =>
+        request.ResourceLogs.Sum(resource => resource.ScopeLogs.Sum(scope => scope.LogRecords.Count));
 
     private static async Task WaitUntil(Func<bool> condition, TimeSpan timeout)
     {
