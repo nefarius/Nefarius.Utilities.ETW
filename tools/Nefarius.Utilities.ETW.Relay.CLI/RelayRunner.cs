@@ -185,18 +185,74 @@ internal sealed class RelayRunner(RelaySettings settings, OtlpSender sender, Tex
                 }
                 else
                 {
-                    TimeSpan remaining = Stopwatch.GetElapsedTime(Stopwatch.GetTimestamp(), deadline);
-                    using CancellationTokenSource wait = CancellationTokenSource.CreateLinkedTokenSource(token);
-                    wait.CancelAfter(remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero);
-                    try
+                    TimeSpan flushRemaining = Stopwatch.GetElapsedTime(Stopwatch.GetTimestamp(), deadline);
+                    if (flushRemaining < TimeSpan.Zero)
                     {
-                        more = await reader.WaitToReadAsync(wait.Token).ConfigureAwait(false);
+                        flushRemaining = TimeSpan.Zero;
                     }
-                    catch (OperationCanceledException) when (!token.IsCancellationRequested)
+
+                    // A heartbeat that falls due while frames are waiting must not sit behind --flush-ms. Sending the
+                    // batch refreshes the gateway session and starts the interval again.
+                    if (_heartbeat is null || settings.HeartbeatInterval <= TimeSpan.Zero)
                     {
-                        await FlushAsync(batchSession, batch, armHeartbeat: true, token).ConfigureAwait(false);
-                        batchBytes = 0;
-                        continue;
+                        using CancellationTokenSource wait = CancellationTokenSource.CreateLinkedTokenSource(token);
+                        wait.CancelAfter(flushRemaining);
+                        try
+                        {
+                            more = await reader.WaitToReadAsync(wait.Token).ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException) when (!token.IsCancellationRequested)
+                        {
+                            await FlushAsync(batchSession, batch, armHeartbeat: true, token).ConfigureAwait(false);
+                            batchBytes = 0;
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        TimeSpan heartbeatRemaining = _clock.GetElapsedTime(_clock.GetTimestamp(), _heartbeatDue);
+                        if (heartbeatRemaining < TimeSpan.Zero)
+                        {
+                            heartbeatRemaining = TimeSpan.Zero;
+                        }
+
+                        using CancellationTokenSource readCancel = CancellationTokenSource.CreateLinkedTokenSource(token);
+                        using CancellationTokenSource flushCancel = CancellationTokenSource.CreateLinkedTokenSource(token);
+                        using CancellationTokenSource heartbeatCancel =
+                            CancellationTokenSource.CreateLinkedTokenSource(token);
+                        Task<bool> incoming = reader.WaitToReadAsync(readCancel.Token).AsTask();
+                        Task flushWait = flushRemaining <= TimeSpan.Zero
+                            ? Task.CompletedTask
+                            : Task.Delay(flushRemaining, flushCancel.Token);
+                        Task heartbeatWait = heartbeatRemaining <= TimeSpan.Zero
+                            ? Task.CompletedTask
+                            : Task.Delay(heartbeatRemaining, _clock, heartbeatCancel.Token);
+                        await Task.WhenAny(incoming, flushWait, heartbeatWait).ConfigureAwait(false);
+                        if (token.IsCancellationRequested)
+                        {
+                            token.ThrowIfCancellationRequested();
+                        }
+
+                        if (incoming.IsCompletedSuccessfully)
+                        {
+                            await flushCancel.CancelAsync().ConfigureAwait(false);
+                            await heartbeatCancel.CancelAsync().ConfigureAwait(false);
+                            await ObserveAsync(flushWait).ConfigureAwait(false);
+                            await ObserveAsync(heartbeatWait).ConfigureAwait(false);
+                            more = await incoming.ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            await readCancel.CancelAsync().ConfigureAwait(false);
+                            await ObserveAsync(incoming).ConfigureAwait(false);
+                            await flushCancel.CancelAsync().ConfigureAwait(false);
+                            await heartbeatCancel.CancelAsync().ConfigureAwait(false);
+                            await ObserveAsync(flushWait).ConfigureAwait(false);
+                            await ObserveAsync(heartbeatWait).ConfigureAwait(false);
+                            await FlushAsync(batchSession, batch, armHeartbeat: true, token).ConfigureAwait(false);
+                            batchBytes = 0;
+                            continue;
+                        }
                     }
                 }
 
@@ -253,7 +309,7 @@ internal sealed class RelayRunner(RelaySettings settings, OtlpSender sender, Tex
 
     /// <summary>
     ///     Waits for the next frame. Returns false when the input is finished. An idle open session is refreshed by
-    ///     replaying its latest acknowledged frames. A leading hello is left out of that replay: it would open a new
+    ///     replaying its latest acknowledged frames. Every hello is left out of that replay: it would open a new
     ///     session after a gateway restart and the following events would be exported again.
     /// </summary>
     private async Task<bool> WaitForFrameAsync(ChannelReader<Item> reader, CancellationToken token)
@@ -311,11 +367,18 @@ internal sealed class RelayRunner(RelaySettings settings, OtlpSender sender, Tex
         if (armHeartbeat && settings.HeartbeatInterval > TimeSpan.Zero &&
             TryCreateHeartbeat(session, batch, body, out byte[]? heartbeat))
         {
-            // A batch that does not start with hello is replayed from the bytes just sent, so a gzip stream stays
-            // identical. A leading hello is omitted; the remaining frames are what a live session can accept as
-            // duplicates, and what a restarted gateway rejects instead of exporting again.
+            // A batch with no hello is replayed from the bytes just sent, so a gzip stream stays identical. Every
+            // hello is omitted; the remaining frames are what a live session can accept as duplicates, and what a
+            // restarted gateway rejects instead of exporting again.
             _heartbeat = heartbeat;
             _heartbeatSession = session;
+            _heartbeatDue = NextHeartbeatDue();
+        }
+        else if (armHeartbeat && settings.HeartbeatInterval > TimeSpan.Zero &&
+                 _heartbeat is not null && _heartbeatSession == session)
+        {
+            // This batch was only a hello. Replaying it could open a session, so the previous event frames stay
+            // cached. The acknowledgement still restarted the gateway's idle clock.
             _heartbeatDue = NextHeartbeatDue();
         }
         else
@@ -341,25 +404,38 @@ internal sealed class RelayRunner(RelaySettings settings, OtlpSender sender, Tex
     }
 
     /// <summary>
-    ///     Builds the idle replay. Returns false when the only frame is a hello, which cannot refresh a live session
+    ///     Builds the idle replay. Returns false when every frame is a hello, which cannot refresh a live session
     ///     without also being able to create one.
     /// </summary>
     private bool TryCreateHeartbeat(Guid session, List<byte[]> batch, byte[] sentBody, out byte[]? heartbeat)
     {
-        if (RawEtwFrameCodec.Decode(batch[0], _limits).Type != RawEtwFrameType.Hello)
+        List<byte[]> events = [];
+        bool containsHello = false;
+        foreach (byte[] frame in batch)
+        {
+            if (RawEtwFrameCodec.Decode(frame, _limits).Type == RawEtwFrameType.Hello)
+            {
+                containsHello = true;
+                continue;
+            }
+
+            events.Add(frame);
+        }
+
+        if (!containsHello)
         {
             heartbeat = sentBody;
             return true;
         }
 
-        if (batch.Count == 1)
+        if (events.Count == 0)
         {
             heartbeat = null;
             return false;
         }
 
         heartbeat = sender.Serialize(RelayLogRecords.CreateRequest(session,
-            batch.Skip(1).Select(static frame => (ReadOnlyMemory<byte>)frame), settings.Resources));
+            events.Select(static frame => (ReadOnlyMemory<byte>)frame), settings.Resources));
         return true;
     }
 

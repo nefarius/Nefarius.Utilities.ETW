@@ -162,27 +162,34 @@ public class RunnerTests
                 b.HeartbeatInterval = TimeSpan.FromMilliseconds(120);
             }), pipe, handler);
 
-        pipe.Push(Frames.Concat([Frames.Hello(Guid.NewGuid()), Frames.Event(1)]));
-        await WaitUntil(() => handler.Requests.Count >= 2, TimeSpan.FromSeconds(5));
-
-        CapturedRequest[] sent = handler.Requests.Take(2).ToArray();
-        Assert.Multiple(() =>
+        try
         {
-            Assert.That(sent[0].FrameBytes(), Has.Count.EqualTo(2));
-            Assert.That(sent[1].Body, Is.Not.EqualTo(sent[0].Body));
-            Assert.That(sent[1].ContentEncoding, Is.EqualTo("gzip"));
+            pipe.Push(Frames.Concat([Frames.Hello(Guid.NewGuid()), Frames.Event(1)]));
+            await WaitUntil(() => handler.Requests.Count >= 2, TimeSpan.FromSeconds(5));
+
+            CapturedRequest[] sent = handler.Requests.Take(2).ToArray();
+            Assert.Multiple(() =>
+            {
+                Assert.That(sent[0].FrameBytes(), Has.Count.EqualTo(2));
+                Assert.That(sent[1].Body, Is.Not.EqualTo(sent[0].Body));
+                Assert.That(sent[1].ContentEncoding, Is.EqualTo("gzip"));
             Assert.That(sent[1].FrameBytes().Select(Convert.ToBase64String),
                 Is.EqualTo(sent[0].FrameBytes().Skip(1).Select(Convert.ToBase64String)));
         });
 
-        pipe.Complete();
-        (int code, RelayRunner runner, _) = await running;
-        Assert.Multiple(() =>
+            pipe.Complete();
+            (int code, RelayRunner runner, _) = await running;
+            Assert.Multiple(() =>
+            {
+                Assert.That(code, Is.EqualTo(0));
+                Assert.That(runner.FramesSent, Is.EqualTo(2));
+                Assert.That(runner.Batches, Is.GreaterThanOrEqualTo(2));
+            });
+        }
+        finally
         {
-            Assert.That(code, Is.EqualTo(0));
-            Assert.That(runner.FramesSent, Is.EqualTo(2));
-            Assert.That(runner.Batches, Is.GreaterThanOrEqualTo(2));
-        });
+            await StopAsync(pipe, running);
+        }
     }
 
     [Test]
@@ -190,8 +197,19 @@ public class RunnerTests
     {
         ManualTime clock = new();
         PipeLikeStream pipe = new();
-        RecordingHandler handler = new();
         byte[] secondEvent = Frames.Event(2);
+        int schedulesAtSecondBatch = -1;
+        RecordingHandler handler = new((_, captured) =>
+        {
+            if (Volatile.Read(ref schedulesAtSecondBatch) < 0 &&
+                captured.FrameBytes().Select(Convert.ToBase64String)
+                    .SequenceEqual([Convert.ToBase64String(secondEvent)]))
+            {
+                Volatile.Write(ref schedulesAtSecondBatch, clock.ScheduleCount);
+            }
+
+            return Task.FromResult(RecordingHandler.Ok());
+        });
         Task<(int Code, RelayRunner Runner, List<TimeSpan> Delays)> running = Run.RunAsync(Run.Settings(b =>
         {
             b.BatchFrames = 2;
@@ -199,26 +217,137 @@ public class RunnerTests
             b.HeartbeatInterval = TimeSpan.FromMilliseconds(1000);
         }), pipe, handler, clock: clock);
 
+        try
+        {
+            Guid session = Guid.NewGuid();
+            pipe.Push(Frames.Concat([Frames.Hello(session), Frames.Event(1)]));
+            await WaitUntil(() => handler.Requests.Count >= 1 && handler.Requests[0].FrameBytes().Count == 2
+                                  && clock.ScheduleCount >= 1, TimeSpan.FromSeconds(5));
+
+            clock.Advance(TimeSpan.FromMilliseconds(400));
+            pipe.Push(secondEvent);
+            await WaitUntil(() =>
+            {
+                int seen = Volatile.Read(ref schedulesAtSecondBatch);
+                return seen >= 0 && clock.ScheduleCount > seen;
+            }, TimeSpan.FromSeconds(5));
+
+            clock.Advance(TimeSpan.FromMilliseconds(999));
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
+            Assert.That(CountRequestsWithFrames(handler, secondEvent), Is.EqualTo(1),
+                "The replay must wait for the full interval after the second batch.");
+
+            clock.Advance(TimeSpan.FromMilliseconds(1));
+            await WaitUntil(() => CountRequestsWithFrames(handler, secondEvent) >= 2, TimeSpan.FromSeconds(5));
+
+            pipe.Complete();
+            Assert.That((await running).Code, Is.EqualTo(0));
+        }
+        finally
+        {
+            await StopAsync(pipe, running);
+        }
+    }
+
+    [Test]
+    public async Task PendingBatch_FlushesWhenTheHeartbeatDeadlineArrives()
+    {
+        ManualTime clock = new();
+        PipeLikeStream pipe = new();
+        RecordingHandler handler = new();
+        byte[] pending = Frames.Event(2);
+        Task<(int Code, RelayRunner Runner, List<TimeSpan> Delays)> running = Run.RunAsync(Run.Settings(b =>
+        {
+            b.BatchFrames = 2;
+            b.FlushInterval = TimeSpan.FromHours(1);
+            b.HeartbeatInterval = TimeSpan.FromMilliseconds(1000);
+        }), pipe, handler, clock: clock);
+
+        try
+        {
+            Guid session = Guid.NewGuid();
+            pipe.Push(Frames.Concat([Frames.Hello(session), Frames.Event(1)]));
+            await WaitUntil(() => handler.Requests.Count >= 1 && clock.ScheduleCount >= 1, TimeSpan.FromSeconds(5));
+
+            int armedSchedules = clock.ScheduleCount;
+            pipe.Push(pending);
+            await WaitUntil(() => clock.ScheduleCount > armedSchedules, TimeSpan.FromSeconds(5));
+
+            clock.Advance(TimeSpan.FromMilliseconds(999));
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
+            Assert.That(handler.Requests, Has.Count.EqualTo(1),
+                "The open batch must wait for the heartbeat deadline rather than the flush interval.");
+
+            clock.Advance(TimeSpan.FromMilliseconds(1));
+            await WaitUntil(() => handler.Requests.Count >= 2, TimeSpan.FromSeconds(5));
+            Assert.That(handler.Requests[1].FrameBytes().Select(Convert.ToBase64String),
+                Is.EqualTo(new[] { Convert.ToBase64String(pending) }));
+
+            pipe.Complete();
+            Assert.That((await running).Code, Is.EqualTo(0));
+        }
+        finally
+        {
+            await StopAsync(pipe, running);
+        }
+    }
+
+    [Test]
+    public async Task DuplicateHelloOnlyBatch_KeepsThePreviousHeartbeat()
+    {
+        ManualTime clock = new();
+        PipeLikeStream pipe = new();
         Guid session = Guid.NewGuid();
-        pipe.Push(Frames.Concat([Frames.Hello(session), Frames.Event(1)]));
-        await WaitUntil(() => handler.Requests.Count >= 1 && handler.Requests[0].FrameBytes().Count == 2
-                              && clock.ScheduleCount >= 1, TimeSpan.FromSeconds(5));
+        byte[] hello = Frames.Hello(session);
+        byte[] firstEvent = Frames.Event(1);
+        int schedulesAtHello = -1;
+        RecordingHandler handler = new((_, captured) =>
+        {
+            if (Volatile.Read(ref schedulesAtHello) < 0 &&
+                captured.FrameBytes().Select(Convert.ToBase64String).SequenceEqual([Convert.ToBase64String(hello)]))
+            {
+                Volatile.Write(ref schedulesAtHello, clock.ScheduleCount);
+            }
 
-        int armedSchedules = clock.ScheduleCount;
-        pipe.Push(secondEvent);
-        await WaitUntil(() => CountRequestsWithFrames(handler, secondEvent) == 1 && clock.ScheduleCount > armedSchedules,
-            TimeSpan.FromSeconds(5));
+            return Task.FromResult(RecordingHandler.Ok());
+        });
+        Task<(int Code, RelayRunner Runner, List<TimeSpan> Delays)> running = Run.RunAsync(Run.Settings(b =>
+        {
+            b.BatchFrames = 2;
+            b.FlushInterval = TimeSpan.FromHours(1);
+            b.HeartbeatInterval = TimeSpan.FromMilliseconds(1000);
+        }), pipe, handler, clock: clock);
 
-        clock.Advance(TimeSpan.FromMilliseconds(999));
-        await Task.Delay(TimeSpan.FromMilliseconds(100));
-        Assert.That(CountRequestsWithFrames(handler, secondEvent), Is.EqualTo(1),
-            "The replay must wait for the full interval after the second batch.");
+        try
+        {
+            pipe.Push(Frames.Concat([hello, firstEvent]));
+            await WaitUntil(() => handler.Requests.Count >= 1 && clock.ScheduleCount >= 1, TimeSpan.FromSeconds(5));
 
-        clock.Advance(TimeSpan.FromMilliseconds(1));
-        await WaitUntil(() => CountRequestsWithFrames(handler, secondEvent) >= 2, TimeSpan.FromSeconds(5));
+            int armedSchedules = clock.ScheduleCount;
+            pipe.Push(hello);
+            await WaitUntil(() => clock.ScheduleCount > armedSchedules, TimeSpan.FromSeconds(5));
+            clock.Advance(TimeSpan.FromMilliseconds(1000));
+            await WaitUntil(() =>
+            {
+                int seen = Volatile.Read(ref schedulesAtHello);
+                return seen >= 0 && clock.ScheduleCount > seen;
+            }, TimeSpan.FromSeconds(5));
 
-        pipe.Complete();
-        Assert.That((await running).Code, Is.EqualTo(0));
+            clock.Advance(TimeSpan.FromMilliseconds(999));
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
+            Assert.That(CountRequestsWithFrames(handler, firstEvent), Is.EqualTo(0),
+                "The retained heartbeat starts a full interval after the hello is acknowledged.");
+
+            clock.Advance(TimeSpan.FromMilliseconds(1));
+            await WaitUntil(() => CountRequestsWithFrames(handler, firstEvent) >= 1, TimeSpan.FromSeconds(5));
+
+            pipe.Complete();
+            Assert.That((await running).Code, Is.EqualTo(0));
+        }
+        finally
+        {
+            await StopAsync(pipe, running);
+        }
     }
 
     private static int CountRequestsWithFrames(RecordingHandler handler, params byte[][] frames)
@@ -238,14 +367,20 @@ public class RunnerTests
             b.HeartbeatInterval = TimeSpan.FromMilliseconds(80);
         }), pipe, handler);
 
-        pipe.Push(Frames.Concat(Frames.Session(Guid.NewGuid(), 1)));
-        await WaitUntil(() => handler.Requests.Count >= 1, TimeSpan.FromSeconds(5));
-        await Task.Delay(TimeSpan.FromMilliseconds(400));
+        try
+        {
+            pipe.Push(Frames.Concat(Frames.Session(Guid.NewGuid(), 1)));
+            await WaitUntil(() => handler.Requests.Count >= 1, TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromMilliseconds(400));
 
-        Assert.That(handler.Requests, Has.Count.EqualTo(1));
-
-        pipe.Complete();
-        Assert.That((await running).Code, Is.EqualTo(0));
+            Assert.That(handler.Requests, Has.Count.EqualTo(1));
+            pipe.Complete();
+            Assert.That((await running).Code, Is.EqualTo(0));
+        }
+        finally
+        {
+            await StopAsync(pipe, running);
+        }
     }
 
     [Test]
@@ -260,15 +395,21 @@ public class RunnerTests
             b.HeartbeatInterval = TimeSpan.Zero;
         }), pipe, handler);
 
-        pipe.Push(Frames.Concat([Frames.Hello(Guid.NewGuid()), Frames.Event(1)]));
-        await WaitUntil(() => handler.Requests.Count >= 1 && handler.Requests[0].FrameBytes().Count == 2,
-            TimeSpan.FromSeconds(5));
-        await Task.Delay(TimeSpan.FromMilliseconds(350));
+        try
+        {
+            pipe.Push(Frames.Concat([Frames.Hello(Guid.NewGuid()), Frames.Event(1)]));
+            await WaitUntil(() => handler.Requests.Count >= 1 && handler.Requests[0].FrameBytes().Count == 2,
+                TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromMilliseconds(350));
 
-        Assert.That(handler.Requests, Has.Count.EqualTo(1));
-
-        pipe.Complete();
-        Assert.That((await running).Code, Is.EqualTo(0));
+            Assert.That(handler.Requests, Has.Count.EqualTo(1));
+            pipe.Complete();
+            Assert.That((await running).Code, Is.EqualTo(0));
+        }
+        finally
+        {
+            await StopAsync(pipe, running);
+        }
     }
 
     [Test]
@@ -285,20 +426,26 @@ public class RunnerTests
             b.HeartbeatInterval = TimeSpan.FromMilliseconds(80);
         }), pipe, handler);
 
-        pipe.Push(Frames.Concat([Frames.Hello(Guid.NewGuid()), Frames.Event(1)]));
-        Task finished = await Task.WhenAny(running, Task.Delay(TimeSpan.FromSeconds(5)));
-        pipe.Complete();
-        Assert.That(finished, Is.SameAs(running));
-        DeliveryException? ex = Assert.ThrowsAsync<DeliveryException>(async () => await running);
-
-        Assert.Multiple(() =>
+        try
         {
-            Assert.That(ex!.Message, Does.Contain("session is unknown"));
-            Assert.That(handler.Requests, Has.Count.EqualTo(2));
-            Assert.That(handler.Requests[1].Body, Is.Not.EqualTo(handler.Requests[0].Body));
-            Assert.That(handler.Requests[1].FrameBytes().Select(Convert.ToBase64String),
-                Is.EqualTo(handler.Requests[0].FrameBytes().Skip(1).Select(Convert.ToBase64String)));
-        });
+            pipe.Push(Frames.Concat([Frames.Hello(Guid.NewGuid()), Frames.Event(1)]));
+            Task finished = await Task.WhenAny(running, Task.Delay(TimeSpan.FromSeconds(5)));
+            Assert.That(finished, Is.SameAs(running));
+            DeliveryException? ex = Assert.ThrowsAsync<DeliveryException>(async () => await running);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(ex!.Message, Does.Contain("session is unknown"));
+                Assert.That(handler.Requests, Has.Count.EqualTo(2));
+                Assert.That(handler.Requests[1].Body, Is.Not.EqualTo(handler.Requests[0].Body));
+                Assert.That(handler.Requests[1].FrameBytes().Select(Convert.ToBase64String),
+                    Is.EqualTo(handler.Requests[0].FrameBytes().Skip(1).Select(Convert.ToBase64String)));
+            });
+        }
+        finally
+        {
+            await StopAsync(pipe, running);
+        }
     }
 
     [Test]
@@ -353,7 +500,84 @@ public class RunnerTests
         }
         finally
         {
-            pipe.Complete();
+            await StopAsync(pipe, running);
+            gateway.Dispose();
+        }
+    }
+
+    [Test]
+    public async Task HeartbeatWithAnEmbeddedHello_DoesNotReopenAfterRestart()
+    {
+        ManualTime clock = new();
+        PipeLikeStream pipe = new();
+        RelayLogProcessor gateway = new();
+        int seen = 0;
+        int firstExports = 0;
+        int replayExports = -1;
+        int schedulesAtEmbeddedBatch = -1;
+        RecordingHandler handler = new((_, request) =>
+        {
+            RelayLogResult result = gateway.Process("anonymous", request.Parse());
+            seen++;
+            if (seen < 3)
+            {
+                if (seen == 1)
+                {
+                    firstExports = ExportedEvents(result.Decoded);
+                }
+                else
+                {
+                    Volatile.Write(ref schedulesAtEmbeddedBatch, clock.ScheduleCount);
+                    gateway.Dispose();
+                    gateway = new RelayLogProcessor();
+                }
+
+                return Task.FromResult(RecordingHandler.Ok());
+            }
+
+            replayExports = ExportedEvents(result.Decoded);
+            return Task.FromResult(RecordingHandler.Rejected(result.Error ?? "rejected"));
+        });
+
+        Task running = Run.RunAsync(Run.Settings(b =>
+        {
+            b.BatchFrames = 3;
+            b.FlushInterval = TimeSpan.FromHours(1);
+            b.HeartbeatInterval = TimeSpan.FromMilliseconds(1000);
+        }), pipe, handler, clock: clock);
+
+        try
+        {
+            Guid session = Guid.NewGuid();
+            byte[] hello = Frames.Hello(session);
+            byte[] firstEvent = Frames.Event(1);
+            pipe.Push(Frames.Concat([hello, firstEvent, Frames.Event(2)]));
+            await WaitUntil(() => handler.Requests.Count >= 1 && clock.ScheduleCount >= 1, TimeSpan.FromSeconds(5));
+
+            pipe.Push(Frames.Concat([firstEvent, hello, firstEvent]));
+            await WaitUntil(() =>
+            {
+                int seenSchedules = Volatile.Read(ref schedulesAtEmbeddedBatch);
+                return seenSchedules >= 0 && clock.ScheduleCount > seenSchedules;
+            }, TimeSpan.FromSeconds(5));
+
+            clock.Advance(TimeSpan.FromMilliseconds(1000));
+            Task finished = await Task.WhenAny(running, Task.Delay(TimeSpan.FromSeconds(5)));
+            Assert.That(finished, Is.SameAs(running));
+            DeliveryException? ex = Assert.ThrowsAsync<DeliveryException>(async () => await running);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(firstExports, Is.GreaterThan(0));
+                Assert.That(replayExports, Is.EqualTo(0));
+                Assert.That(ex!.Message, Does.Contain("session is unknown"));
+                Assert.That(handler.Requests[2].FrameBytes().Select(Convert.ToBase64String),
+                    Is.EqualTo(new[] { Convert.ToBase64String(firstEvent), Convert.ToBase64String(firstEvent) }));
+            });
+        }
+        finally
+        {
+            await StopAsync(pipe, running);
             gateway.Dispose();
         }
     }
@@ -367,6 +591,20 @@ public class RunnerTests
         while (!condition())
         {
             await Task.Delay(TimeSpan.FromMilliseconds(15), timeoutSource.Token);
+        }
+    }
+
+    /// <summary>Stops the runner even when an assertion fails before the test reaches its own completion.</summary>
+    private static async Task StopAsync(PipeLikeStream pipe, Task running)
+    {
+        pipe.Complete();
+        try
+        {
+            await running.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        catch (Exception)
+        {
+            // The failing assertion stays the test result. This only lets the runner exit.
         }
     }
 
