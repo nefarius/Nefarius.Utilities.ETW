@@ -46,6 +46,12 @@ internal sealed class RelaySettings
     /// <summary>The longest a frame waits in an incomplete batch.</summary>
     public TimeSpan FlushInterval { get; init; } = TimeSpan.FromMilliseconds(250);
 
+    /// <summary>
+    ///     How long an open session may go without a newly acknowledged batch before that batch is sent again.
+    ///     <see cref="TimeSpan.Zero" /> disables it. Default: 5 minutes, inside the gateway's 15-minute idle timeout.
+    /// </summary>
+    public TimeSpan HeartbeatInterval { get; init; } = TimeSpan.FromMinutes(5);
+
     /// <summary>Frames buffered between the input reader and the sender. A full queue stalls the producer.</summary>
     public int QueueFrames { get; init; } = 1024;
 

@@ -50,6 +50,7 @@ etwrelay [--endpoint <url>]            # default http://localhost:4318; '/v1/log
          [--batch-frames <1-64>]       # default 64
          [--batch-bytes <n>]           # default 1 MiB
          [--flush-ms <n>]              # default 250
+         [--heartbeat-seconds <0-86400>] # default 300; 0 disables; keeps an open session from going idle
          [--queue-frames <n>]          # default 1024; a full queue slows the producer down
          [--timeout-seconds <n>]       # per request, default 30
          [--max-retries <n>]           # default 8
@@ -57,6 +58,10 @@ etwrelay [--endpoint <url>]            # default http://localhost:4318; '/v1/log
 ```
 
 Frames of one session are sent in order, in requests of at most 64 frames: that is the length of the gateway's duplicate-retry window. Sessions are never mixed in a request, and a request is flushed at the end frame, when a new hello frame starts another session, when it reaches the frame or byte limit, or after `--flush-ms`.
+
+## Idle sessions
+
+The gateway discards a session after `Gateway:Limits:SessionIdleTimeout` without a request (15 minutes by default). A quiet capture would otherwise lose its session and be rejected when the next event arrived. While a session is open and no new batch has been acknowledged, `etwrelay` replays the latest acknowledged frames after `--heartbeat-seconds` (default 5 minutes; `0` disables it). Set that interval below the gateway's idle timeout. An interval equal to or greater than the timeout can let the session expire before the first heartbeat. A batch with no hello is resent unchanged, so the gateway recognizes those frames as duplicates, refreshes the session, and does not decode or export them again. Every hello is omitted from the replay: after a gateway restart it would open a session and the events behind it would be exported a second time. The frames that remain are what a live session accepts as duplicates and what a restarted gateway rejects. A batch that contains only a hello has nothing safe to replay. A batch still waiting for `--flush-ms` is sent when the heartbeat comes due, which refreshes the session and starts the interval again. Heartbeats count as requests and stop at an end frame, when the input closes, or when another session starts. A rejected replay is fatal and the capture has to start again.
 
 ## Retries and failure
 

@@ -332,6 +332,7 @@ internal static class Run
             BatchFrames = b.BatchFrames,
             BatchBytes = b.BatchBytes,
             FlushInterval = b.FlushInterval,
+            HeartbeatInterval = b.HeartbeatInterval,
             QueueFrames = b.QueueFrames,
             RequestTimeout = b.RequestTimeout,
             MaxRetries = b.MaxRetries,
@@ -344,7 +345,7 @@ internal static class Run
 
     /// <summary>Runs the pipeline over <paramref name="input" />; delays are recorded, not waited.</summary>
     public static async Task<(int Code, RelayRunner Runner, List<TimeSpan> Delays)> RunAsync(RelaySettings settings,
-        Stream input, HttpMessageHandler handler, CancellationToken abort = default)
+        Stream input, HttpMessageHandler handler, CancellationToken abort = default, TimeProvider? clock = null)
     {
         List<TimeSpan> delays = [];
         using OtlpSender sender = new(settings, TextWriter.Null, handler, (span, _) =>
@@ -356,7 +357,7 @@ internal static class Run
 
             return Task.CompletedTask;
         });
-        RelayRunner runner = new(settings, sender, TextWriter.Null);
+        RelayRunner runner = new(settings, sender, TextWriter.Null, clock);
         int code = await runner.RunAsync(input, abort);
         return (code, runner, delays);
     }
@@ -371,9 +372,157 @@ internal sealed class SettingsBuilder
     public int BatchFrames { get; set; } = 64;
     public int BatchBytes { get; set; } = 1024 * 1024;
     public TimeSpan FlushInterval { get; set; } = TimeSpan.FromHours(1);
+    public TimeSpan HeartbeatInterval { get; set; } = TimeSpan.Zero;
     public int QueueFrames { get; set; } = 1024;
     public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(30);
     public int MaxRetries { get; set; } = 3;
     public TimeSpan RetryAfterCap { get; set; } = TimeSpan.FromSeconds(60);
     public int MaxFrameBytes { get; set; } = 1024 * 1024;
+}
+
+/// <summary>A clock whose delays complete only when <see cref="Advance" /> reaches them.</summary>
+internal sealed class ManualTime : TimeProvider
+{
+    private readonly object _gate = new();
+    private readonly List<ManualTimer> _timers = [];
+    private long _now;
+    private int _scheduleCount;
+
+    public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+    /// <summary>How many positive delays have been scheduled.</summary>
+    public int ScheduleCount
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _scheduleCount;
+            }
+        }
+    }
+
+    public override long GetTimestamp()
+    {
+        lock (_gate)
+        {
+            return _now;
+        }
+    }
+
+    public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+    {
+        ManualTimer timer = new(this, callback, state);
+        List<ManualTimer> due = [];
+        lock (_gate)
+        {
+            if (dueTime > TimeSpan.Zero)
+            {
+                _scheduleCount++;
+            }
+
+            timer.Arm(dueTime, period, _now);
+            _timers.Add(timer);
+            CollectDue(due);
+        }
+
+        Fire(due);
+        return timer;
+    }
+
+    public void Advance(TimeSpan by)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(by, TimeSpan.Zero);
+
+        List<ManualTimer> due = [];
+        lock (_gate)
+        {
+            _now += by.Ticks;
+            CollectDue(due);
+        }
+
+        Fire(due);
+    }
+
+    private void CollectDue(List<ManualTimer> due)
+    {
+        foreach (ManualTimer timer in _timers)
+        {
+            if (timer.TryTakeDue(_now))
+            {
+                due.Add(timer);
+            }
+        }
+    }
+
+    private static void Fire(List<ManualTimer> due)
+    {
+        foreach (ManualTimer timer in due)
+        {
+            timer.Invoke();
+        }
+    }
+
+    private sealed class ManualTimer(ManualTime clock, TimerCallback callback, object? state) : ITimer
+    {
+        private long _due = long.MaxValue;
+        private long _periodTicks = Timeout.Infinite;
+        private bool _disposed;
+
+        public void Arm(TimeSpan dueTime, TimeSpan period, long now)
+        {
+            _periodTicks = period == Timeout.InfiniteTimeSpan ? Timeout.Infinite : period.Ticks;
+            _due = DueFrom(dueTime, now);
+        }
+
+        public bool TryTakeDue(long now)
+        {
+            if (_disposed || now < _due)
+            {
+                return false;
+            }
+
+            _due = _periodTicks < 0 ? long.MaxValue : now + _periodTicks;
+            return true;
+        }
+
+        public void Invoke() => callback(state);
+
+        public bool Change(TimeSpan dueTime, TimeSpan period)
+        {
+            List<ManualTimer> due = [];
+            lock (clock._gate)
+            {
+                if (_disposed)
+                {
+                    return false;
+                }
+
+                Arm(dueTime, period, clock._now);
+                clock.CollectDue(due);
+            }
+
+            Fire(due);
+            return true;
+        }
+
+        public void Dispose()
+        {
+            lock (clock._gate)
+            {
+                _disposed = true;
+                _due = long.MaxValue;
+                clock._timers.Remove(this);
+            }
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            Dispose();
+            return ValueTask.CompletedTask;
+        }
+
+        private static long DueFrom(TimeSpan dueTime, long now) =>
+            dueTime == Timeout.InfiniteTimeSpan ? long.MaxValue : dueTime <= TimeSpan.Zero ? now : now + dueTime.Ticks;
+    }
 }
