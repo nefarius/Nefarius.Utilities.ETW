@@ -204,20 +204,21 @@ public class RunnerTests
 
         Task running = Run.RunAsync(Run.Settings(b =>
         {
+            b.BatchFrames = 2;
             b.FlushInterval = TimeSpan.FromMilliseconds(40);
             b.HeartbeatInterval = TimeSpan.FromMilliseconds(1000);
         }), pipe, handler);
 
         Guid session = Guid.NewGuid();
-        pipe.Push(Frames.Hello(session));
-        await WaitUntil(() => handler.Requests.Count >= 1, TimeSpan.FromSeconds(5));
+        pipe.Push(Frames.Concat([Frames.Hello(session), Frames.Event(1)]));
+        await WaitUntil(() => handler.Requests.Count >= 1 && handler.Requests[0].FrameBytes().Count == 2,
+            TimeSpan.FromSeconds(5));
 
-        // Still inside the first heartbeat interval. A duplicate of the hello would mean the new batch did not
-        // replace it; the gap distinguishes a replaced deadline from the remainder of the original one.
-        await Task.Delay(TimeSpan.FromMilliseconds(500));
-        pipe.Push(Frames.Event(1));
+        // Inside the armed interval. The gap distinguishes a replaced deadline from the remainder of the original one.
+        await Task.Delay(TimeSpan.FromMilliseconds(400));
+        pipe.Push(Frames.Event(2));
 
-        int eventAt = -1;
+        int replayAt = -1;
         TimeSpan gap = TimeSpan.Zero;
         await WaitUntil(() =>
         {
@@ -229,29 +230,34 @@ public class RunnerTests
             }
 
             int count = Math.Min(requests.Length, times.Length);
-            int foundEvent = Array.FindIndex(requests, 0, count,
-                r => !r.Body.AsSpan().SequenceEqual(requests[0].Body));
-            if (foundEvent != 1)
+            if (count < 2 || requests[0].FrameBytes().Count != 2)
             {
                 return false;
             }
 
-            int foundDuplicate = Array.FindIndex(requests, foundEvent + 1, count - (foundEvent + 1),
-                r => r.Body.AsSpan().SequenceEqual(requests[foundEvent].Body));
-            if (foundDuplicate < 0)
+            int nextBatch = Array.FindIndex(requests, 1, count - 1,
+                request => !request.Body.AsSpan().SequenceEqual(requests[0].Body));
+            if (nextBatch < 0)
             {
                 return false;
             }
 
-            eventAt = foundEvent;
-            gap = times[foundDuplicate] - times[foundEvent];
+            int duplicate = Array.FindIndex(requests, nextBatch + 1, count - (nextBatch + 1),
+                request => request.Body.AsSpan().SequenceEqual(requests[nextBatch].Body));
+            if (duplicate < 0)
+            {
+                return false;
+            }
+
+            replayAt = duplicate;
+            gap = times[duplicate] - times[nextBatch];
             return true;
         }, TimeSpan.FromSeconds(5));
 
         Assert.Multiple(() =>
         {
-            Assert.That(eventAt, Is.EqualTo(1), "The hello must not be resent before the new batch.");
-            Assert.That(handler.Requests[eventAt].FrameBytes(), Has.Count.EqualTo(1));
+            Assert.That(replayAt, Is.EqualTo(2), "The replay follows the batch that reset the deadline.");
+            Assert.That(handler.Requests[1].FrameBytes(), Has.Count.EqualTo(1));
             Assert.That(gap, Is.GreaterThanOrEqualTo(TimeSpan.FromMilliseconds(700)));
         });
 
@@ -287,12 +293,14 @@ public class RunnerTests
         RecordingHandler handler = new();
         Task<(int Code, RelayRunner Runner, List<TimeSpan> Delays)> running = Run.RunAsync(Run.Settings(b =>
         {
-            b.FlushInterval = TimeSpan.FromMilliseconds(40);
+            b.BatchFrames = 2;
+            b.FlushInterval = TimeSpan.FromHours(1);
             b.HeartbeatInterval = TimeSpan.Zero;
         }), pipe, handler);
 
-        pipe.Push(Frames.Hello(Guid.NewGuid()));
-        await WaitUntil(() => handler.Requests.Count >= 1, TimeSpan.FromSeconds(5));
+        pipe.Push(Frames.Concat([Frames.Hello(Guid.NewGuid()), Frames.Event(1)]));
+        await WaitUntil(() => handler.Requests.Count >= 1 && handler.Requests[0].FrameBytes().Count == 2,
+            TimeSpan.FromSeconds(5));
         await Task.Delay(TimeSpan.FromMilliseconds(350));
 
         Assert.That(handler.Requests, Has.Count.EqualTo(1));
