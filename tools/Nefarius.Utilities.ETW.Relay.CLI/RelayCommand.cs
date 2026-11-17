@@ -68,6 +68,14 @@ internal static class RelayCommand
             DefaultValueFactory = _ => 250
         };
 
+        Option<int> heartbeatOpt = new("--heartbeat-seconds")
+        {
+            Description =
+                "Resend the latest acknowledged batch of an open session after this many idle seconds, so the gateway " +
+                "does not expire it. 0 disables the heartbeat.",
+            DefaultValueFactory = _ => 300
+        };
+
         Option<int> queueOpt = new("--queue-frames")
         {
             Description = "Frames buffered between reading and sending. When full, the producer is slowed down.",
@@ -98,7 +106,7 @@ internal static class RelayCommand
             "Exit codes: 0 delivered, 1 delivery failed, 2 invalid usage or input.")
         {
             endpointOpt, inputFormatOpt, inputOpt, headerOpt, resourceOpt, gzipOpt, batchFramesOpt, batchBytesOpt,
-            flushMsOpt, queueOpt, timeoutOpt, retriesOpt, maxFrameOpt
+            flushMsOpt, heartbeatOpt, queueOpt, timeoutOpt, retriesOpt, maxFrameOpt
         };
 
         root.SetAction(async (ParseResult result, CancellationToken libraryToken) =>
@@ -107,7 +115,8 @@ internal static class RelayCommand
             try
             {
                 settings = CreateSettings(result, endpointOpt, inputFormatOpt, headerOpt, resourceOpt, gzipOpt,
-                    batchFramesOpt, batchBytesOpt, flushMsOpt, queueOpt, timeoutOpt, retriesOpt, maxFrameOpt);
+                    batchFramesOpt, batchBytesOpt, flushMsOpt, heartbeatOpt, queueOpt, timeoutOpt, retriesOpt,
+                    maxFrameOpt);
             }
             catch (UsageException ex)
             {
@@ -182,8 +191,8 @@ internal static class RelayCommand
 
     private static RelaySettings CreateSettings(ParseResult result, Option<string> endpoint, Option<string> format,
         Option<string[]> header, Option<string[]> resource, Option<bool> gzip, Option<int> batchFrames,
-        Option<int> batchBytes, Option<int> flushMs, Option<int> queue, Option<int> timeout, Option<int> retries,
-        Option<int> maxFrame)
+        Option<int> batchBytes, Option<int> flushMs, Option<int> heartbeatSeconds, Option<int> queue,
+        Option<int> timeout, Option<int> retries, Option<int> maxFrame)
     {
         InputFormat inputFormat = result.GetValue(format)!.ToLowerInvariant() switch
         {
@@ -207,6 +216,7 @@ internal static class RelayCommand
         int frames = Range(result.GetValue(batchFrames), 1, RelaySettings.MaxFramesPerBatch, "--batch-frames");
         int bytes = Range(result.GetValue(batchBytes), 1, 16 * 1024 * 1024, "--batch-bytes");
         int flush = Range(result.GetValue(flushMs), 1, 60_000, "--flush-ms");
+        int heartbeat = Range(result.GetValue(heartbeatSeconds), 0, 86_400, "--heartbeat-seconds");
         int queueFrames = Range(result.GetValue(queue), 1, 1_000_000, "--queue-frames");
         int timeoutSeconds = Range(result.GetValue(timeout), 1, 3600, "--timeout-seconds");
         int maxRetries = Range(result.GetValue(retries), 0, 1000, "--max-retries");
@@ -223,6 +233,7 @@ internal static class RelayCommand
             BatchFrames = frames,
             BatchBytes = bytes,
             FlushInterval = TimeSpan.FromMilliseconds(flush),
+            HeartbeatInterval = TimeSpan.FromSeconds(heartbeat),
             QueueFrames = queueFrames,
             RequestTimeout = TimeSpan.FromSeconds(timeoutSeconds),
             MaxRetries = maxRetries,

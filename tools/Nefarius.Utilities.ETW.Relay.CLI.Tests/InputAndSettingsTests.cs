@@ -1,3 +1,5 @@
+using System.CommandLine;
+
 namespace Nefarius.Utilities.ETW.Relay.CLI.Tests;
 
 public class BinaryInputTests
@@ -186,4 +188,34 @@ public class SettingsTests
     [Test]
     public void ControlCharactersInHeaders_AreRefused() =>
         Assert.Throws<UsageException>(() => RelaySettings.ParsePairs(["a=1\r\nInjected: yes"], "--header"));
+}
+
+public class HeartbeatOptionTests
+{
+    [TestCase("-1")]
+    [TestCase("86401")]
+    public async Task OutOfRangeHeartbeat_IsRejected(string seconds)
+    {
+        StringWriter log = new();
+        RootCommand command = RelayCommand.Build(() => Stream.Null, log);
+
+        int code = await command.Parse(["--heartbeat-seconds", seconds]).InvokeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(code, Is.EqualTo(2));
+            Assert.That(log.ToString(), Does.Contain("--heartbeat-seconds"));
+        });
+    }
+
+    [Test]
+    public async Task ZeroHeartbeat_IsAccepted()
+    {
+        StringWriter log = new();
+        RootCommand command = RelayCommand.Build(() => Stream.Null, log);
+
+        int code = await command.Parse(["--heartbeat-seconds", "0"]).InvokeAsync();
+
+        Assert.That(code, Is.EqualTo(0));
+    }
 }

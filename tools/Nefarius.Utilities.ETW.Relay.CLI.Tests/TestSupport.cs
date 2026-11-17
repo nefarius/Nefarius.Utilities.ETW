@@ -332,6 +332,7 @@ internal static class Run
             BatchFrames = b.BatchFrames,
             BatchBytes = b.BatchBytes,
             FlushInterval = b.FlushInterval,
+            HeartbeatInterval = b.HeartbeatInterval,
             QueueFrames = b.QueueFrames,
             RequestTimeout = b.RequestTimeout,
             MaxRetries = b.MaxRetries,
@@ -371,6 +372,7 @@ internal sealed class SettingsBuilder
     public int BatchFrames { get; set; } = 64;
     public int BatchBytes { get; set; } = 1024 * 1024;
     public TimeSpan FlushInterval { get; set; } = TimeSpan.FromHours(1);
+    public TimeSpan HeartbeatInterval { get; set; } = TimeSpan.Zero;
     public int QueueFrames { get; set; } = 1024;
     public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(30);
     public int MaxRetries { get; set; } = 3;

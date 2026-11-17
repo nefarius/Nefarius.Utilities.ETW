@@ -50,6 +50,7 @@ etwrelay [--endpoint <url>]            # default http://localhost:4318; '/v1/log
          [--batch-frames <1-64>]       # default 64
          [--batch-bytes <n>]           # default 1 MiB
          [--flush-ms <n>]              # default 250
+         [--heartbeat-seconds <0-86400>] # default 300; 0 disables; keeps an open session from going idle
          [--queue-frames <n>]          # default 1024; a full queue slows the producer down
          [--timeout-seconds <n>]       # per request, default 30
          [--max-retries <n>]           # default 8
@@ -57,6 +58,10 @@ etwrelay [--endpoint <url>]            # default http://localhost:4318; '/v1/log
 ```
 
 Frames of one session are sent in order, in requests of at most 64 frames: that is the length of the gateway's duplicate-retry window. Sessions are never mixed in a request, and a request is flushed at the end frame, when a new hello frame starts another session, when it reaches the frame or byte limit, or after `--flush-ms`.
+
+## Idle sessions
+
+The gateway discards a session after `Gateway:Limits:SessionIdleTimeout` without a request (15 minutes by default). A quiet capture would otherwise lose its session and be rejected when the next event arrived. While a session is open and no new batch has been acknowledged, `etwrelay` resends the latest acknowledged request after `--heartbeat-seconds` (default 5 minutes). The body is the same bytes, so the gateway recognizes a duplicate, refreshes the session, and does not decode or export those events again. Heartbeats count as requests and stop at an end frame, when the input closes, when another session starts, or when `--heartbeat-seconds 0` disables them. A restart of the gateway still rejects the session; that rejection is fatal and the capture has to start again.
 
 ## Retries and failure
 

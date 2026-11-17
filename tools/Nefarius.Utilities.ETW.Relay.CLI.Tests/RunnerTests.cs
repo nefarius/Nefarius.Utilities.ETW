@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 
@@ -138,6 +139,196 @@ public class RunnerTests
 
         Assert.That(handler.Requests.SelectMany(r => r.FrameBytes()).Select(Convert.ToBase64String),
             Is.EqualTo(input.Select(Convert.ToBase64String)));
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // Idle heartbeat
+    // ---------------------------------------------------------------------------------------------------------------
+
+    [Test]
+    public async Task IdleOpenSession_ResendsTheLastAcknowledgedBatchUnchanged()
+    {
+        PipeLikeStream pipe = new();
+        RecordingHandler handler = new();
+        Task<(int Code, RelayRunner Runner, List<TimeSpan> Delays)> running = Run.RunAsync(
+            Run.Settings(b =>
+            {
+                b.Gzip = true;
+                b.FlushInterval = TimeSpan.FromMilliseconds(40);
+                b.HeartbeatInterval = TimeSpan.FromMilliseconds(120);
+            }), pipe, handler);
+
+        pipe.Push(Frames.Hello(Guid.NewGuid()));
+        await WaitUntil(() => handler.Requests.Count >= 2, TimeSpan.FromSeconds(5));
+
+        CapturedRequest[] sent = handler.Requests.Take(2).ToArray();
+        Assert.Multiple(() =>
+        {
+            Assert.That(sent[1].Body, Is.EqualTo(sent[0].Body));
+            Assert.That(sent[1].ContentEncoding, Is.EqualTo("gzip"));
+            Assert.That(sent[1].FrameBytes().Select(Convert.ToBase64String),
+                Is.EqualTo(sent[0].FrameBytes().Select(Convert.ToBase64String)));
+        });
+
+        pipe.Complete();
+        (int code, RelayRunner runner, _) = await running;
+        Assert.Multiple(() =>
+        {
+            Assert.That(code, Is.EqualTo(0));
+            Assert.That(runner.FramesSent, Is.EqualTo(1));
+            Assert.That(runner.Batches, Is.GreaterThanOrEqualTo(2));
+        });
+    }
+
+    [Test]
+    public async Task NewBatch_ResetsTheHeartbeatDeadline()
+    {
+        PipeLikeStream pipe = new();
+        Stopwatch clock = Stopwatch.StartNew();
+        List<TimeSpan> sentAt = [];
+        RecordingHandler handler = new((_, _) =>
+        {
+            lock (sentAt)
+            {
+                sentAt.Add(clock.Elapsed);
+            }
+
+            return Task.FromResult(RecordingHandler.Ok());
+        });
+
+        Task running = Run.RunAsync(Run.Settings(b =>
+        {
+            b.FlushInterval = TimeSpan.FromMilliseconds(40);
+            b.HeartbeatInterval = TimeSpan.FromMilliseconds(1000);
+        }), pipe, handler);
+
+        Guid session = Guid.NewGuid();
+        pipe.Push(Frames.Hello(session));
+        await WaitUntil(() => handler.Requests.Count >= 1, TimeSpan.FromSeconds(5));
+
+        // Still inside the first heartbeat interval. A duplicate of the hello would mean the new batch did not
+        // replace it; the gap distinguishes a replaced deadline from the remainder of the original one.
+        await Task.Delay(TimeSpan.FromMilliseconds(500));
+        pipe.Push(Frames.Event(1));
+
+        int eventAt = -1;
+        TimeSpan gap = TimeSpan.Zero;
+        await WaitUntil(() =>
+        {
+            CapturedRequest[] requests = [.. handler.Requests];
+            TimeSpan[] times;
+            lock (sentAt)
+            {
+                times = [.. sentAt];
+            }
+
+            int count = Math.Min(requests.Length, times.Length);
+            int foundEvent = Array.FindIndex(requests, 0, count,
+                r => !r.Body.AsSpan().SequenceEqual(requests[0].Body));
+            if (foundEvent != 1)
+            {
+                return false;
+            }
+
+            int foundDuplicate = Array.FindIndex(requests, foundEvent + 1, count - (foundEvent + 1),
+                r => r.Body.AsSpan().SequenceEqual(requests[foundEvent].Body));
+            if (foundDuplicate < 0)
+            {
+                return false;
+            }
+
+            eventAt = foundEvent;
+            gap = times[foundDuplicate] - times[foundEvent];
+            return true;
+        }, TimeSpan.FromSeconds(5));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(eventAt, Is.EqualTo(1), "The hello must not be resent before the new batch.");
+            Assert.That(handler.Requests[eventAt].FrameBytes(), Has.Count.EqualTo(1));
+            Assert.That(gap, Is.GreaterThanOrEqualTo(TimeSpan.FromMilliseconds(700)));
+        });
+
+        pipe.Complete();
+        await running;
+    }
+
+    [Test]
+    public async Task EndedSession_IsNotKeptAlive()
+    {
+        PipeLikeStream pipe = new();
+        RecordingHandler handler = new();
+        Task<(int Code, RelayRunner Runner, List<TimeSpan> Delays)> running = Run.RunAsync(Run.Settings(b =>
+        {
+            b.FlushInterval = TimeSpan.FromMilliseconds(40);
+            b.HeartbeatInterval = TimeSpan.FromMilliseconds(80);
+        }), pipe, handler);
+
+        pipe.Push(Frames.Concat(Frames.Session(Guid.NewGuid(), 1)));
+        await WaitUntil(() => handler.Requests.Count >= 1, TimeSpan.FromSeconds(5));
+        await Task.Delay(TimeSpan.FromMilliseconds(400));
+
+        Assert.That(handler.Requests, Has.Count.EqualTo(1));
+
+        pipe.Complete();
+        Assert.That((await running).Code, Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task DisabledHeartbeat_LeavesAnIdleSessionAlone()
+    {
+        PipeLikeStream pipe = new();
+        RecordingHandler handler = new();
+        Task<(int Code, RelayRunner Runner, List<TimeSpan> Delays)> running = Run.RunAsync(Run.Settings(b =>
+        {
+            b.FlushInterval = TimeSpan.FromMilliseconds(40);
+            b.HeartbeatInterval = TimeSpan.Zero;
+        }), pipe, handler);
+
+        pipe.Push(Frames.Hello(Guid.NewGuid()));
+        await WaitUntil(() => handler.Requests.Count >= 1, TimeSpan.FromSeconds(5));
+        await Task.Delay(TimeSpan.FromMilliseconds(350));
+
+        Assert.That(handler.Requests, Has.Count.EqualTo(1));
+
+        pipe.Complete();
+        Assert.That((await running).Code, Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task HeartbeatRejection_IsFatalAndNotRetried()
+    {
+        PipeLikeStream pipe = new();
+        RecordingHandler handler = new((index, _) =>
+            Task.FromResult(index == 0 ? RecordingHandler.Ok() : RecordingHandler.Rejected("The session is unknown")));
+
+        Task running = Run.RunAsync(Run.Settings(b =>
+        {
+            b.FlushInterval = TimeSpan.FromMilliseconds(40);
+            b.HeartbeatInterval = TimeSpan.FromMilliseconds(80);
+        }), pipe, handler);
+
+        pipe.Push(Frames.Hello(Guid.NewGuid()));
+        Task finished = await Task.WhenAny(running, Task.Delay(TimeSpan.FromSeconds(5)));
+        pipe.Complete();
+        Assert.That(finished, Is.SameAs(running));
+        DeliveryException? ex = Assert.ThrowsAsync<DeliveryException>(async () => await running);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ex!.Message, Does.Contain("session is unknown"));
+            Assert.That(handler.Requests, Has.Count.EqualTo(2));
+            Assert.That(handler.Requests[1].Body, Is.EqualTo(handler.Requests[0].Body));
+        });
+    }
+
+    private static async Task WaitUntil(Func<bool> condition, TimeSpan timeout)
+    {
+        using CancellationTokenSource timeoutSource = new(timeout);
+        while (!condition())
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(15), timeoutSource.Token);
+        }
     }
 
     // ---------------------------------------------------------------------------------------------------------------
