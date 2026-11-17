@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 
@@ -189,80 +188,43 @@ public class RunnerTests
     [Test]
     public async Task NewBatch_ResetsTheHeartbeatDeadline()
     {
+        ManualTime clock = new();
         PipeLikeStream pipe = new();
-        Stopwatch clock = Stopwatch.StartNew();
-        List<TimeSpan> sentAt = [];
-        RecordingHandler handler = new((_, _) =>
-        {
-            lock (sentAt)
-            {
-                sentAt.Add(clock.Elapsed);
-            }
-
-            return Task.FromResult(RecordingHandler.Ok());
-        });
-
-        Task running = Run.RunAsync(Run.Settings(b =>
+        RecordingHandler handler = new();
+        byte[] secondEvent = Frames.Event(2);
+        Task<(int Code, RelayRunner Runner, List<TimeSpan> Delays)> running = Run.RunAsync(Run.Settings(b =>
         {
             b.BatchFrames = 2;
             b.FlushInterval = TimeSpan.FromMilliseconds(40);
             b.HeartbeatInterval = TimeSpan.FromMilliseconds(1000);
-        }), pipe, handler);
+        }), pipe, handler, clock: clock);
 
         Guid session = Guid.NewGuid();
         pipe.Push(Frames.Concat([Frames.Hello(session), Frames.Event(1)]));
-        await WaitUntil(() => handler.Requests.Count >= 1 && handler.Requests[0].FrameBytes().Count == 2,
+        await WaitUntil(() => handler.Requests.Count >= 1 && handler.Requests[0].FrameBytes().Count == 2
+                              && clock.ScheduleCount >= 1, TimeSpan.FromSeconds(5));
+
+        int armedSchedules = clock.ScheduleCount;
+        pipe.Push(secondEvent);
+        await WaitUntil(() => CountRequestsWithFrames(handler, secondEvent) == 1 && clock.ScheduleCount > armedSchedules,
             TimeSpan.FromSeconds(5));
 
-        // Inside the armed interval. The gap distinguishes a replaced deadline from the remainder of the original one.
-        await Task.Delay(TimeSpan.FromMilliseconds(400));
-        pipe.Push(Frames.Event(2));
+        clock.Advance(TimeSpan.FromMilliseconds(999));
+        await Task.Delay(TimeSpan.FromMilliseconds(100));
+        Assert.That(CountRequestsWithFrames(handler, secondEvent), Is.EqualTo(1),
+            "The replay must wait for the full interval after the second batch.");
 
-        int replayAt = -1;
-        TimeSpan gap = TimeSpan.Zero;
-        await WaitUntil(() =>
-        {
-            CapturedRequest[] requests = [.. handler.Requests];
-            TimeSpan[] times;
-            lock (sentAt)
-            {
-                times = [.. sentAt];
-            }
-
-            int count = Math.Min(requests.Length, times.Length);
-            if (count < 2 || requests[0].FrameBytes().Count != 2)
-            {
-                return false;
-            }
-
-            int nextBatch = Array.FindIndex(requests, 1, count - 1,
-                request => !request.Body.AsSpan().SequenceEqual(requests[0].Body));
-            if (nextBatch < 0)
-            {
-                return false;
-            }
-
-            int duplicate = Array.FindIndex(requests, nextBatch + 1, count - (nextBatch + 1),
-                request => request.Body.AsSpan().SequenceEqual(requests[nextBatch].Body));
-            if (duplicate < 0)
-            {
-                return false;
-            }
-
-            replayAt = duplicate;
-            gap = times[duplicate] - times[nextBatch];
-            return true;
-        }, TimeSpan.FromSeconds(5));
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(replayAt, Is.EqualTo(2), "The replay follows the batch that reset the deadline.");
-            Assert.That(handler.Requests[1].FrameBytes(), Has.Count.EqualTo(1));
-            Assert.That(gap, Is.GreaterThanOrEqualTo(TimeSpan.FromMilliseconds(700)));
-        });
+        clock.Advance(TimeSpan.FromMilliseconds(1));
+        await WaitUntil(() => CountRequestsWithFrames(handler, secondEvent) >= 2, TimeSpan.FromSeconds(5));
 
         pipe.Complete();
-        await running;
+        Assert.That((await running).Code, Is.EqualTo(0));
+    }
+
+    private static int CountRequestsWithFrames(RecordingHandler handler, params byte[][] frames)
+    {
+        string[] expected = frames.Select(Convert.ToBase64String).ToArray();
+        return handler.Requests.Count(request => request.FrameBytes().Select(Convert.ToBase64String).SequenceEqual(expected));
     }
 
     [Test]

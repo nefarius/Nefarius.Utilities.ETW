@@ -8,8 +8,10 @@ namespace Nefarius.Utilities.ETW.Relay.CLI;
 /// <summary>
 ///     Moves frames from the input stream to the gateway: one reader, a bounded queue, one ordered sender.
 /// </summary>
-internal sealed class RelayRunner(RelaySettings settings, OtlpSender sender, TextWriter log)
+internal sealed class RelayRunner(RelaySettings settings, OtlpSender sender, TextWriter log, TimeProvider? clock = null)
 {
+    private readonly TimeProvider _clock = clock ?? TimeProvider.System;
+
     private readonly RawEtwRelayLimits _limits = new() { MaxFrameLength = settings.MaxFrameBytes };
 
     /// <summary>Frames sent so far.</summary>
@@ -263,19 +265,32 @@ internal sealed class RelayRunner(RelaySettings settings, OtlpSender sender, Tex
                 return await reader.WaitToReadAsync(token).ConfigureAwait(false);
             }
 
-            TimeSpan remaining = Stopwatch.GetElapsedTime(Stopwatch.GetTimestamp(), _heartbeatDue);
-            using CancellationTokenSource wait = CancellationTokenSource.CreateLinkedTokenSource(token);
-            wait.CancelAfter(remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero);
-            try
+            TimeSpan remaining = _clock.GetElapsedTime(_clock.GetTimestamp(), _heartbeatDue);
+            if (remaining < TimeSpan.Zero)
             {
-                return await reader.WaitToReadAsync(wait.Token).ConfigureAwait(false);
+                remaining = TimeSpan.Zero;
             }
-            catch (OperationCanceledException) when (!token.IsCancellationRequested)
+
+            using CancellationTokenSource idleCancel = CancellationTokenSource.CreateLinkedTokenSource(token);
+            using CancellationTokenSource readCancel = CancellationTokenSource.CreateLinkedTokenSource(token);
+            Task<bool> incoming = reader.WaitToReadAsync(readCancel.Token).AsTask();
+            Task idle = remaining <= TimeSpan.Zero
+                ? Task.CompletedTask
+                : Task.Delay(remaining, _clock, idleCancel.Token);
+            await Task.WhenAny(incoming, idle).ConfigureAwait(false);
+            if (incoming.IsCompleted)
             {
-                await sender.SendAsync(_heartbeat, token).ConfigureAwait(false);
-                Batches++;
-                _heartbeatDue = NextHeartbeatDue();
+                await idleCancel.CancelAsync().ConfigureAwait(false);
+                await ObserveAsync(idle).ConfigureAwait(false);
+                return await incoming.ConfigureAwait(false);
             }
+
+            await readCancel.CancelAsync().ConfigureAwait(false);
+            await ObserveAsync(incoming).ConfigureAwait(false);
+            await idle.ConfigureAwait(false);
+            await sender.SendAsync(_heartbeat, token).ConfigureAwait(false);
+            Batches++;
+            _heartbeatDue = NextHeartbeatDue();
         }
     }
 
@@ -312,7 +327,18 @@ internal sealed class RelayRunner(RelaySettings settings, OtlpSender sender, Tex
     }
 
     private long NextHeartbeatDue() =>
-        Stopwatch.GetTimestamp() + (long)(settings.HeartbeatInterval.TotalSeconds * Stopwatch.Frequency);
+        _clock.GetTimestamp() + (long)(settings.HeartbeatInterval.TotalSeconds * _clock.TimestampFrequency);
+
+    private static async Task ObserveAsync(Task task)
+    {
+        try
+        {
+            await task.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
 
     /// <summary>
     ///     Builds the idle replay. Returns false when the only frame is a hello, which cannot refresh a live session
