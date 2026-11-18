@@ -2,9 +2,7 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
-        <!-- net11.0 is additive. The .NET 10 SDK cannot evaluate it, so older SDKs keep building 8/9/10. -->
-        <TargetFrameworks Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(NETCoreSdkVersion)', '11.0'))">$(TargetFrameworks);net11.0</TargetFrameworks>
+        <TargetFrameworks>net8.0;net9.0;net10.0;net11.0</TargetFrameworks>
         <AssemblyName>etwutils</AssemblyName>
         <RootNamespace>Nefarius.Utilities.ETW.CLI</RootNamespace>
         <ImplicitUsings>enable</ImplicitUsings>
