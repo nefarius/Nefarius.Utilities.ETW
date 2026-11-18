@@ -1,7 +1,7 @@
 # etwrelay — Nefarius.Utilities.ETW.Relay.CLI
 
 [![.NET](https://github.com/nefarius/Nefarius.Utilities.ETW/actions/workflows/build.yml/badge.svg)](https://github.com/nefarius/Nefarius.Utilities.ETW/actions/workflows/build.yml)
-![Requirements](https://img.shields.io/badge/Requires-.NET%208%2F9%2F10-blue.svg)
+![Requirements](https://img.shields.io/badge/Requires-.NET%208%2F9%2F10%2F11-blue.svg)
 [![NuGet Version](https://img.shields.io/nuget/v/Nefarius.Utilities.ETW.Relay.CLI)](https://www.nuget.org/packages/Nefarius.Utilities.ETW.Relay.CLI/)
 
 An **optional** companion to [`etwutils`](../Nefarius.Utilities.ETW.CLI/README.md). It reads raw ETW relay frames and delivers them to an OpenTelemetry decoding gateway as OTLP/HTTP logs. Use it to try the [decoding gateway](../../docs/guides/opentelemetry-gateway.md) from the command line, or to ship captures from a machine that has no symbols.
@@ -19,7 +19,7 @@ etwutils realtime --format relay <provider-guid> | etwrelay --endpoint https://g
 dotnet tool install -g Nefarius.Utilities.ETW.Relay.CLI
 ```
 
-Requires the .NET 8, 9, or 10 **SDK**. `etwrelay` itself runs on Windows, Linux and macOS; capturing with `etwutils` needs Windows and an elevated shell.
+Requires the .NET 8, 9, 10, or 11 **SDK**. `etwrelay` itself runs on Windows, Linux and macOS; capturing with `etwutils` needs Windows and an elevated shell.
 
 ## Piping from `etwutils`
 

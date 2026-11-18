@@ -21,7 +21,7 @@ jobs:
       - name: Setup .Net SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.x
+          dotnet-version: 11.x
 
       - name: Modify README.md for NuGet
         run: |
