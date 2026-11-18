@@ -1,7 +1,7 @@
 # etwutils — Nefarius.Utilities.ETW.CLI
 
 [![.NET](https://github.com/nefarius/Nefarius.Utilities.ETW/actions/workflows/build.yml/badge.svg)](https://github.com/nefarius/Nefarius.Utilities.ETW/actions/workflows/build.yml)
-![Requirements](https://img.shields.io/badge/Requires-.NET%208%2F9%2F10-blue.svg)
+![Requirements](https://img.shields.io/badge/Requires-.NET%208%2F9%2F10%2F11-blue.svg)
 ![Windows only](https://img.shields.io/badge/Windows-8.0+-red)
 [![NuGet Version](https://img.shields.io/nuget/v/Nefarius.Utilities.ETW.CLI)](https://www.nuget.org/packages/Nefarius.Utilities.ETW.CLI/)
 [![NuGet](https://img.shields.io/nuget/dt/Nefarius.Utilities.ETW.CLI)](https://www.nuget.org/packages/Nefarius.Utilities.ETW.CLI/)
@@ -21,7 +21,7 @@ A .NET global tool (`etwutils`) that wraps the ETW API of [Nefarius.Utilities.ET
 dotnet tool install -g Nefarius.Utilities.ETW.CLI
 ```
 
-This makes the `etwutils` command available on `PATH`. Requires the .NET 8, 9, or 10 **SDK** on Windows (`dotnet tool` is an SDK feature, not available with the runtime-only install).
+This makes the `etwutils` command available on `PATH`. Requires the .NET 8, 9, 10, or 11 **SDK** on Windows (`dotnet tool` is an SDK feature, not available with the runtime-only install).
 
 ## Commands
 
