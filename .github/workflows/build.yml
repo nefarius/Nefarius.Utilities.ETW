@@ -25,11 +25,25 @@ jobs:
       - name: Build
         run: dotnet build -c Release
 
-      - name: Test
+      - name: Test core library (net10.0)
         env:
           RUN_INTEGRATION_TESTS: "true"
           PARITY_OUTPUT_DIR: ${{ github.workspace }}/parity-json
-        run: dotnet test -c Release --no-build --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage" --results-directory TestResults
+        run: dotnet test tests -c Release --no-build -f net10.0 --logger "trx;LogFileName=test-results-core-net10.trx" --collect:"XPlat Code Coverage" --results-directory TestResults
+
+      - name: Test core library (net11.0)
+        env:
+          RUN_INTEGRATION_TESTS: "true"
+        run: dotnet test tests -c Release --no-build -f net11.0 --logger "trx;LogFileName=test-results-core-net11.trx" --results-directory TestResults
+
+      - name: Test OpenTelemetry integration (net10.0)
+        run: dotnet test integrations/Nefarius.Utilities.ETW.OpenTelemetry.Tests -c Release --no-build -f net10.0 --logger "trx;LogFileName=test-results-otel-net10.trx" --collect:"XPlat Code Coverage" --results-directory TestResults
+
+      - name: Test relay CLI (net10.0)
+        run: dotnet test tools/Nefarius.Utilities.ETW.Relay.CLI.Tests -c Release --no-build -f net10.0 --logger "trx;LogFileName=test-results-relay-net10.trx" --collect:"XPlat Code Coverage" --results-directory TestResults
+
+      - name: Test relay CLI (net11.0)
+        run: dotnet test tools/Nefarius.Utilities.ETW.Relay.CLI.Tests -c Release --no-build -f net11.0 --logger "trx;LogFileName=test-results-relay-net11.trx" --results-directory TestResults
 
       - name: Upload test results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -71,11 +85,20 @@ jobs:
       - name: Build library and tests
         run: dotnet build tests -c Release
 
-      - name: Test (managed backend)
-        run: dotnet test tests -c Release --no-build --logger "trx;LogFileName=test-results-linux.trx" --results-directory TestResults
+      - name: Test (managed backend, net10.0)
+        run: dotnet test tests -c Release --no-build -f net10.0 --logger "trx;LogFileName=test-results-linux-net10.trx" --results-directory TestResults
 
-      - name: Test relay CLI (etwrelay pipeline without ETW)
-        run: dotnet test tools/Nefarius.Utilities.ETW.Relay.CLI.Tests -c Release --logger "trx;LogFileName=test-results-relay-linux.trx" --results-directory TestResults
+      - name: Test (managed backend, net11.0)
+        run: dotnet test tests -c Release --no-build -f net11.0 --logger "trx;LogFileName=test-results-linux-net11.trx" --results-directory TestResults
+
+      - name: Build relay CLI tests
+        run: dotnet build tools/Nefarius.Utilities.ETW.Relay.CLI.Tests -c Release
+
+      - name: Test relay CLI (etwrelay pipeline without ETW, net10.0)
+        run: dotnet test tools/Nefarius.Utilities.ETW.Relay.CLI.Tests -c Release --no-build -f net10.0 --logger "trx;LogFileName=test-results-relay-linux-net10.trx" --results-directory TestResults
+
+      - name: Test relay CLI (etwrelay pipeline without ETW, net11.0)
+        run: dotnet test tools/Nefarius.Utilities.ETW.Relay.CLI.Tests -c Release --no-build -f net11.0 --logger "trx;LogFileName=test-results-relay-linux-net11.trx" --results-directory TestResults
 
       - name: Upload test results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
