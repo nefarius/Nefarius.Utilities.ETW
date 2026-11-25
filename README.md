@@ -1,7 +1,7 @@
 # <img src="assets/NSS-128x128.png" align="left" />Nefarius.Utilities.ETW
 
 [![.NET](https://github.com/nefarius/Nefarius.Utilities.ETW/actions/workflows/build.yml/badge.svg)](https://github.com/nefarius/Nefarius.Utilities.ETW/actions/workflows/build.yml)
-![Requirements](https://img.shields.io/badge/Requires-.NET%208%2F9%2F10-blue.svg)
+![Requirements](https://img.shields.io/badge/Requires-.NET%208%2F9%2F10%2F11-blue.svg)
 [![NuGet Version](https://img.shields.io/nuget/v/Nefarius.Utilities.ETW)](https://www.nuget.org/packages/Nefarius.Utilities.ETW/)
 [![NuGet](https://img.shields.io/nuget/dt/Nefarius.Utilities.ETW)](https://www.nuget.org/packages/Nefarius.Utilities.ETW/)
 [![Assisted by Cursor AI](https://img.shields.io/badge/Assisted%20by-Cursor%20AI-8B5CF6?style=flat)](https://cursor.com/)
