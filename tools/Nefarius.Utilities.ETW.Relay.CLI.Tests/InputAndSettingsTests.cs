@@ -24,11 +24,11 @@ public class BinaryInputTests
     }
 
     [Test]
-    public void DeclaredLengthAboveTheLimit_IsRejectedBeforeAllocation()
+    public async Task DeclaredLengthAboveTheLimit_IsRejectedBeforeAllocation()
     {
         byte[] frame = Frames.Event(1, payloadLength: 4096);
 
-        RawEtwProtocolException? ex = Assert.ThrowsAsync<RawEtwProtocolException>(async () =>
+        RawEtwProtocolException? ex = await Assert.ThrowsAsync<RawEtwProtocolException>(async () =>
         {
             await foreach (byte[] _ in FrameInput.ReadBinaryAsync(new MemoryStream(frame), 1024,
                                CancellationToken.None))
@@ -40,11 +40,11 @@ public class BinaryInputTests
     }
 
     [Test]
-    public void TruncatedFrame_Throws()
+    public async Task TruncatedFrame_Throws()
     {
         byte[] frame = Frames.Event(1);
 
-        Assert.ThrowsAsync<RawEtwProtocolException>(async () =>
+        await Assert.ThrowsAsync<RawEtwProtocolException>(async () =>
         {
             await foreach (byte[] _ in FrameInput.ReadBinaryAsync(new MemoryStream(frame[..^8]), 1 << 20,
                                CancellationToken.None))
@@ -95,28 +95,28 @@ public class Base64NdjsonInputTests
     [TestCase("{\"other\":\"AAAA\"}")]
     [TestCase("{\"frame\":\"AAAA\",\"extra\":1}")]
     [TestCase("{\"frame\":\"%%%\"}")]
-    public void MalformedLines_AreRejected(string line)
+    public async Task MalformedLines_AreRejected(string line)
     {
-        Assert.ThrowsAsync<InputException>(async () =>
+        await Assert.ThrowsAsync<InputException>(async () =>
             await ReadAll(System.Text.Encoding.ASCII.GetBytes(line + "\n")));
     }
 
     [Test]
-    public void FrameAboveTheLimit_IsRejected()
+    public async Task FrameAboveTheLimit_IsRejected()
     {
         byte[] data = Frames.Ndjson([Frames.Event(1, payloadLength: 4096)]);
 
-        Assert.ThrowsAsync<InputException>(async () => await ReadAll(data, max: 1024));
+        await Assert.ThrowsAsync<InputException>(async () => await ReadAll(data, max: 1024));
     }
 
     [Test]
-    public void EndlessLineWithoutNewline_IsRejectedWhileReading()
+    public async Task EndlessLineWithoutNewline_IsRejectedWhileReading()
     {
         // A megabyte of 'a' with no newline must fail at the small limit instead of being buffered.
         byte[] data = new byte[1024 * 1024];
         Array.Fill(data, (byte)'a');
 
-        InputException? ex = Assert.ThrowsAsync<InputException>(async () => await ReadAll(data, max: 1024));
+        InputException? ex = await Assert.ThrowsAsync<InputException>(async () => await ReadAll(data, max: 1024));
         Assert.That(ex!.Message, Does.Contain("refusing to buffer"));
     }
 }
