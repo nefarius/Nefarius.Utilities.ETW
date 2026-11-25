@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+        <TargetFrameworks>net8.0;net9.0;net10.0;net11.0</TargetFrameworks>
         <AssemblyName>etwrelay</AssemblyName>
         <RootNamespace>Nefarius.Utilities.ETW.Relay.CLI</RootNamespace>
         <ImplicitUsings>enable</ImplicitUsings>
@@ -28,6 +28,7 @@
         <AssetTargetFallback Condition="'$(TargetFramework)' == 'net8.0'">$(AssetTargetFallback);net8.0-windows8.0</AssetTargetFallback>
         <AssetTargetFallback Condition="'$(TargetFramework)' == 'net9.0'">$(AssetTargetFallback);net9.0-windows8.0</AssetTargetFallback>
         <AssetTargetFallback Condition="'$(TargetFramework)' == 'net10.0'">$(AssetTargetFallback);net10.0-windows8.0</AssetTargetFallback>
+        <AssetTargetFallback Condition="'$(TargetFramework)' == 'net11.0'">$(AssetTargetFallback);net11.0-windows8.0</AssetTargetFallback>
     </PropertyGroup>
 
     <Import Project="$(MSBuildThisFileDirectory)..\..\CommonProjectProperties.targets" />
