@@ -194,7 +194,7 @@ public class StreamingBackendTests
             Assert.Ignore("Native backend is available.");
         }
 
-        Assert.ThrowsAsync<PlatformNotSupportedException>(async () =>
+        await Assert.ThrowsAsync<PlatformNotSupportedException>(async () =>
         {
             await foreach (ReadOnlyMemory<byte> _ in EtwUtil.EnumerateEventsAsync(
                                ["./traces/BthPS3_0.etl"],

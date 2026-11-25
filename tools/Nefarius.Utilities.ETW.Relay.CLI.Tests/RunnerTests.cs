@@ -431,7 +431,7 @@ public class RunnerTests
             pipe.Push(Frames.Concat([Frames.Hello(Guid.NewGuid()), Frames.Event(1)]));
             Task finished = await Task.WhenAny(running, Task.Delay(TimeSpan.FromSeconds(5)));
             Assert.That(finished, Is.SameAs(running));
-            DeliveryException? ex = Assert.ThrowsAsync<DeliveryException>(async () => await running);
+            DeliveryException? ex = await Assert.ThrowsAsync<DeliveryException>(async () => await running);
 
             Assert.Multiple(() =>
             {
@@ -485,7 +485,7 @@ public class RunnerTests
             pipe.Push(Frames.Concat([Frames.Hello(Guid.NewGuid()), Frames.Event(1)]));
             Task finished = await Task.WhenAny(running, Task.Delay(TimeSpan.FromSeconds(5)));
             Assert.That(finished, Is.SameAs(running));
-            DeliveryException? ex = Assert.ThrowsAsync<DeliveryException>(async () => await running);
+            DeliveryException? ex = await Assert.ThrowsAsync<DeliveryException>(async () => await running);
 
             Assert.Multiple(() =>
             {
@@ -564,7 +564,7 @@ public class RunnerTests
             clock.Advance(TimeSpan.FromMilliseconds(1000));
             Task finished = await Task.WhenAny(running, Task.Delay(TimeSpan.FromSeconds(5)));
             Assert.That(finished, Is.SameAs(running));
-            DeliveryException? ex = Assert.ThrowsAsync<DeliveryException>(async () => await running);
+            DeliveryException? ex = await Assert.ThrowsAsync<DeliveryException>(async () => await running);
 
             Assert.Multiple(() =>
             {
@@ -723,11 +723,11 @@ public class RunnerTests
         });
     }
     [Test]
-    public void GivingUp_AfterTheRetryBudget_IsADeliveryFailure()
+    public async Task GivingUp_AfterTheRetryBudget_IsADeliveryFailure()
     {
         RecordingHandler handler = new((_, _) => Respond(HttpStatusCode.BadGateway));
 
-        DeliveryException? ex = Assert.ThrowsAsync<DeliveryException>(async () =>
+        DeliveryException? ex = await Assert.ThrowsAsync<DeliveryException>(async () =>
             await Run.RunAsync(Run.Settings(b => b.MaxRetries = 2), Binary(Frames.Session(Guid.NewGuid(), 1)),
                 handler));
 
@@ -743,23 +743,23 @@ public class RunnerTests
     [TestCase(HttpStatusCode.Forbidden)]
     [TestCase(HttpStatusCode.NotFound)]
     [TestCase(HttpStatusCode.UnprocessableEntity)]
-    public void OtherClientErrors_AreFatalAndNotRetried(HttpStatusCode code)
+    public async Task OtherClientErrors_AreFatalAndNotRetried(HttpStatusCode code)
     {
         RecordingHandler handler = new((_, _) => Respond(code));
 
-        Assert.ThrowsAsync<DeliveryException>(async () =>
+        await Assert.ThrowsAsync<DeliveryException>(async () =>
             await Run.RunAsync(Run.Settings(), Binary(Frames.Session(Guid.NewGuid(), 1)), handler));
 
         Assert.That(handler.Requests, Has.Count.EqualTo(1));
     }
 
     [Test]
-    public void RejectedRecords_AreFatalEvenOnSuccessStatus_AndNotRetried()
+    public async Task RejectedRecords_AreFatalEvenOnSuccessStatus_AndNotRetried()
     {
         RecordingHandler handler = new((_, _) =>
             Task.FromResult(RecordingHandler.Rejected("relay session is unknown")));
 
-        DeliveryException? ex = Assert.ThrowsAsync<DeliveryException>(async () =>
+        DeliveryException? ex = await Assert.ThrowsAsync<DeliveryException>(async () =>
             await Run.RunAsync(Run.Settings(), Binary(Frames.Session(Guid.NewGuid(), 1)), handler));
 
         Assert.Multiple(() =>
@@ -774,11 +774,11 @@ public class RunnerTests
     // ---------------------------------------------------------------------------------------------------------------
 
     [Test]
-    public void EventBeforeHello_IsAnInputError()
+    public async Task EventBeforeHello_IsAnInputError()
     {
         RecordingHandler handler = new();
 
-        InputException? ex = Assert.ThrowsAsync<InputException>(async () =>
+        InputException? ex = await Assert.ThrowsAsync<InputException>(async () =>
             await Run.RunAsync(Run.Settings(), Binary([Frames.Event(0)]), handler));
 
         Assert.Multiple(() =>
@@ -789,21 +789,21 @@ public class RunnerTests
     }
 
     [Test]
-    public void FramesAfterEnd_NeedANewHello()
+    public async Task FramesAfterEnd_NeedANewHello()
     {
         List<byte[]> input = [.. Frames.Session(Guid.NewGuid(), 1), Frames.Event(9)];
 
-        Assert.ThrowsAsync<InputException>(async () =>
+        await Assert.ThrowsAsync<InputException>(async () =>
             await Run.RunAsync(Run.Settings(), Binary(input), new RecordingHandler()));
     }
 
     [Test]
-    public void Garbage_ExplainsTheTextPipelineProblemOnFirstFrame()
+    public async Task Garbage_ExplainsTheTextPipelineProblemOnFirstFrame()
     {
         // What a pipeline that treated the bytes as text would produce: valid UTF-8 text, wrong magic.
         byte[] text = System.Text.Encoding.UTF8.GetBytes(new string('x', 64));
 
-        InputException? ex = Assert.ThrowsAsync<InputException>(async () =>
+        InputException? ex = await Assert.ThrowsAsync<InputException>(async () =>
             await Run.RunAsync(Run.Settings(), new MemoryStream(text), new RecordingHandler()));
 
         Assert.That(ex!.Message, Does.Contain("PowerShell 7.4").And.Contain("relay-ndjson"));
@@ -816,7 +816,7 @@ public class RunnerTests
         byte[] input = [.. Frames.Concat([Frames.Hello(session), Frames.Event(1)]), .. new byte[32]];
         RecordingHandler handler = new();
 
-        Assert.ThrowsAsync<InputException>(async () =>
+        await Assert.ThrowsAsync<InputException>(async () =>
             await Run.RunAsync(Run.Settings(), new MemoryStream(input), handler));
 
         Assert.That(handler.Requests.Single().FrameBytes(), Has.Count.EqualTo(2));
@@ -867,7 +867,7 @@ public class RunnerTests
     }
 
     [Test]
-    public void Abort_WhileDeliveryIsStuck_IsADeliveryFailure()
+    public async Task Abort_WhileDeliveryIsStuck_IsADeliveryFailure()
     {
         PipeLikeStream pipe = new();
         using CancellationTokenSource abort = new();
@@ -881,19 +881,19 @@ public class RunnerTests
         abort.Cancel();
 
         // The sender gets a few seconds of grace, then the unfinished request is a failure.
-        DeliveryException? ex = Assert.ThrowsAsync<DeliveryException>(async () => await running);
+        DeliveryException? ex = await Assert.ThrowsAsync<DeliveryException>(async () => await running);
         Assert.That(ex!.Message, Does.Contain("Interrupted"));
     }
 
     [Test]
-    public void MalformedAcknowledgement_IsNotTreatedAsDelivered()
+    public async Task MalformedAcknowledgement_IsNotTreatedAsDelivered()
     {
         RecordingHandler handler = new((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new ByteArrayContent([0x80])
         }));
 
-        DeliveryException? ex = Assert.ThrowsAsync<DeliveryException>(async () =>
+        DeliveryException? ex = await Assert.ThrowsAsync<DeliveryException>(async () =>
             await Run.RunAsync(Run.Settings(), Binary(Frames.Session(Guid.NewGuid(), 1)), handler));
 
         Assert.Multiple(() =>
@@ -904,14 +904,14 @@ public class RunnerTests
     }
 
     [Test]
-    public void UnreadableRejectionBody_StaysAPermanentFailure()
+    public async Task UnreadableRejectionBody_StaysAPermanentFailure()
     {
         RecordingHandler handler = new((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
         {
             Content = new ThrowingContent()
         }));
 
-        Assert.ThrowsAsync<DeliveryException>(async () =>
+        await Assert.ThrowsAsync<DeliveryException>(async () =>
             await Run.RunAsync(Run.Settings(), Binary(Frames.Session(Guid.NewGuid(), 1)), handler));
 
         Assert.That(handler.Requests, Has.Count.EqualTo(1));

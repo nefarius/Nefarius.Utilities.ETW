@@ -407,7 +407,7 @@ public class GatewayTests
         await gateway.Sink.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
         await client.ExportAsync(Frames.Request(Session, Frames.Event(2)));
 
-        RpcException? ex = Assert.ThrowsAsync<RpcException>(async () =>
+        RpcException? ex = await Assert.ThrowsAsync<RpcException>(async () =>
             await client.ExportAsync(Frames.Request(Session, Frames.Event(3))));
         Assert.That(ex!.StatusCode, Is.EqualTo(StatusCode.Unavailable));
 

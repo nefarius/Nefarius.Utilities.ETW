@@ -362,7 +362,7 @@ public class SymbolDiscoveryTests
     {
         foreach (string url in new[] { "ftp://symbols.example/", "not a url" })
         {
-            Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             {
                 TestGateway gateway = await TestGateway.StartAsync(new()
                 {
