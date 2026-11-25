@@ -58,10 +58,10 @@ public class RealtimeRelayProducerArgumentTests
             EtwUtil.EnumerateRealtimeRelayFramesAsync("s", o => o.MaxFrameLength = uint.MaxValue));
 
     [Test]
-    public void MissingSession_SurfacesProcessTraceFailure()
+    public async Task MissingSession_SurfacesProcessTraceFailure()
     {
         // ProcessTrace reports ERROR_WMI_INSTANCE_NOT_FOUND (4201); it must not end like a normal stop.
-        System.ComponentModel.Win32Exception? ex = Assert.ThrowsAsync<System.ComponentModel.Win32Exception>(async () =>
+        System.ComponentModel.Win32Exception? ex = await Assert.ThrowsAsync<System.ComponentModel.Win32Exception>(async () =>
         {
             await foreach (byte[] _ in EtwUtil.EnumerateRealtimeRelayFramesAsync(
                                "Nefarius.ETW.Tests.RelayProducer.DoesNotExist"))
